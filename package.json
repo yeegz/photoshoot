@@ -1,0 +1,29 @@
+{
+  "name": "photoshoot",
+  "version": "1.0.0",
+  "description": "Photoshoot — a modern Windows photobooth app. Clean-room homage, all original code and assets.",
+  "author": "Photoshoot",
+  "license": "MIT",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build:app": "node esbuild.mjs",
+    "build:app:prod": "node esbuild.mjs --prod",
+    "dev": "node esbuild.mjs && electron .",
+    "watch": "node esbuild.mjs --watch",
+    "start": "electron .",
+    "typecheck": "tsc --noEmit",
+    "build": "node esbuild.mjs --prod && electron-builder",
+    "build:win": "node esbuild.mjs --prod && electron-builder --win",
+    "build:dir": "node esbuild.mjs --prod && electron-builder --dir",
+    "build:web": "node web/build-web.mjs",
+    "deploy": "node web/build-web.mjs && firebase deploy --only hosting"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "electron": "^31.7.7",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.6.3"
+  }
+}

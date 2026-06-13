@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: data:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Photoshoot</title>
+    <link rel="stylesheet" href="styles/base.css" />
+    <link rel="stylesheet" href="styles/layout.css" />
+    <link rel="stylesheet" href="styles/components.css" />
+    <link rel="stylesheet" href="styles/themes.css" />
+  </head>
+  <body>
+    <div class="app" id="app">
+      <!-- Titlebar (frameless window) -->
+      <header class="titlebar">
+        <div class="titlebar-left">
+          <div class="traffic" aria-label="Window controls">
+            <button class="tl tl-close" id="tlClose" type="button" aria-label="Close">
+              <svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1.6 1.6 6.4 6.4M6.4 1.6 1.6 6.4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+            </button>
+            <button class="tl tl-min" id="tlMin" type="button" aria-label="Minimize">
+              <svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1.6 4h4.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+            </button>
+            <button class="tl tl-zoom" id="tlZoom" type="button" aria-label="Maximize">
+              <svg viewBox="0 0 8 8" aria-hidden="true"><path d="M4 1.6v4.8M1.6 4h4.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <span class="titlebar-status" id="cameraStatusLabel">Starting camera…</span>
+        </div>
+        <div class="titlebar-title">
+          <span class="titlebar-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18">
+              <rect x="2" y="3.5" width="20" height="17" rx="5" fill="#e2362c" />
+              <path d="M7 9.4h2l.8-1.2h4.4l.8 1.2h2a1 1 0 0 1 1 1v4.9a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V10.4a1 1 0 0 1 1-1Z" fill="#fff" />
+              <circle cx="12" cy="12.8" r="2.05" fill="#e2362c" />
+            </svg>
+          </span>
+          Photoshoot
+        </div>
+        <div class="titlebar-actions">
+          <button class="tb-icon" id="btnBackgrounds" type="button" aria-label="Backgrounds" title="Backgrounds">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 18 9 9l4 5 2.4-3L21 18Z"/><circle cx="16.5" cy="7" r="1.6"/></svg>
+          </button>
+          <button class="tb-icon" id="btnSettings" type="button" aria-label="Settings" title="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M3.5 7h9M16.5 7h4M3.5 17h4M11.5 17h9"/><circle cx="14.5" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Stage / viewfinder -->
+      <main class="stage">
+        <div class="viewfinder" id="viewfinder">
+          <canvas id="glCanvas" class="gl-canvas" aria-label="Live camera preview"></canvas>
+
+          <!-- Photo review: shows a captured photo where the preview was (camera paused) -->
+          <div class="review hidden" id="review" aria-hidden="true">
+            <img id="reviewImage" alt="Captured photo" />
+          </div>
+
+          <div class="vf-overlay vf-message hidden" id="vfMessage" role="status">
+            <div class="vf-message-card">
+              <div class="vf-message-icon" id="vfMessageIcon" aria-hidden="true">●</div>
+              <h2 id="vfMessageTitle">Camera</h2>
+              <p id="vfMessageText"></p>
+              <button class="btn btn-primary hidden" id="vfMessageAction" type="button"></button>
+            </div>
+          </div>
+
+          <div class="vf-overlay vf-bg-guide hidden" id="bgGuide" role="status">
+            <div class="vf-bg-guide-inner"><p id="bgGuideText">Step out of the frame…</p></div>
+          </div>
+
+          <div class="vf-overlay countdown hidden" id="countdown" aria-hidden="true">
+            <span class="countdown-number" id="countdownNumber">3</span>
+          </div>
+
+          <div class="vf-overlay flash" id="flash" aria-hidden="true"></div>
+
+          <div class="strip-progress hidden" id="stripProgress" aria-hidden="true"></div>
+
+          <div class="rec-badge hidden" id="recBadge" aria-hidden="true">
+            <span class="rec-dot"></span><span id="recTime">0:00</span>
+          </div>
+
+          <div class="perf-overlay hidden" id="perfOverlay" aria-hidden="true"></div>
+
+          <!-- Filmstrip tray — just the photos, no chrome (slides up over the viewfinder edge) -->
+          <section class="tray hidden" id="tray" aria-label="Recent captures">
+            <div class="tray-scroll" id="trayScroll">
+              <p class="tray-empty" id="trayEmpty"></p>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <!-- Bottom toolbar -->
+      <footer class="toolbar" id="toolbar">
+        <div class="toolbar-zone left">
+          <div class="mode-switch" id="modeSwitch" role="radiogroup" aria-label="Capture mode">
+            <button class="mode-option" data-mode="strip" role="radio" aria-checked="false" type="button" aria-label="Four-shot strip" title="4-shot strip">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3.5" y="3.5" width="7.4" height="7.4" rx="1.6"/><rect x="13.1" y="3.5" width="7.4" height="7.4" rx="1.6"/><rect x="3.5" y="13.1" width="7.4" height="7.4" rx="1.6"/><rect x="13.1" y="13.1" width="7.4" height="7.4" rx="1.6"/></svg>
+            </button>
+            <button class="mode-option is-active" data-mode="single" role="radio" aria-checked="true" type="button" aria-label="Single photo" title="Single photo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5h3.2l1.3-1.9h7l1.3 1.9H20A1.5 1.5 0 0 1 21.5 10v7.5A1.5 1.5 0 0 1 20 19H4a1.5 1.5 0 0 1-1.5-1.5V10A1.5 1.5 0 0 1 4 8.5Z"/><circle cx="12" cy="13.4" r="3.2"/></svg>
+            </button>
+            <button class="mode-option" data-mode="video" role="radio" aria-checked="false" type="button" aria-label="Record video" title="Video">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="2.6" y="7" width="12.6" height="10" rx="2.4"/><path d="M15.2 10.6 21.4 7.4v9.2L15.2 13.4Z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar-zone center">
+          <button class="shutter" id="shutter" type="button" aria-label="Take photo">
+            <svg class="glyph-photo" viewBox="0 0 28 28" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M9.6 5.4 8.4 7H5A2.2 2.2 0 0 0 2.8 9.2V19.4A2.2 2.2 0 0 0 5 21.6H23A2.2 2.2 0 0 0 25.2 19.4V9.2A2.2 2.2 0 0 0 23 7H19.6L18.4 5.4Z M14 9.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2Z M14 11.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z"/></svg>
+            <svg class="glyph-video" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="2.6" y="7" width="12.6" height="10" rx="2.4"/><path d="M15.2 10.6 21.4 7.4v9.2L15.2 13.4Z"/></svg>
+            <svg class="glyph-stop" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="3"/></svg>
+          </button>
+          <p class="shutter-hint" id="shutterHint">Tap to capture</p>
+        </div>
+
+        <div class="toolbar-zone right">
+          <button class="effects-btn" id="btnEffects" type="button" aria-label="Effects">Effects</button>
+        </div>
+
+        <!-- In-bar countdown (the bar turns red and counts) -->
+        <div class="bar-countdown" id="barCountdown" aria-hidden="true">
+          <span class="cd-nums" id="cdNums"></span>
+          <span class="cd-cam" aria-hidden="true">
+            <svg viewBox="0 0 28 28"><path fill="currentColor" fill-rule="evenodd" d="M9.6 5.4 8.4 7H5A2.2 2.2 0 0 0 2.8 9.2V19.4A2.2 2.2 0 0 0 5 21.6H23A2.2 2.2 0 0 0 25.2 19.4V9.2A2.2 2.2 0 0 0 23 7H19.6L18.4 5.4Z M14 9.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2Z M14 11.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z"/></svg>
+          </span>
+        </div>
+
+        <!-- Page dots shown while browsing effects -->
+        <div class="bar-pages" id="barPages"></div>
+      </footer>
+    </div>
+
+    <!-- Overlays -->
+    <div class="scrim hidden" id="scrim"></div>
+
+    <section class="effects-view" id="effectsPanel" aria-label="Effects" role="group">
+      <div class="effects-grid" id="effectsGrid"></div>
+    </section>
+
+    <aside class="panel panel-overlay hidden" id="backgroundsPanel" aria-label="Backgrounds" role="dialog" aria-modal="true">
+      <div class="panel-head">
+        <h2>Backgrounds</h2>
+        <button class="icon-btn-sm" data-close="backgroundsPanel" type="button" aria-label="Close">✕</button>
+      </div>
+      <p class="panel-note">Classic background replacement. Pick a scene, then step out of the frame so Photoshoot can learn the background, and step back in.</p>
+      <div class="backgrounds-grid" id="backgroundsGrid"></div>
+    </aside>
+
+    <aside class="panel panel-slideover hidden" id="settingsPanel" aria-label="Settings" role="dialog" aria-modal="true">
+      <div class="panel-head">
+        <h2>Settings</h2>
+        <button class="icon-btn-sm" data-close="settingsPanel" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="settings-body" id="settingsBody"></div>
+    </aside>
+
+    <div class="modal hidden" id="previewModal" role="dialog" aria-modal="true" aria-label="Capture preview">
+      <div class="modal-card">
+        <button class="icon-btn-sm modal-close" data-close="previewModal" type="button" aria-label="Close">✕</button>
+        <div class="modal-image-wrap" id="previewImageWrap"></div>
+        <div class="modal-actions" id="previewActions"></div>
+      </div>
+    </div>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>

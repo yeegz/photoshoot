@@ -1,0 +1,260 @@
+/* Photoshoot — app shell layout, Photo Booth style: a slim unified titlebar, a
+   full-bleed black viewfinder, and a single neutral bottom toolbar. Trays,
+   panels and modals float above so the WebGL canvas never resizes. */
+
+.app {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100vh;
+  width: 100vw;
+  background: var(--app-bg-texture, none), var(--app-bg);
+  background-size: cover;
+}
+
+/* ---- Titlebar (frameless window: drag region + traffic lights) ---- */
+.titlebar {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: 40px;
+  padding: 0 14px;
+  background: var(--app-bg-2);
+  border-bottom: 1px solid var(--panel-border);
+  -webkit-app-region: drag;
+}
+.titlebar button,
+.traffic {
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.traffic {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tl {
+  position: relative;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: none;
+  transition: filter var(--dur) var(--ease);
+}
+/* Enlarge the clickable area to a comfortable target without changing the dot. */
+.tl::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+.tl svg {
+  width: 8px;
+  height: 8px;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+  color: rgba(0, 0, 0, 0.5);
+}
+.traffic:hover .tl svg,
+.tl:focus-visible svg {
+  opacity: 1;
+}
+.tl:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+.tl-close {
+  background: var(--tl-close);
+}
+.tl-min {
+  background: var(--tl-min);
+}
+.tl-zoom {
+  background: var(--tl-zoom);
+}
+.tl:active {
+  filter: brightness(0.85);
+}
+
+.titlebar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: -0.01em;
+}
+.titlebar-mark {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+}
+.titlebar-status {
+  justify-self: start;
+  font-size: 12px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.titlebar-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: background var(--dur) var(--ease);
+}
+.titlebar-status.is-live::before {
+  background: var(--success);
+}
+.titlebar-status.is-error::before {
+  background: var(--danger);
+}
+.titlebar-status.is-hidden {
+  display: none;
+}
+
+.titlebar-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+.titlebar:hover .titlebar-actions,
+.titlebar-actions:focus-within {
+  opacity: 1;
+}
+
+/* ---- Stage / viewfinder (full-bleed) ---- */
+.stage {
+  position: relative;
+  min-height: 0;
+  background: #000;
+}
+
+.viewfinder {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--viewfinder-radius);
+  background: var(--viewfinder-texture, none) center / cover, var(--viewfinder-frame);
+  overflow: hidden;
+}
+
+.gl-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--viewfinder-inner);
+  object-fit: cover;
+}
+
+/* ---- Bottom toolbar ---- */
+.toolbar {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space);
+  height: 54px;
+  padding: 0 16px;
+  background: var(--toolbar-bg);
+  border-top: 1px solid var(--panel-border);
+  overflow: visible;
+}
+.toolbar-zone {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.toolbar-zone.left {
+  justify-self: start;
+}
+.toolbar-zone.center {
+  justify-self: center;
+  flex-direction: column;
+  gap: 2px;
+  /* shutter centered in the bar */
+}
+.toolbar-zone.right {
+  justify-self: end;
+}
+
+/* Countdown takes over the whole bar (the bar turns red, numbers count in it) */
+.bar-countdown {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 46px;
+  background: var(--shutter);
+  z-index: 4;
+}
+.toolbar.is-counting .toolbar-zone {
+  opacity: 0;
+  pointer-events: none;
+}
+.toolbar.is-counting .bar-countdown {
+  display: flex;
+}
+.cd-num {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1;
+  color: #fff;
+  opacity: 0.4;
+  transition: opacity 0.15s var(--ease), transform 0.15s var(--ease);
+}
+.cd-num.active {
+  opacity: 1;
+  transform: scale(1.06);
+}
+.cd-cam {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+}
+.cd-cam svg {
+  width: 21px;
+  height: 21px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Effects-browsing state: page dots replace the mode control + shutter */
+.toolbar.is-effects .toolbar-zone.left,
+.toolbar.is-effects .toolbar-zone.center {
+  opacity: 0;
+  pointer-events: none;
+}
+.bar-pages {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 2;
+}
+.toolbar.is-effects .bar-pages {
+  display: flex;
+}

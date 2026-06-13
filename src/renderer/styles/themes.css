@@ -1,0 +1,189 @@
+/* Photoshoot — built-in themes. "Studio" (light) lives in base.css (:root).
+   Each theme overrides the token vocabulary plus a few decorative rules. All
+   original CSS. Every theme keeps the same discipline: neutral chrome, one
+   selection accent, the red shutter as the only color pop. */
+
+/* ======================================================================
+   STUDIO DARK — macOS dark mode (system grays + system blue + red shutter)
+   ====================================================================== */
+html[data-theme="glass"] {
+  --app-bg: #323232;
+  --app-bg-2: #2a2a2a;
+  --toolbar-bg: #262626;
+  --app-bg-accent: #0a84ff;
+  --surface: #1e1e1e;
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --surface-3: #3a3a3a;
+  --panel: #1e1e1e;
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --text: rgba(255, 255, 255, 0.86);
+  --text-dim: rgba(255, 255, 255, 0.55);
+  --text-faint: rgba(255, 255, 255, 0.32);
+  --accent: #0a84ff;
+  --accent-2: #0a84ff;
+  --accent-contrast: #ffffff;
+  --btn-bg: rgba(255, 255, 255, 0.09);
+  --btn-bg-hover: rgba(255, 255, 255, 0.15);
+  --btn-text: rgba(255, 255, 255, 0.86);
+  --btn-border: rgba(255, 255, 255, 0.12);
+  --shutter: #ff453a;
+  --shutter-2: #e23b32;
+  --tray-bg: rgba(0, 0, 0, 0.6);
+  --tray-border: rgba(255, 255, 255, 0.18);
+  --thumb-border: rgba(255, 255, 255, 0.5);
+  --modal-bg: #1e1e1e;
+  --modal-border: rgba(255, 255, 255, 0.12);
+  --menu-bg: #262626;
+  --menu-tile: #2e2e2e;
+  --menu-tile-active: rgba(10, 132, 255, 0.22);
+  --countdown-color: #ffffff;
+  --countdown-glow: rgba(0, 0, 0, 0.6);
+  --viewfinder-frame: #0a0a0a;
+  --viewfinder-inner: #000000;
+  --scrollbar: rgba(255, 255, 255, 0.2);
+  --focus-ring: #0a84ff;
+  --danger: #ff453a;
+  --success: #30d158;
+}
+html[data-theme="glass"] .mode-switch {
+  background: rgba(255, 255, 255, 0.09);
+}
+html[data-theme="glass"] .switch .track {
+  background: rgba(255, 255, 255, 0.18);
+}
+html[data-theme="glass"] .stage {
+  background: #000;
+}
+
+/* ======================================================================
+   CLASSIC METAL — refined brushed aluminium, nostalgic hardware
+   ====================================================================== */
+html[data-theme="metal"] {
+  --app-bg: #c8cacd;
+  --app-bg-2: #dcdee1;
+  --toolbar-bg: #cdcfd2;
+  --app-bg-accent: #3a6ea5;
+  --surface: #fdfdfe;
+  --surface-2: #e8e9eb;
+  --surface-3: #d9dbde;
+  --panel: #edeef0;
+  --panel-border: rgba(0, 0, 0, 0.2);
+  --text: rgba(0, 0, 0, 0.82);
+  --text-dim: rgba(0, 0, 0, 0.58);
+  --text-faint: rgba(0, 0, 0, 0.4);
+  --accent: #3a6ea5;
+  --accent-2: #3a6ea5;
+  --accent-contrast: #ffffff;
+  --btn-bg: linear-gradient(180deg, #fafbfc, #dfe1e4);
+  --btn-bg-hover: linear-gradient(180deg, #ffffff, #e7e9ec);
+  --btn-text: rgba(0, 0, 0, 0.82);
+  --btn-border: rgba(0, 0, 0, 0.28);
+  --shutter: #d63a2f;
+  --shutter-2: #b73228;
+  --tray-bg: rgba(0, 0, 0, 0.5);
+  --tray-border: rgba(255, 255, 255, 0.25);
+  --thumb-border: rgba(255, 255, 255, 0.7);
+  --modal-bg: #edeef0;
+  --modal-border: rgba(0, 0, 0, 0.25);
+  --menu-bg: #e6e7ea;
+  --menu-tile: #d4d6d9;
+  --menu-tile-active: #c2d2e6;
+  --countdown-color: #f4f5f6;
+  --countdown-glow: rgba(0, 0, 0, 0.55);
+  --viewfinder-frame: linear-gradient(180deg, #9da1a6, #7d8186 55%, #6c7075);
+  --viewfinder-inner: #0d1013;
+  --scrollbar: rgba(0, 0, 0, 0.3);
+  --focus-ring: #3a6ea5;
+  --danger: #b23a3a;
+  --success: #3f8f5f;
+  --radius-sm: 6px;
+  --radius: 9px;
+  --radius-lg: 12px;
+  --viewfinder-radius: 0px;
+}
+html[data-theme="metal"] .app {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0, rgba(0, 0, 0, 0.035) 1px, transparent 2px, transparent 3px),
+    linear-gradient(160deg, #cdcfd2, #bfc2c6 50%, #c9cbce);
+}
+html[data-theme="metal"] .titlebar,
+html[data-theme="metal"] .toolbar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(0, 0, 0, 0.05)),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0, rgba(0, 0, 0, 0.03) 1px, transparent 2px, transparent 3px),
+    linear-gradient(180deg, #d2d4d7, #c2c4c7);
+}
+html[data-theme="metal"] .titlebar-title,
+html[data-theme="metal"] .setting-label,
+html[data-theme="metal"] .panel-head h2 {
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+html[data-theme="metal"] .viewfinder {
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55);
+}
+html[data-theme="metal"] .icon-btn,
+html[data-theme="metal"] .effects-btn,
+html[data-theme="metal"] .btn {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+html[data-theme="metal"] .shutter {
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.4), inset 0 -3px 6px rgba(0, 0, 0, 0.35),
+    0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+/* ======================================================================
+   RETRO FILM — warm vintage photo-print palette (intentional, not slop)
+   ====================================================================== */
+html[data-theme="retro"] {
+  --app-bg: #ece2cd;
+  --app-bg-2: #e2d6bc;
+  --toolbar-bg: #ddd0b4;
+  --app-bg-accent: #1f7a6e;
+  --surface: #fbf6ea;
+  --surface-2: #f1e8d4;
+  --surface-3: #e6dabf;
+  --panel: #fbf6ea;
+  --panel-border: rgba(90, 60, 25, 0.2);
+  --text: #3a2e20;
+  --text-dim: #6e5d46;
+  --text-faint: #9c8a6e;
+  --accent: #1f7a6e;
+  --accent-2: #1f7a6e;
+  --accent-contrast: #ffffff;
+  --btn-bg: rgba(90, 60, 25, 0.07);
+  --btn-bg-hover: rgba(90, 60, 25, 0.13);
+  --btn-text: #3a2e20;
+  --btn-border: rgba(90, 60, 25, 0.22);
+  --shutter: #e2542e;
+  --shutter-2: #c8431f;
+  --tray-bg: rgba(40, 28, 16, 0.55);
+  --tray-border: rgba(255, 245, 225, 0.3);
+  --thumb-border: rgba(255, 248, 232, 0.85);
+  --modal-bg: #fbf6ea;
+  --modal-border: rgba(90, 60, 25, 0.22);
+  --menu-bg: #f1e8d4;
+  --menu-tile: #e6dabf;
+  --menu-tile-active: #d3e8d6;
+  --countdown-color: #fff5e6;
+  --countdown-glow: rgba(40, 28, 16, 0.5);
+  --viewfinder-frame: #241c12;
+  --viewfinder-inner: #120d07;
+  --scrollbar: rgba(90, 60, 25, 0.3);
+  --focus-ring: #1f7a6e;
+  --danger: #c0392b;
+  --success: #3f8f5f;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+}
+html[data-theme="retro"] .app {
+  background:
+    repeating-linear-gradient(45deg, rgba(120, 90, 40, 0.025) 0, rgba(120, 90, 40, 0.025) 1px, transparent 1px, transparent 4px),
+    linear-gradient(160deg, #efe6d2, #e6d9bd);
+}
+html[data-theme="retro"] .mode-switch {
+  background: rgba(90, 60, 25, 0.1);
+}
+html[data-theme="retro"] .switch .track {
+  background: rgba(90, 60, 25, 0.18);
+}
