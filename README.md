@@ -13,6 +13,12 @@ is original: **no Apple branding, logos, icon artwork, graphics, or sound files,
 and no Apple code is copied.** Every line of code, every pixel of art, and every
 sound is made from scratch.
 
+### ▶ Try it now
+
+- **Use it online:** **https://photoshoot-yeegz.web.app/app/** — the full app runs in your browser, camera and all. Nothing is uploaded.
+- **Landing page:** https://photoshoot-yeegz.web.app
+- **Download for Windows:** see [Releases](https://github.com/yeegz/photoshoot/releases) (build it yourself with `npm run build:win`).
+
 ---
 
 ## Highlights
@@ -75,6 +81,35 @@ Output is written to `release/`:
 
 The app icon (`build/icon.png`) is generated, original art. You can regenerate it
 with `node build/make-icon.mjs`.
+
+> The download link on the website points at GitHub Releases. To publish a
+> Windows build, run `npm run build:win` **on Windows**, then attach the
+> `release/*.exe` files to a GitHub Release.
+
+---
+
+## Web app & website
+
+Photoshoot also runs **entirely in the browser** — the same renderer, with a
+small browser shim (`src/web/shim.ts`) replacing the Electron bridge: captures
+live in IndexedDB, settings/themes in `localStorage`, and "export" becomes a
+download. Camera processing stays on‑device; nothing is uploaded.
+
+```bash
+npm run build:web     # builds the landing page + web app into web-dist/
+npm run deploy        # builds web-dist/ and deploys to Firebase Hosting
+```
+
+`web-dist/` is a plain static site:
+
+- `web-dist/index.html` — the marketing landing page (`web/landing/`)
+- `web-dist/app/` — the web app (shim + renderer + styles)
+
+**Live:** the site is hosted on Firebase Hosting at
+**https://photoshoot-yeegz.web.app** (app at `/app/`). Hosting config is in
+`firebase.json` / `.firebaserc`; deploy with `firebase login && npm run deploy`.
+Because the web app uses `getUserMedia`, it must be served over HTTPS (Firebase
+Hosting, GitHub Pages, or `localhost` all qualify).
 
 ---
 
