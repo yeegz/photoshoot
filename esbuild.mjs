@@ -72,6 +72,20 @@ async function copyStatic() {
   if (existsSync(stylesSrc)) {
     await cp(stylesSrc, path.join(dist, 'styles'), { recursive: true });
   }
+  await copyMediapipe(dist);
+}
+
+// MediaPipe face-landmarker WASM fileset + model, served locally (no CDN).
+async function copyMediapipe(targetDir) {
+  const wasmSrc = path.join(root, 'node_modules/@mediapipe/tasks-vision/wasm');
+  const modelSrc = path.join(root, 'build/mediapipe/face_landmarker.task');
+  if (existsSync(wasmSrc)) {
+    await cp(wasmSrc, path.join(targetDir, 'mediapipe/wasm'), { recursive: true });
+  }
+  if (existsSync(modelSrc)) {
+    await mkdir(path.join(targetDir, 'mediapipe'), { recursive: true });
+    await cp(modelSrc, path.join(targetDir, 'mediapipe/face_landmarker.task'));
+  }
 }
 
 async function clean() {

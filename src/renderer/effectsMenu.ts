@@ -6,9 +6,10 @@
 
 import { app } from './app';
 import { GLRenderer } from './gl/renderer';
-import { EFFECTS, effectLabel, isDraggable } from './gl/effects';
+import { EFFECTS, effectLabel, isDraggable, isFaceEffect } from './gl/effects';
 import { byId, el, clear } from './dom';
 import { sound } from './sound';
+import { activateFaceTracking, deactivateFaceTracking } from './faceTracker';
 
 const PAGE_SIZE = 9;
 
@@ -109,6 +110,7 @@ function applyEffect(id: string): void {
   markActive(id);
   byId('btnEffects').classList.toggle('is-on', id !== 'normal');
   byId('viewfinder').classList.toggle('is-draggable', isDraggable(id));
+  if (isFaceEffect(id)) void activateFaceTracking();
   byId('shutterHint').textContent =
     id === 'normal' ? 'Tap to capture' : `Effect · ${effectLabel(id)}`;
 }
@@ -133,6 +135,7 @@ export function openEffects(): void {
   byId('toolbar').classList.add('is-effects');
   renderPageDots();
   sound.play('button');
+  void activateFaceTracking(); // so face-effect tiles preview live
   loop();
 }
 
@@ -142,6 +145,7 @@ export function closeEffects(): void {
   rafHandle = 0;
   byId('effectsPanel').classList.remove('is-open');
   byId('toolbar').classList.remove('is-effects');
+  if (!isFaceEffect(app.effect)) deactivateFaceTracking();
 }
 
 export function toggleEffects(): void {

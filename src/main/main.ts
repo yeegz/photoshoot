@@ -4,15 +4,22 @@
 // and hard navigation/window-open guards. All media processing happens locally
 // in the renderer; nothing is ever uploaded.
 
-import { app, BrowserWindow, session, shell } from 'electron';
+import { app, BrowserWindow, net, protocol, session, shell } from 'electron';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { registerIpc } from './ipc';
+import { isInside } from './paths';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
+// The renderer is served from a custom app:// origin (not file://) so that
+// MediaPipe's FaceLandmarker can fetch() its local WASM + model — Chromium
+// blocks fetch() of file:// resources, but allows it for a standard scheme.
+const APP_ORIGIN = 'app://photoshoot';
+
 const CSP = [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' 'wasm-unsafe-eval'",
   "style-src 'self'",
   "img-src 'self' data: blob:",
   "media-src 'self' blob: data:",
@@ -26,6 +33,36 @@ const CSP = [
 ].join('; ');
 
 let mainWindow: BrowserWindow | null = null;
+
+// Must run before app `ready`. Marks app:// as a standard, secure origin that
+// supports fetch — so 'self' in the CSP resolves to it and WASM can load.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+  },
+]);
+
+// Serve the bundled renderer (and its MediaPipe assets) from disk over app://.
+// Path traversal is impossible: every request is resolved against the dist dir
+// and rejected unless it stays inside it.
+function registerAppProtocol(): void {
+  const distDir = __dirname; // main.js lives in dist/ alongside index.html etc.
+  protocol.handle('app', async (request) => {
+    let rel: string;
+    try {
+      rel = decodeURIComponent(new URL(request.url).pathname).replace(/^\/+/, '');
+    } catch {
+      return new Response('Bad Request', { status: 400 });
+    }
+    if (rel === '') rel = 'index.html';
+    const filePath = path.join(distDir, rel);
+    if (!isInside(distDir, filePath)) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    return net.fetch(pathToFileURL(filePath).toString());
+  });
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -68,7 +105,7 @@ function createWindow(): void {
 
   mainWindow.webContents.on('will-attach-webview', (event) => event.preventDefault());
 
-  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+  mainWindow.loadURL(`${APP_ORIGIN}/index.html`);
 
   if (isDev) mainWindow.webContents.openDevTools({ mode: 'detach' });
 
@@ -101,6 +138,7 @@ function hardenSession(): void {
   ses.webRequest.onBeforeRequest((details, callback) => {
     const url = details.url;
     const allowed =
+      url.startsWith('app:') ||
       url.startsWith('file:') ||
       url.startsWith('devtools:') ||
       url.startsWith('blob:') ||
@@ -122,6 +160,7 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
+    registerAppProtocol();
     hardenSession();
     registerIpc(() => mainWindow);
     createWindow();

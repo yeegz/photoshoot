@@ -42,8 +42,12 @@ async function run() {
     logLevel: 'info',
   });
 
-  // 2) Styles.
+  // 2) Styles + MediaPipe face-landmarker assets (WASM fileset + model).
   await cp(path.join(root, 'src/renderer/styles'), path.join(appOut, 'styles'), { recursive: true });
+  const wasmSrc = path.join(root, 'node_modules/@mediapipe/tasks-vision/wasm');
+  const modelSrc = path.join(root, 'build/mediapipe/face_landmarker.task');
+  await cp(wasmSrc, path.join(appOut, 'mediapipe/wasm'), { recursive: true });
+  await cp(modelSrc, path.join(appOut, 'mediapipe/face_landmarker.task'));
 
   // 3) App HTML, derived from the Electron renderer's index.html.
   let html = await readFile(path.join(root, 'src/renderer/index.html'), 'utf8');

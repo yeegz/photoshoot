@@ -25,5 +25,8 @@
     "electron-builder": "^25.1.8",
     "esbuild": "^0.24.2",
     "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.18"
   }
 }

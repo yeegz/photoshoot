@@ -10,6 +10,7 @@
 import { VERTEX_SRC, FRAGMENTS } from './shaders';
 import { EFFECT_BY_ID } from './effects';
 import { CompiledProgram, linkProgram, createQuad, createVideoTexture } from './glcore';
+import { getFace } from '../faceTracker';
 
 type Source = HTMLVideoElement | HTMLCanvasElement;
 
@@ -201,6 +202,23 @@ export class GLRenderer {
     gl.uniform1f(prog.uniforms.u_mirror, mirror ? 1 : 0);
     // Mirror-correct the center so a dragged point lines up with the pointer.
     gl.uniform2f(prog.uniforms.u_center, mirror ? 1 - this.center.x : this.center.x, this.center.y);
+
+    // Face landmarks (mirror-corrected x), used by the fun-face effects.
+    const f = getFace();
+    const fx = (p: readonly [number, number]) => (mirror ? 1 - p[0] : p[0]);
+    const u = prog.uniforms;
+    gl.uniform1f(u.u_faceFound, f.found ? 1 : 0);
+    gl.uniform2f(u.u_eyeL, fx(f.eyeL), f.eyeL[1]);
+    gl.uniform2f(u.u_eyeR, fx(f.eyeR), f.eyeR[1]);
+    gl.uniform2f(u.u_nose, fx(f.nose), f.nose[1]);
+    gl.uniform2f(u.u_mouth, fx(f.mouth), f.mouth[1]);
+    gl.uniform2f(u.u_chin, fx(f.chin), f.chin[1]);
+    gl.uniform2f(u.u_brow, fx(f.brow), f.brow[1]);
+    gl.uniform2f(u.u_cheekL, fx(f.cheekL), f.cheekL[1]);
+    gl.uniform2f(u.u_cheekR, fx(f.cheekR), f.cheekR[1]);
+    gl.uniform2f(u.u_faceC, fx(f.faceC), f.faceC[1]);
+    gl.uniform1f(u.u_faceR, f.faceR);
+
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.bindVertexArray(null);

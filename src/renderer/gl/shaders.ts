@@ -23,7 +23,35 @@ uniform float u_amount;
 uniform float u_mirror;
 uniform vec2 u_center;
 
+// Face landmarks (normalized, mirror-corrected by the renderer).
+uniform float u_faceFound;
+uniform vec2 u_eyeL;
+uniform vec2 u_eyeR;
+uniform vec2 u_nose;
+uniform vec2 u_mouth;
+uniform vec2 u_chin;
+uniform vec2 u_brow;
+uniform vec2 u_cheekL;
+uniform vec2 u_cheekR;
+uniform vec2 u_faceC;
+uniform float u_faceR;
+
 vec3 lumv = vec3(0.299, 0.587, 0.114);
+
+// Local magnify/shrink around a point: amt>0 enlarges, amt<0 shrinks.
+vec2 magnify(vec2 uv, vec2 p, float rad, float amt){
+  vec2 d = uv - p;
+  float fall = smoothstep(rad, 0.0, length(d));
+  return p + d * (1.0 - amt * fall);
+}
+// Local swirl around a point.
+vec2 twirlAt(vec2 uv, vec2 p, float rad, float ang){
+  vec2 d = uv - p;
+  float fall = smoothstep(rad, 0.0, length(d));
+  float a = ang * fall;
+  float s = sin(a), c = cos(a);
+  return p + mat2(c, -s, s, c) * d;
+}
 `;
 
 const MAIN = `
@@ -250,5 +278,83 @@ vec4 run(vec2 uv){
   vec3 indigo=vec3(0.16,0.11,0.42);
   vec3 col = l < 0.25 ? indigo : (l < 0.5 ? cyan : (l < 0.75 ? pink : yellow));
   return vec4(col, 1.0);
+}`),
+
+  // ---- Face-tracked "fun face" effects (fall back to normal with no face) ----
+
+  bugeyes: frag(`
+vec4 run(vec2 uv){
+  if (u_faceFound < 0.5) return texture(u_tex, uv);
+  float rad = u_faceR * 0.95;
+  vec2 p = magnify(uv, u_eyeL, rad, 0.62*u_amount);
+  p = magnify(p, u_eyeR, rad, 0.62*u_amount);
+  return texture(u_tex, clamp(p, 0.0, 1.0));
+}`),
+
+  chipmunk: frag(`
+vec4 run(vec2 uv){
+  if (u_faceFound < 0.5) return texture(u_tex, uv);
+  float rad = u_faceR * 1.15;
+  vec2 p = magnify(uv, u_cheekL, rad, 0.5*u_amount);
+  p = magnify(p, u_cheekR, rad, 0.5*u_amount);
+  return texture(u_tex, clamp(p, 0.0, 1.0));
+}`),
+
+  frog: frag(`
+vec4 run(vec2 uv){
+  if (u_faceFound < 0.5) return texture(u_tex, uv);
+  float rad = u_faceR * 0.85;
+  vec2 p = magnify(uv, u_eyeL, rad, 0.5*u_amount);
+  p = magnify(p, u_eyeR, rad, 0.5*u_amount);
+  p = magnify(p, u_mouth, u_faceR * 1.05, 0.34*u_amount);
+  return texture(u_tex, clamp(p, 0.0, 1.0));
+}`),
+
+  dizzy: frag(`
+vec4 run(vec2 uv){
+  if (u_faceFound < 0.5) return texture(u_tex, uv);
+  float ang = sin(u_time * 1.6) * 1.4 * u_amount;
+  vec2 p = twirlAt(uv, u_faceC, u_faceR * 2.3, ang);
+  return texture(u_tex, clamp(p, 0.0, 1.0));
+}`),
+
+  bighead: frag(`
+vec4 run(vec2 uv){
+  if (u_faceFound < 0.5) return texture(u_tex, uv);
+  vec2 p = magnify(uv, u_faceC, u_faceR * 2.7, 0.42*u_amount);
+  return texture(u_tex, clamp(p, 0.0, 1.0));
+}`),
+
+  nosetwist: frag(`
+vec4 run(vec2 uv){
+  if (u_faceFound < 0.5) return texture(u_tex, uv);
+  vec2 p = twirlAt(uv, u_nose, u_faceR * 0.85, 2.7*u_amount);
+  return texture(u_tex, clamp(p, 0.0, 1.0));
+}`),
+
+  sweetheart: frag(`
+vec4 run(vec2 uv){
+  vec2 p = uv;
+  if (u_faceFound > 0.5) {
+    float rad = u_faceR * 0.9;
+    p = magnify(p, u_eyeL, rad, 0.5*u_amount);
+    p = magnify(p, u_eyeR, rad, 0.5*u_amount);
+  }
+  vec3 c = texture(u_tex, clamp(p, 0.0, 1.0)).rgb;
+  c = mix(c, c * vec3(1.08, 0.9, 0.98) + vec3(0.07, 0.0, 0.03), 0.5);
+  return vec4(clamp(c, 0.0, 1.0), 1.0);
+}`),
+
+  alien: frag(`
+vec4 run(vec2 uv){
+  vec2 p = uv;
+  if (u_faceFound > 0.5) {
+    p = magnify(p, u_brow, u_faceR * 2.0, 0.46*u_amount);
+    p = magnify(p, u_chin, u_faceR * 1.0, -0.46*u_amount);
+  }
+  vec3 c = texture(u_tex, clamp(p, 0.0, 1.0)).rgb;
+  float l = dot(c, lumv);
+  c = mix(c, vec3(l) * vec3(0.6, 1.06, 0.7), 0.45);
+  return vec4(clamp(c, 0.0, 1.0), 1.0);
 }`),
 };

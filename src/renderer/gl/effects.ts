@@ -9,6 +9,7 @@ export interface EffectDef {
   amount: number;
   animated: boolean;
   draggable?: boolean;
+  face?: boolean; // needs face-landmark tracking
 }
 
 // Ordered so "Normal" lands in the centre cell of the first page (index 4) — the
@@ -32,6 +33,15 @@ export const EFFECTS: EffectDef[] = [
   { id: 'fisheye', label: 'Fish Eye', amount: 1, animated: false, draggable: true },
   { id: 'stretch', label: 'Stretch', amount: 1, animated: false, draggable: true },
   { id: 'popart', label: 'Pop Art', amount: 1, animated: false },
+  // Face-tracked effects (page 3).
+  { id: 'bugeyes', label: 'Bug Out', amount: 1, animated: false, face: true },
+  { id: 'chipmunk', label: 'Chipmunk', amount: 1, animated: false, face: true },
+  { id: 'frog', label: 'Frog', amount: 1, animated: false, face: true },
+  { id: 'dizzy', label: 'Dizzy', amount: 1, animated: true, face: true },
+  { id: 'bighead', label: 'Blockhead', amount: 1, animated: false, face: true },
+  { id: 'nosetwist', label: 'Nose Twirl', amount: 1, animated: false, face: true },
+  { id: 'sweetheart', label: 'Lovestruck', amount: 1, animated: false, face: true },
+  { id: 'alien', label: 'Space Alien', amount: 1, animated: false, face: true },
 ];
 
 export const EFFECT_BY_ID = new Map(EFFECTS.map((e) => [e.id, e]));
@@ -42,4 +52,8 @@ export function effectLabel(id: string): string {
 
 export function isDraggable(id: string): boolean {
   return EFFECT_BY_ID.get(id)?.draggable ?? false;
+}
+
+export function isFaceEffect(id: string): boolean {
+  return EFFECT_BY_ID.get(id)?.face ?? false;
 }
