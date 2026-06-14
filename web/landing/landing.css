@@ -471,8 +471,8 @@ body::after {
 /* ---------- Themes: mini prints ---------- */
 .themes {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 22px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 18px;
 }
 .print {
   background: var(--print);
@@ -484,6 +484,7 @@ body::after {
 .print:nth-child(2) { transform: rotate(1.4deg); }
 .print:nth-child(3) { transform: rotate(-1deg); }
 .print:nth-child(4) { transform: rotate(2deg); }
+.print:nth-child(5) { transform: rotate(-1.6deg); }
 .print-sw { display: flex; gap: 4px; margin-bottom: 9px; }
 .print-sw span { flex: 1; height: 64px; border-radius: 2px; border: 1px solid rgba(0, 0, 0, 0.08); }
 .print figcaption { padding: 2px 2px 3px; }

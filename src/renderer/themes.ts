@@ -19,6 +19,7 @@ export const BUILTIN_THEMES = [
   { id: 'metal', name: 'Classic Metal', sub: 'Brushed aluminium', swatches: ['#c8cacd', '#7d8186', '#d63a2f', '#3a6ea5'] },
   { id: 'glass', name: 'Studio Dark', sub: 'Dark & cinematic', swatches: ['#1e1e1e', '#323232', '#ff453a', '#0a84ff'] },
   { id: 'retro', name: 'Retro Film', sub: 'Warm & vintage', swatches: ['#ece2cd', '#e2542e', '#1f7a6e', '#3a2e20'] },
+  { id: 'darkroom', name: 'Darkroom', sub: 'Warm paper · safelight red', swatches: ['#efe7d4', '#1f1c17', '#b0151b', '#8a7d68'] },
 ];
 
 const BUILTIN_IDS = BUILTIN_THEMES.map((t) => t.id);

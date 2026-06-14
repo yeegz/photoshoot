@@ -29,7 +29,7 @@ export const IPC = {
 
 export type CaptureFormat = 'png' | 'jpg';
 export type CaptureKind = 'single' | 'strip' | 'video';
-export type BuiltInThemeId = 'modern' | 'metal' | 'glass' | 'retro';
+export type BuiltInThemeId = 'modern' | 'metal' | 'glass' | 'retro' | 'darkroom';
 
 export interface AppInfo {
   name: string;
@@ -108,7 +108,7 @@ export interface RawThemeManifest {
   name?: unknown;
   author?: unknown;
   description?: unknown;
-  base?: unknown; // which built-in to extend: modern|metal|glass|retro
+  base?: unknown; // which built-in to extend: modern|metal|glass|retro|darkroom
   tokens?: unknown; // Record<string,string>
   textures?: unknown; // Record<string,string> -> relative file name in package
 }

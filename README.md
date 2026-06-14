@@ -28,7 +28,7 @@ sound is made from scratch.
 - 🙂 **8 face‑tracked “fun” effects** — Bug Out, Chipmunk, Frog, Dizzy, Blockhead, Nose Twirl, Lovestruck, Space Alien — powered by an **on‑device** MediaPipe face mesh (nothing uploaded)
 - 📸 **Single photo**, **4‑shot vertical strip** (composited with borders, paper texture & footer), and **video** capture
 - 🪄 **Classic background replacement** with six original procedural backdrops
-- 🎨 **Four polished built‑in themes** — Studio (Photo Booth‑style light), Studio Dark, Classic Metal, Retro Film
+- 🎨 **Five polished built‑in themes** — Studio (Photo Booth‑style light), Studio Dark, Classic Metal, Retro Film, and Darkroom (warm paper · safelight red)
 - 🔌 **Secure community theme + filter import** — zero‑trust; filters are clamped numeric grades + an optional validated LUT, never code
 - 🔊 **Original sound design** synthesized at runtime (no audio files at all)
 - 🖼 **Local gallery** with preview, open file, show in folder, delete
@@ -181,12 +181,13 @@ Stage Lights) are all drawn procedurally with Canvas2D — no copyrighted images
 
 ## Themes
 
-Four built‑in themes ship with the app and are switchable in Settings:
+Five built‑in themes ship with the app and are switchable in Settings:
 
 - **Studio** — bright, neutral, Photo Booth‑style light (the default on first launch)
 - **Studio Dark** — clean macOS‑style dark mode
 - **Classic Metal** — brushed‑aluminium hardware nostalgia
 - **Retro Film** — warm vintage photo‑print palette
+- **Darkroom** — warm photo‑paper chrome with a deep safelight‑red shutter
 
 Your selected theme persists locally and is restored on restart. Themes are built
 on a shared vocabulary of design tokens (colors, spacing, radius, shadow, font,

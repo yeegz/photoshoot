@@ -187,3 +187,69 @@ html[data-theme="retro"] .mode-switch {
 html[data-theme="retro"] .switch .track {
   background: rgba(90, 60, 25, 0.18);
 }
+
+/* ======================================================================
+   DARKROOM — warm photo-paper chrome with a deep safelight-red shutter.
+   The "Print Shop" palette: cream paper, warm ink, ONE deep red, charcoal
+   selection. No second saturated accent — the red shutter is the only pop.
+   ====================================================================== */
+html[data-theme="darkroom"] {
+  --app-bg: #efe7d4;
+  --app-bg-2: #e9e0cd;
+  --toolbar-bg: #e3d9c3;
+  --app-bg-accent: #b0151b;
+  --surface: #fbf7ee;
+  --surface-2: #f3ecdb;
+  --surface-3: #e8dfca;
+  --panel: #fbf7ee;
+  --panel-border: rgba(60, 48, 30, 0.16);
+  --text: #1f1c17;
+  --text-dim: #6f655a;
+  --text-faint: #9a8e79;
+  --accent: #2c2823;            /* charcoal selection — keeps the red for the shutter alone */
+  --accent-2: #2c2823;
+  --accent-contrast: #f7f1e3;
+  --btn-bg: rgba(60, 48, 30, 0.06);
+  --btn-bg-hover: rgba(60, 48, 30, 0.12);
+  --btn-text: #26231f;
+  --btn-border: rgba(60, 48, 30, 0.2);
+  --shutter: #b0151b;           /* the safelight red */
+  --shutter-2: #8f1016;
+  --shutter-ring: transparent;
+  --shutter-glow: transparent;
+  --tray-bg: rgba(34, 28, 18, 0.5);
+  --tray-border: rgba(255, 247, 234, 0.3);
+  --thumb-border: rgba(255, 247, 234, 0.85);
+  --modal-bg: #fbf7ee;
+  --modal-border: rgba(60, 48, 30, 0.18);
+  --menu-bg: #f3ecdb;
+  --menu-tile: #e8dfca;
+  --menu-tile-active: rgba(176, 21, 27, 0.14);
+  --countdown-color: #fff7ea;
+  --countdown-glow: rgba(34, 28, 18, 0.5);
+  --flash-color: #ffffff;
+  --viewfinder-frame: #201a12;
+  --viewfinder-inner: #14100a;
+  --scrollbar: rgba(60, 48, 30, 0.3);
+  --focus-ring: #b0151b;
+  --danger: #b0151b;
+  --success: #3fa34d;
+  --tl-close: #d8534b;
+  --tl-min: #d9a235;
+  --tl-zoom: #4f9d54;
+  --radius-sm: 6px;
+  --radius: 9px;
+  --radius-lg: 13px;
+  --thumb-radius: 3px;
+}
+html[data-theme="darkroom"] .app {
+  background:
+    repeating-linear-gradient(48deg, rgba(120, 90, 40, 0.022) 0, rgba(120, 90, 40, 0.022) 1px, transparent 1px, transparent 5px),
+    linear-gradient(162deg, #f2eada, #e9e0cb);
+}
+html[data-theme="darkroom"] .mode-switch {
+  background: rgba(60, 48, 30, 0.09);
+}
+html[data-theme="darkroom"] .switch .track {
+  background: rgba(60, 48, 30, 0.18);
+}
