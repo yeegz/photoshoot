@@ -56,7 +56,7 @@ body::after {
 }
 
 /* ---------- machine voice: mono readouts / plates / stamps ---------- */
-.plate, .kicker, .ready, .rebate-n, .strip-foot, .exposure, .rec,
+.plate, .kicker, .rebate-n, .strip-foot, .exposure, .rec,
 .sprockets-label, .get-stamp, .footer-stamp {
   font-family: var(--font-mono);
   text-transform: uppercase;
@@ -125,21 +125,6 @@ body::after {
   color: var(--ink-dim);
 }
 .nav-links a:hover { color: var(--ink); }
-.ready {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--ink-dim);
-}
-.ready-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 0 3px rgba(63, 163, 77, 0.18);
-}
 
 /* ---------- Hero ---------- */
 .hero {
@@ -621,14 +606,13 @@ body::after {
   .frame-wide { grid-column: span 2; }
   .themes { grid-template-columns: 1fr 1fr; }
   .nav-links { display: none; }
-  .ready { margin-left: auto; }
+  .nav .btn { margin-left: auto; }
 }
 @media (max-width: 560px) {
   .sheet { grid-template-columns: 1fr; }
   .frame-wide { grid-column: span 1; }
   .frame-wide .frame-shot { aspect-ratio: 3 / 2; }
   .themes { grid-template-columns: 1fr 1fr; }
-  .ready { display: none; }
 }
 
 /* ---------- Dark mode: a real darkroom ---------- */
