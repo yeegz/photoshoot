@@ -609,3 +609,67 @@ img {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Follow the device's appearance — a dark transform of the same design. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15130d;
+    --bg-2: #1e1b14;
+    --ink: #f3eee3;
+    --ink-dim: #a89e8c;
+    --card: #211d15;
+    --line: rgba(255, 255, 255, 0.1);
+    --red: #ff453a;
+    --red-2: #ff5a50;
+    --blue: #0a84ff;
+    --dark: #2a2620;
+    --shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 10px 26px rgba(0, 0, 0, 0.42);
+  }
+  .nav {
+    background: rgba(21, 19, 13, 0.8);
+  }
+  .btn-ghost {
+    color: var(--ink);
+  }
+  .btn-dark {
+    background: #f3eee3;
+    color: #1b1814;
+  }
+  .btn-dark:hover {
+    background: #fff;
+  }
+  /* App mockup → dark chrome, matching the app's dark theme */
+  .window {
+    background: #1c1c1c;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .win-bar {
+    background: #2a2a2a;
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+  .win-title {
+    color: #9a9a9a;
+  }
+  .win-tools {
+    background: #262626;
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+  .win-tools .seg {
+    background: rgba(255, 255, 255, 0.09);
+  }
+  .win-tools .seg span {
+    border-color: rgba(255, 255, 255, 0.42);
+  }
+  .win-tools .fx {
+    background: #1e1e1e;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #cfcfcf;
+  }
+  .strip {
+    background: #2a2620;
+  }
+  .get-card {
+    background: linear-gradient(180deg, #221e16, #1a1710);
+  }
+}

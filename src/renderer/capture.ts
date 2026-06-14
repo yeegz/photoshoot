@@ -77,11 +77,74 @@ function makeThumb(src: HTMLCanvasElement, maxEdge: number): string {
   return t.toDataURL('image/jpeg', 0.72);
 }
 
+// Animates the captured photo "printing" down from the viewfinder into the
+// tray, calls onLand() the moment it arrives (to reveal the real thumbnail),
+// then removes the flying overlay. Deliberately unhurried.
+function flyToTray(thumbnail: string, onLand: () => Promise<void> | void): Promise<void> {
+  return new Promise((resolve) => {
+    const tray = byId('tray');
+    tray.classList.remove('hidden');
+    const reduce =
+      app.settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const vf = byId('viewfinder').getBoundingClientRect();
+
+    // No animation possible (reduced motion / no viewfinder): just reveal it.
+    if (reduce || vf.width === 0) {
+      void Promise.resolve(onLand()).then(() => resolve());
+      return;
+    }
+
+    // Target slot: the right edge of the tray (where the newest photo lands).
+    const trayRect = byId('trayScroll').getBoundingClientRect();
+    const size = 70;
+    const targetX = trayRect.right - size - 5;
+    const targetY = trayRect.top + (trayRect.height - size) / 2;
+
+    const overlay = document.createElement('img');
+    overlay.className = 'print-fly';
+    overlay.src = thumbnail;
+    overlay.style.left = `${vf.left}px`;
+    overlay.style.top = `${vf.top}px`;
+    overlay.style.width = `${vf.width}px`;
+    overlay.style.height = `${vf.height}px`;
+    document.body.appendChild(overlay);
+
+    const scale = size / vf.width;
+    const anim = overlay.animate(
+      [
+        { transform: 'translate(0px, 0px) scale(1)', borderRadius: '5px', offset: 0 },
+        { transform: 'translate(0px, 0px) scale(1)', borderRadius: '5px', offset: 0.28 },
+        {
+          transform: `translate(${targetX - vf.left}px, ${targetY - vf.top}px) scale(${scale})`,
+          borderRadius: `${5 / scale}px`,
+          offset: 1,
+        },
+      ],
+      { duration: 760, easing: 'cubic-bezier(0.5, 0, 0.18, 1)', fill: 'forwards' }
+    );
+
+    // Reveal the real thumbnail on landing. A guaranteed timeout backs up
+    // anim.finished so the photo always appears, even if the animation is
+    // interrupted or never fires.
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      void Promise.resolve(onLand()).then(() => {
+        overlay.remove();
+        resolve();
+      });
+    };
+    anim.finished.then(finish).catch(finish);
+    setTimeout(finish, 850);
+  });
+}
+
 async function saveCanvas(canvas: HTMLCanvasElement, kind: CaptureKind): Promise<boolean> {
   const format = app.settings.format;
   const type = format === 'jpg' ? 'image/jpeg' : 'image/png';
   const dataUrl = canvas.toDataURL(type, format === 'jpg' ? 0.92 : undefined);
-  const thumbnail = makeThumb(canvas, kind === 'strip' ? 180 : 240);
+  const thumbnail = makeThumb(canvas, kind === 'strip' ? 200 : 280);
   const res = await api.saveCapture({
     kind,
     format,
@@ -91,14 +154,15 @@ async function saveCanvas(canvas: HTMLCanvasElement, kind: CaptureKind): Promise
     effect: app.effect,
     thumbnail,
   });
-  if (res.ok) {
-    await refreshGallery(true);
-    sound.play('trayDrop'); // the photo dropping into the tray IS the confirmation
-    return true;
+  if (!res.ok) {
+    toast(res.error ?? 'Could not save capture.', 'error');
+    sound.play('error');
+    return false;
   }
-  toast(res.error ?? 'Could not save capture.', 'error');
-  sound.play('error');
-  return false;
+  // Print the photo down into the tray, revealing the real thumbnail on landing.
+  await flyToTray(thumbnail, () => refreshGallery(false));
+  sound.play('trayDrop'); // lands with a satisfying drop
+  return true;
 }
 
 // ---------------------------------------------------------------------------
