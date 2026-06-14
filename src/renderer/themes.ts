@@ -80,9 +80,33 @@ export function applyTheme(themeId: string): void {
   root.dataset.theme = BUILTIN_IDS.includes(themeId) ? themeId : 'modern';
 }
 
+/** The built-in theme that matches the device's light/dark appearance. */
+export function deviceTheme(): string {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'glass' : 'modern';
+}
+
+/** Apply whatever theme the settings resolve to (device theme when on Auto). */
+export function applyResolvedTheme(): void {
+  applyTheme(app.settings.autoTheme ? deviceTheme() : app.settings.theme);
+}
+
+/** Re-apply on OS appearance changes while Auto is on. Call once on boot. */
+export function watchDeviceTheme(): void {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (app.settings.autoTheme) applyTheme(deviceTheme());
+  });
+}
+
+/** Pick a specific theme — turns Auto off. */
 export async function setTheme(themeId: string): Promise<void> {
   applyTheme(themeId);
-  await app.updateSettings({ theme: themeId });
+  await app.updateSettings({ theme: themeId, autoTheme: false });
+}
+
+/** Follow the device appearance automatically. */
+export async function setAutoTheme(): Promise<void> {
+  applyTheme(deviceTheme());
+  await app.updateSettings({ autoTheme: true });
 }
 
 export async function importThemeFlow(): Promise<import('../shared/ipc-contract').ThemeImportResult> {
@@ -97,7 +121,9 @@ export async function importThemeFlow(): Promise<import('../shared/ipc-contract'
 export async function removeImportedTheme(id: string): Promise<void> {
   await api.removeImportedTheme(id);
   await loadImportedThemes();
-  if (app.settings.theme === `imported:${id}`) {
+  if (!app.settings.autoTheme && app.settings.theme === `imported:${id}`) {
     await setTheme('modern');
+  } else {
+    applyResolvedTheme();
   }
 }

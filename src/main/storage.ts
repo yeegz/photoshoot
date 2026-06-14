@@ -32,6 +32,7 @@ function coerceSettings(raw: unknown): Settings {
   const format: CaptureFormat = obj.format === 'jpg' ? 'jpg' : 'png';
   return {
     theme: typeof obj.theme === 'string' && obj.theme.length < 80 ? obj.theme : DEFAULT_SETTINGS.theme,
+    autoTheme: typeof obj.autoTheme === 'boolean' ? obj.autoTheme : DEFAULT_SETTINGS.autoTheme,
     cameraId:
       typeof obj.cameraId === 'string' && obj.cameraId.length < 256 ? obj.cameraId : null,
     mirror: typeof obj.mirror === 'boolean' ? obj.mirror : DEFAULT_SETTINGS.mirror,

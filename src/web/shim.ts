@@ -91,6 +91,7 @@ function coerceSettings(raw: unknown): Settings {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   return {
     theme: typeof o.theme === 'string' ? o.theme : DEFAULT_SETTINGS.theme,
+    autoTheme: typeof o.autoTheme === 'boolean' ? o.autoTheme : DEFAULT_SETTINGS.autoTheme,
     cameraId: typeof o.cameraId === 'string' ? o.cameraId : null,
     mirror: typeof o.mirror === 'boolean' ? o.mirror : DEFAULT_SETTINGS.mirror,
     countdownSeconds: clampNum(o.countdownSeconds, 0, 5, DEFAULT_SETTINGS.countdownSeconds),

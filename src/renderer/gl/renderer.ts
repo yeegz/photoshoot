@@ -38,6 +38,7 @@ export class GLRenderer {
   private effect = 'normal';
   private amount = 0;
   private mirror = false;
+  private center = { x: 0.5, y: 0.5 };
   private maxSize: number | null = null;
   private frameHook: (() => void) | null = null;
 
@@ -129,6 +130,12 @@ export class GLRenderer {
     this.mirror = mirror;
   }
 
+  /** Distortion center in normalized preview coords (0..1). */
+  setCenter(x: number, y: number): void {
+    this.center.x = Math.min(1, Math.max(0, x));
+    this.center.y = Math.min(1, Math.max(0, y));
+  }
+
   private sourceDims(): { w: number; h: number } {
     const s = this.source;
     if (s instanceof HTMLVideoElement) return { w: s.videoWidth, h: s.videoHeight };
@@ -192,6 +199,8 @@ export class GLRenderer {
     gl.uniform1f(prog.uniforms.u_time, (performance.now() - this.startTime) / 1000);
     gl.uniform1f(prog.uniforms.u_amount, amount);
     gl.uniform1f(prog.uniforms.u_mirror, mirror ? 1 : 0);
+    // Mirror-correct the center so a dragged point lines up with the pointer.
+    gl.uniform2f(prog.uniforms.u_center, mirror ? 1 - this.center.x : this.center.x, this.center.y);
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.bindVertexArray(null);

@@ -1,8 +1,8 @@
 // Raw GLSL (WebGL2 / GLSL ES 3.00) for the effect library. Each effect supplies
 // a `vec4 run(vec2 uv)` body; the shared header + main wrap it, apply mirroring,
-// and write the final pixel. Distortion effects modify uv before sampling;
-// color effects sample then transform. Keeping every effect as one small,
-// readable shader makes the switching system trivial.
+// and write the final pixel. Distortion effects warp uv around `u_center` (which
+// the renderer sets, already mirror-corrected, so a dragged center lines up with
+// the pointer). Color effects ignore it.
 
 export const VERTEX_SRC = `#version 300 es
 in vec2 a_pos;
@@ -21,6 +21,7 @@ uniform vec2 u_res;
 uniform float u_time;
 uniform float u_amount;
 uniform float u_mirror;
+uniform vec2 u_center;
 
 vec3 lumv = vec3(0.299, 0.587, 0.114);
 `;
@@ -58,6 +59,78 @@ vec4 run(vec2 uv){
   return vec4(vec3(l), 1.0);
 }`),
 
+  plasticcamera: frag(`
+vec4 run(vec2 uv){
+  vec3 c = texture(u_tex, uv).rgb;
+  c = (c - 0.5) * 1.22 + 0.5;                       // contrast
+  float l = dot(c, lumv);
+  c = clamp(mix(vec3(l), c, 1.55), 0.0, 1.0);       // boost saturation
+  c.r = clamp(c.r * 1.06 + 0.02, 0.0, 1.0);         // warm cross-process
+  c.b = clamp(c.b * 0.92, 0.0, 1.0);
+  float d = distance(uv, vec2(0.5));
+  c *= smoothstep(0.92, 0.3, d);                    // heavy vignette
+  return vec4(c, 1.0);
+}`),
+
+  comic: frag(`
+vec4 run(vec2 uv){
+  vec2 px = 1.0 / u_res;
+  float tl = dot(texture(u_tex, uv+px*vec2(-1.0,-1.0)).rgb, lumv);
+  float  l = dot(texture(u_tex, uv+px*vec2(-1.0, 0.0)).rgb, lumv);
+  float bl = dot(texture(u_tex, uv+px*vec2(-1.0, 1.0)).rgb, lumv);
+  float tr = dot(texture(u_tex, uv+px*vec2( 1.0,-1.0)).rgb, lumv);
+  float  r = dot(texture(u_tex, uv+px*vec2( 1.0, 0.0)).rgb, lumv);
+  float br = dot(texture(u_tex, uv+px*vec2( 1.0, 1.0)).rgb, lumv);
+  float tt = dot(texture(u_tex, uv+px*vec2( 0.0,-1.0)).rgb, lumv);
+  float bb = dot(texture(u_tex, uv+px*vec2( 0.0, 1.0)).rgb, lumv);
+  float gx = -tl - 2.0*l - bl + tr + 2.0*r + br;
+  float gy = -tl - 2.0*tt - tr + bl + 2.0*bb + br;
+  float edge = step(0.55, sqrt(gx*gx + gy*gy));
+  vec3 c = texture(u_tex, uv).rgb;
+  vec3 q = floor(c * 5.0 + 0.5) / 5.0;
+  return vec4(mix(q, vec3(0.04,0.03,0.05), edge), 1.0);
+}`),
+
+  colorpencil: frag(`
+vec4 run(vec2 uv){
+  vec2 px = 1.0 / u_res;
+  float tl = dot(texture(u_tex, uv+px*vec2(-1.0,-1.0)).rgb, lumv);
+  float  l = dot(texture(u_tex, uv+px*vec2(-1.0, 0.0)).rgb, lumv);
+  float bl = dot(texture(u_tex, uv+px*vec2(-1.0, 1.0)).rgb, lumv);
+  float tr = dot(texture(u_tex, uv+px*vec2( 1.0,-1.0)).rgb, lumv);
+  float  r = dot(texture(u_tex, uv+px*vec2( 1.0, 0.0)).rgb, lumv);
+  float br = dot(texture(u_tex, uv+px*vec2( 1.0, 1.0)).rgb, lumv);
+  float tt = dot(texture(u_tex, uv+px*vec2( 0.0,-1.0)).rgb, lumv);
+  float bb = dot(texture(u_tex, uv+px*vec2( 0.0, 1.0)).rgb, lumv);
+  float gx = -tl - 2.0*l - bl + tr + 2.0*r + br;
+  float gy = -tl - 2.0*tt - tr + bl + 2.0*bb + br;
+  float edge = clamp(sqrt(gx*gx + gy*gy) * 1.5, 0.0, 1.0);
+  vec3 base = texture(u_tex, uv).rgb;
+  vec3 pale = mix(vec3(1.0), base, 0.42);           // pale colored-pencil tint
+  vec3 col = pale * (1.0 - edge * 0.85);            // sketchy dark strokes
+  return vec4(clamp(col, 0.0, 1.0), 1.0);
+}`),
+
+  glow: frag(`
+vec4 run(vec2 uv){
+  vec3 base = texture(u_tex, uv).rgb;
+  vec2 px = 2.5 / u_res;
+  vec3 bloom = vec3(0.0);
+  float total = 0.0;
+  for (int x = -2; x <= 2; x++) {
+    for (int y = -2; y <= 2; y++) {
+      vec2 o = vec2(float(x), float(y)) * px;
+      vec3 s = texture(u_tex, uv + o).rgb;
+      float b = max(0.0, dot(s, lumv) - 0.6);
+      float w = 1.0 - length(vec2(float(x), float(y))) * 0.25;
+      bloom += s * b * w;
+      total += 1.0;
+    }
+  }
+  bloom /= total;
+  return vec4(clamp(base + bloom * (5.0 * u_amount), 0.0, 1.0), 1.0);
+}`),
+
   thermal: frag(`
 vec3 ramp(float t){
   vec3 c0=vec3(0.0,0.0,0.18);
@@ -86,58 +159,47 @@ vec4 run(vec2 uv){
   return vec4(clamp(col,0.0,1.0), 1.0);
 }`),
 
-  comic: frag(`
-vec4 run(vec2 uv){
-  vec2 px = 1.0 / u_res;
-  float tl = dot(texture(u_tex, uv+px*vec2(-1.0,-1.0)).rgb, lumv);
-  float  l = dot(texture(u_tex, uv+px*vec2(-1.0, 0.0)).rgb, lumv);
-  float bl = dot(texture(u_tex, uv+px*vec2(-1.0, 1.0)).rgb, lumv);
-  float tr = dot(texture(u_tex, uv+px*vec2( 1.0,-1.0)).rgb, lumv);
-  float  r = dot(texture(u_tex, uv+px*vec2( 1.0, 0.0)).rgb, lumv);
-  float br = dot(texture(u_tex, uv+px*vec2( 1.0, 1.0)).rgb, lumv);
-  float tt = dot(texture(u_tex, uv+px*vec2( 0.0,-1.0)).rgb, lumv);
-  float bb = dot(texture(u_tex, uv+px*vec2( 0.0, 1.0)).rgb, lumv);
-  float gx = -tl - 2.0*l - bl + tr + 2.0*r + br;
-  float gy = -tl - 2.0*tt - tr + bl + 2.0*bb + br;
-  float edge = step(0.55, sqrt(gx*gx + gy*gy));
-  vec3 c = texture(u_tex, uv).rgb;
-  vec3 q = floor(c * 5.0 + 0.5) / 5.0;
-  return vec4(mix(q, vec3(0.04,0.03,0.05), edge), 1.0);
-}`),
-
   bulge: frag(`
 vec4 run(vec2 uv){
-  vec2 c = uv - 0.5;
+  vec2 c = uv - u_center;
   float r = length(c);
   float maxr = 0.7071;
   float a = atan(c.y, c.x);
   float rn = clamp(r / maxr, 0.0, 1.0);
   float warped = pow(rn, 1.0 - 0.55*u_amount) * maxr;
-  vec2 nuv = 0.5 + vec2(cos(a), sin(a)) * warped;
+  vec2 nuv = u_center + vec2(cos(a), sin(a)) * warped;
   return texture(u_tex, clamp(nuv, 0.0, 1.0));
 }`),
 
   pinch: frag(`
 vec4 run(vec2 uv){
-  vec2 c = uv - 0.5;
+  vec2 c = uv - u_center;
   float r = length(c);
   float maxr = 0.7071;
   float a = atan(c.y, c.x);
   float rn = clamp(r / maxr, 0.0, 1.0);
   float warped = pow(rn, 1.0 + 0.9*u_amount) * maxr;
-  vec2 nuv = 0.5 + vec2(cos(a), sin(a)) * warped;
+  vec2 nuv = u_center + vec2(cos(a), sin(a)) * warped;
   return texture(u_tex, clamp(nuv, 0.0, 1.0));
 }`),
 
   twirl: frag(`
 vec4 run(vec2 uv){
-  vec2 c = uv - 0.5;
+  vec2 c = uv - u_center;
   float r = length(c);
   float a = atan(c.y, c.x);
   float falloff = 1.0 - clamp(r / 0.7071, 0.0, 1.0);
   a += falloff * falloff * 3.2 * u_amount;
-  vec2 nuv = 0.5 + r * vec2(cos(a), sin(a));
+  vec2 nuv = u_center + r * vec2(cos(a), sin(a));
   return texture(u_tex, clamp(nuv, 0.0, 1.0));
+}`),
+
+  squeeze: frag(`
+vec4 run(vec2 uv){
+  vec2 d = uv - u_center;
+  float squeeze = 1.0 + 0.95 * u_amount * exp(-pow(d.y / 0.32, 2.0));
+  d.x *= squeeze;
+  return texture(u_tex, clamp(d + u_center, 0.0, 1.0));
 }`),
 
   mirror: frag(`
@@ -147,56 +209,36 @@ vec4 run(vec2 uv){
   return texture(u_tex, nuv);
 }`),
 
-  fisheye: frag(`
-vec4 run(vec2 uv){
-  vec2 p = (uv - 0.5) * 2.0;
-  float r = length(p);
-  if (r < 0.0001) return texture(u_tex, uv);
-  float k = mix(1.0, 0.5, u_amount);
-  float rn = pow(min(r, 1.0), k);
-  vec2 nuv = (p / r) * rn * 0.5 + 0.5;
-  return texture(u_tex, clamp(nuv, 0.0, 1.0));
-}`),
-
-  stretch: frag(`
-vec4 run(vec2 uv){
-  vec2 d = uv - 0.5;
-  float widen = 1.0 + 0.85 * u_amount * (0.25 - d.y * d.y) * 4.0;
-  d.x /= max(widen, 0.2);
-  return texture(u_tex, clamp(d + 0.5, 0.0, 1.0));
-}`),
-
   kaleidoscope: frag(`
 vec4 run(vec2 uv){
-  vec2 c = uv - 0.5;
+  vec2 c = uv - u_center;
   float a = atan(c.y, c.x) + u_time * 0.25;
   float r = length(c);
   float sides = 6.0;
   float seg = 6.28318 / sides;
   a = mod(a, seg);
   a = abs(a - seg * 0.5);
-  vec2 nuv = vec2(cos(a), sin(a)) * r + 0.5;
+  vec2 nuv = vec2(cos(a), sin(a)) * r + u_center;
   return texture(u_tex, fract(nuv));
 }`),
 
-  glow: frag(`
+  fisheye: frag(`
 vec4 run(vec2 uv){
-  vec3 base = texture(u_tex, uv).rgb;
-  vec2 px = 2.5 / u_res;
-  vec3 bloom = vec3(0.0);
-  float total = 0.0;
-  for (int x = -2; x <= 2; x++) {
-    for (int y = -2; y <= 2; y++) {
-      vec2 o = vec2(float(x), float(y)) * px;
-      vec3 s = texture(u_tex, uv + o).rgb;
-      float b = max(0.0, dot(s, lumv) - 0.6);
-      float w = 1.0 - length(vec2(float(x), float(y))) * 0.25;
-      bloom += s * b * w;
-      total += 1.0;
-    }
-  }
-  bloom /= total;
-  return vec4(clamp(base + bloom * (5.0 * u_amount), 0.0, 1.0), 1.0);
+  vec2 p = (uv - u_center) * 2.0;
+  float r = length(p);
+  if (r < 0.0001) return texture(u_tex, uv);
+  float k = mix(1.0, 0.5, u_amount);
+  float rn = pow(min(r, 1.0), k);
+  vec2 nuv = (p / r) * rn * 0.5 + u_center;
+  return texture(u_tex, clamp(nuv, 0.0, 1.0));
+}`),
+
+  stretch: frag(`
+vec4 run(vec2 uv){
+  vec2 d = uv - u_center;
+  float widen = 1.0 + 0.85 * u_amount * (0.25 - d.y * d.y) * 4.0;
+  d.x /= max(widen, 0.2);
+  return texture(u_tex, clamp(d + u_center, 0.0, 1.0));
 }`),
 
   popart: frag(`

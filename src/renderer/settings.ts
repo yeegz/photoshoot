@@ -13,6 +13,7 @@ import {
   BUILTIN_THEMES,
   getImportedThemes,
   setTheme,
+  setAutoTheme,
   importThemeFlow,
   removeImportedTheme,
 } from './themes';
@@ -144,8 +145,30 @@ function themeCard(
 
 function buildThemeSection(): HTMLElement {
   const list = el('div', { className: 'theme-list' });
+  const auto = app.settings.autoTheme;
+
+  // Automatic — follows the device's light/dark appearance.
+  const autoCard = el('button', { className: `theme-card${auto ? ' is-active' : ''}`, type: 'button' });
+  const autoSw = el('div', { className: 'theme-swatches' });
+  ['#ececec', '#1a1a1a', '#ff3b30', '#0a84ff'].forEach((c) => {
+    const s = el('span', { className: 'theme-swatch' });
+    s.style.background = c;
+    autoSw.appendChild(s);
+  });
+  autoCard.append(
+    autoSw,
+    el('div', { className: 'theme-card-name', text: 'Automatic' }),
+    el('div', { className: 'theme-card-sub', text: 'Match your device' })
+  );
+  autoCard.addEventListener('click', async () => {
+    await setAutoTheme();
+    sound.play('themeSwitch');
+    render();
+  });
+  list.appendChild(autoCard);
+
   for (const t of BUILTIN_THEMES) {
-    list.appendChild(themeCard(t.id, t.name, t.sub, t.swatches, app.settings.theme === t.id, false));
+    list.appendChild(themeCard(t.id, t.name, t.sub, t.swatches, !auto && app.settings.theme === t.id, false));
   }
   for (const t of getImportedThemes()) {
     const sw = [
@@ -155,7 +178,7 @@ function buildThemeSection(): HTMLElement {
       t.tokens['--text'] ?? '#fff',
     ];
     list.appendChild(
-      themeCard(`imported:${t.id}`, t.name, `By ${t.author}`, sw, app.settings.theme === `imported:${t.id}`, true)
+      themeCard(`imported:${t.id}`, t.name, `By ${t.author}`, sw, !auto && app.settings.theme === `imported:${t.id}`, true)
     );
   }
 
@@ -315,7 +338,7 @@ export function render(): void {
   resetAll.addEventListener('click', async () => {
     if (resetAll.dataset.confirm === '1') {
       await app.updateSettings({ ...DEFAULT_SETTINGS, cameraId: app.settings.cameraId });
-      await setTheme('modern');
+      await setAutoTheme();
       setPerfOverlay(false);
       toast('Settings reset.', 'info');
       render();

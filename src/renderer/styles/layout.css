@@ -162,6 +162,12 @@
   background: var(--viewfinder-inner);
   object-fit: cover;
 }
+.viewfinder.is-draggable .gl-canvas {
+  cursor: grab;
+}
+.viewfinder.is-draggable .gl-canvas:active {
+  cursor: grabbing;
+}
 
 /* ---- Bottom toolbar ---- */
 .toolbar {

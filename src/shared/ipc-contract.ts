@@ -37,6 +37,8 @@ export interface AppInfo {
 export interface Settings {
   // Active theme id: a built-in id or `imported:<id>`.
   theme: string;
+  // When true, the theme follows the device's light/dark appearance.
+  autoTheme: boolean;
   cameraId: string | null;
   mirror: boolean;
   countdownSeconds: number; // 0 = instant, otherwise 1..5
@@ -50,6 +52,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'modern',
+  autoTheme: true,
   cameraId: null,
   mirror: true,
   countdownSeconds: 3,

@@ -10,7 +10,7 @@ import { CameraManager } from './camera';
 import { sound } from './sound';
 import { byId, qsa } from './dom';
 import { toast } from './toast';
-import { applyTheme, loadImportedThemes } from './themes';
+import { loadImportedThemes, applyResolvedTheme, watchDeviceTheme } from './themes';
 import { refreshGallery, exitReview } from './gallery';
 import { buildEffectsMenu, toggleEffects, closeEffects, isEffectsOpen } from './effectsMenu';
 import { initBackgroundsMenu } from './backgroundsMenu';
@@ -19,7 +19,7 @@ import { initSettings, openSettings } from './settings';
 import { setPerfOverlay } from './perf';
 import { triggerShutter, videoRecorder } from './capture';
 import { openOverlay, closeOverlay, closeTop, isAnyOpen } from './overlays';
-import { effectLabel } from './gl/effects';
+import { effectLabel, isDraggable } from './gl/effects';
 import type { CameraErrorKind } from './camera';
 import type { CaptureKind } from '../shared/ipc-contract';
 
@@ -173,6 +173,35 @@ function wireControls(): void {
   byId('scrim').addEventListener('click', () => closeTop());
 }
 
+// Drag on the live preview to move a distortion effect's center.
+function wireDistortionDrag(): void {
+  const canvas = byId<HTMLCanvasElement>('glCanvas');
+  let dragging = false;
+  const update = (e: PointerEvent) => {
+    const r = canvas.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) return;
+    app.renderer.setCenter((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+  };
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!isDraggable(app.effect)) return;
+    dragging = true;
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    update(e);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (dragging) update(e);
+  });
+  const end = () => {
+    dragging = false;
+  };
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', end);
+}
+
 function wireKeyboard(): void {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -222,7 +251,8 @@ async function bootstrap(): Promise<void> {
 
   app.applySideEffects();
   await loadImportedThemes();
-  applyTheme(app.settings.theme);
+  applyResolvedTheme();
+  watchDeviceTheme();
   setPerfOverlay(app.settings.perfOverlay);
   app.effect = 'normal';
   renderer.setEffect('normal');
@@ -239,6 +269,7 @@ async function bootstrap(): Promise<void> {
 
   wireControls();
   wireKeyboard();
+  wireDistortionDrag();
   console.info('[photoshoot] renderer ready');
 
   if (!renderer.available) {

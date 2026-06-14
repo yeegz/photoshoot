@@ -10,6 +10,7 @@ export interface CompiledProgram {
     u_time: WebGLUniformLocation | null;
     u_amount: WebGLUniformLocation | null;
     u_mirror: WebGLUniformLocation | null;
+    u_center: WebGLUniformLocation | null;
   };
 }
 
@@ -58,6 +59,7 @@ export function linkProgram(
       u_time: gl.getUniformLocation(program, 'u_time'),
       u_amount: gl.getUniformLocation(program, 'u_amount'),
       u_mirror: gl.getUniformLocation(program, 'u_mirror'),
+      u_center: gl.getUniformLocation(program, 'u_center'),
     },
   };
 }

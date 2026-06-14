@@ -6,7 +6,7 @@
 
 import { app } from './app';
 import { GLRenderer } from './gl/renderer';
-import { EFFECTS, effectLabel } from './gl/effects';
+import { EFFECTS, effectLabel, isDraggable } from './gl/effects';
 import { byId, el, clear } from './dom';
 import { sound } from './sound';
 
@@ -105,8 +105,10 @@ function markActive(id: string): void {
 function applyEffect(id: string): void {
   app.effect = id;
   app.renderer.setEffect(id);
+  app.renderer.setCenter(0.5, 0.5); // each effect starts centered; drag to move it
   markActive(id);
   byId('btnEffects').classList.toggle('is-on', id !== 'normal');
+  byId('viewfinder').classList.toggle('is-draggable', isDraggable(id));
   byId('shutterHint').textContent =
     id === 'normal' ? 'Tap to capture' : `Effect · ${effectLabel(id)}`;
 }
