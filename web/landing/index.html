@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Photoshoot — a joyful webcam photobooth for your desktop</title>
+    <title>Photoshoot — a webcam photobooth for your desktop</title>
     <meta
       name="description"
-      content="Photoshoot is a free, private photobooth app. Real-time effects, 4-shot strips, background replacement, and four polished themes. Use it online or download for Windows. Nothing ever leaves your device."
+      content="Photoshoot is a free, private photobooth app. 17 real-time GLSL effects, 8 face-mesh effects, 4-shot strips, background replacement, four themes, and secure community filters. Use it online or download for Windows. Nothing ever leaves your device."
     />
     <link rel="icon" href="assets/icon.png" />
-    <meta property="og:title" content="Photoshoot — a joyful webcam photobooth" />
-    <meta property="og:description" content="Real-time effects, 4-shot strips, themes, and total privacy. Use online or download for Windows." />
+    <meta property="og:title" content="Photoshoot — a webcam photobooth for your desktop" />
+    <meta property="og:description" content="Real-time effects, face-mesh fun, 4-shot strips, themes, community filters, and total privacy. Use online or download for Windows." />
     <meta property="og:image" content="assets/icon.png" />
     <link rel="stylesheet" href="landing.css" />
   </head>
@@ -18,7 +18,7 @@
     <!-- Nav -->
     <header class="nav">
       <a class="brand" href="#top">
-        <img src="assets/icon.png" alt="" width="34" height="34" />
+        <img src="assets/icon.png" alt="" width="32" height="32" />
         <span>Photoshoot</span>
       </a>
       <nav class="nav-links">
@@ -27,18 +27,19 @@
         <a href="#privacy">Privacy</a>
         <a href="#get">Download</a>
       </nav>
+      <span class="ready" aria-hidden="true"><span class="ready-dot"></span>Ready</span>
       <a class="btn btn-primary btn-sm" href="app/">Launch web app</a>
     </header>
 
     <!-- Hero -->
     <section class="hero" id="top">
       <div class="hero-copy">
-        <span class="eyebrow">Free · Private · No account</span>
-        <h1>Your webcam, but <span class="wink">fun</span>.</h1>
+        <span class="plate">Free · Private · No account</span>
+        <h1>Your webcam,<br />but <span class="wink">fun</span>.</h1>
         <p class="lede">
-          A playful photobooth for your desktop. Snap photos and 4-shot strips,
-          pile on real-time effects, swap your background, and hear every
-          satisfying click — all processed right on your device.
+          A photobooth for your desktop. Snap photos and 4-shot strips,
+          pile on real-time effects, warp your face, swap your background, and
+          hear every satisfying click — all developed right on your device.
         </p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="app/">
@@ -53,99 +54,122 @@
         <p class="hero-foot">Works in any modern browser. No sign-up, no uploads, no tracking.</p>
       </div>
 
-      <!-- App mockup -->
+      <!-- Hero art: a real photo strip + the app, sitting on the paper -->
       <div class="hero-art" aria-hidden="true">
-        <div class="strip">
-          <div class="strip-frame f1"></div>
-          <div class="strip-frame f2"></div>
-          <div class="strip-frame f3"></div>
-          <div class="strip-frame f4"></div>
-          <div class="strip-word">Photoshoot</div>
-        </div>
         <div class="window">
           <div class="win-bar">
             <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
             <span class="win-title">Photoshoot</span>
           </div>
-          <div class="win-view"></div>
+          <div class="win-view">
+            <div class="subject"></div>
+            <div class="vf-brackets"></div>
+            <span class="rec"><span class="rec-dot"></span>REC</span>
+            <span class="exposure">ISO 400 · f/1.8 · ON-DEVICE</span>
+          </div>
           <div class="win-tools">
             <div class="seg"><span></span><span class="on"></span><span></span></div>
             <div class="shutter"><svg viewBox="0 0 28 28" width="20" height="20"><path fill="#fff" fill-rule="evenodd" d="M9.6 5.4 8.4 7H5A2.2 2.2 0 0 0 2.8 9.2V19.4A2.2 2.2 0 0 0 5 21.6H23A2.2 2.2 0 0 0 25.2 19.4V9.2A2.2 2.2 0 0 0 23 7H19.6L18.4 5.4Z M14 9.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2Z M14 11.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z"/></svg></div>
             <div class="fx">Effects</div>
           </div>
         </div>
+
+        <div class="strip">
+          <div class="strip-frame f1 develop"></div>
+          <div class="strip-frame f2 develop"></div>
+          <div class="strip-frame f3 develop"></div>
+          <div class="strip-frame f4 develop"></div>
+          <div class="strip-foot"><span class="strip-word">Photo·Shoot</span><span class="strip-date">06·14·26</span></div>
+        </div>
       </div>
     </section>
 
-    <!-- Features -->
+    <!-- Features: a contact sheet -->
     <section class="section" id="features">
+      <div class="kicker"><span>Contact Sheet</span><span class="kicker-rule"></span><span>25 effects · 6 reasons</span></div>
       <div class="section-head">
         <h2>Everything you need to make a moment</h2>
-        <p>Built for fun, polished like a finished product.</p>
+        <p>Built for fun, developed like a finished print.</p>
       </div>
-      <div class="grid">
-        <article class="card">
-          <div class="card-ico ico-fx">✦</div>
-          <h3>15 real-time effects</h3>
-          <p>Sepia, Thermal, X-Ray, Comic, Pop Art, Bulge, Twirl, Fish Eye and more — rendered live on the GPU with raw WebGL shaders.</p>
+
+      <div class="sheet">
+        <article class="frame frame-wide develop" style="--n:'01'">
+          <div class="frame-shot shot-effects">
+            <span class="chip chip-a">Sepia</span>
+            <span class="chip chip-b">Thermal</span>
+            <span class="chip chip-c">Pop Art</span>
+            <span class="chip chip-d">Twirl</span>
+            <span class="chip chip-e">X-Ray</span>
+          </div>
+          <div class="rebate"><span class="rebate-n">01</span><span class="rebate-t">17 real-time GLSL effects</span></div>
+          <p class="frame-note">Sepia, Thermal, X-Ray, Comic, Pop Art, Bulge, Twirl, Fish Eye and more — rendered live on the GPU with hand-written WebGL shaders. Distortions have a draggable center.</p>
         </article>
-        <article class="card">
-          <div class="card-ico ico-strip">▤</div>
-          <h3>Photos, strips &amp; video</h3>
-          <p>Single shots, the classic 4-shot vertical strip with a paper finish, or short clips — with a dramatic 3-2-1 countdown and white flash.</p>
+
+        <article class="frame develop" style="--n:'02'">
+          <div class="frame-shot shot-face"></div>
+          <div class="rebate"><span class="rebate-n">02</span><span class="rebate-t">8 face-mesh effects</span></div>
+          <p class="frame-note">Bug Out, Chipmunk, Frog, Lovestruck and more — playful overlays that lock to your features in real time. The face mesh runs entirely on your device.</p>
         </article>
-        <article class="card">
-          <div class="card-ico ico-bg">⛰</div>
-          <h3>Background replacement</h3>
-          <p>Step out, step back in, and drop yourself into dreamy clouds, a space horizon, a sunset, and more — all original art.</p>
+
+        <article class="frame develop" style="--n:'03'">
+          <div class="frame-shot shot-strip"></div>
+          <div class="rebate"><span class="rebate-n">03</span><span class="rebate-t">Photos, strips &amp; video</span></div>
+          <p class="frame-note">Single shots, the classic 4-shot vertical strip with a real paper finish, or short clips — with a 3-2-1 countdown and a white flash.</p>
         </article>
-        <article class="card">
-          <div class="card-ico ico-theme">◐</div>
-          <h3>Four crafted themes</h3>
-          <p>Switch the whole look: bright Studio, cinematic Studio Dark, brushed Classic Metal, or warm Retro Film. Import community themes too.</p>
+
+        <article class="frame develop" style="--n:'04'">
+          <div class="frame-shot shot-bg"></div>
+          <div class="rebate"><span class="rebate-n">04</span><span class="rebate-t">Background replacement</span></div>
+          <p class="frame-note">Step out, step back in, and drop into dreamy clouds, a space horizon, or a sunset — all original procedural art.</p>
         </article>
-        <article class="card">
-          <div class="card-ico ico-sound">♪</div>
-          <h3>Original sound design</h3>
-          <p>Every click, tick and chime is synthesized in-app — tactile and satisfying, with volume and mute that stick.</p>
+
+        <article class="frame develop" style="--n:'05'">
+          <div class="frame-shot shot-sound"></div>
+          <div class="rebate"><span class="rebate-n">05</span><span class="rebate-t">Original sound design</span></div>
+          <p class="frame-note">Every click, tick and chime is synthesized in-app from oscillators and filtered noise — no audio files at all.</p>
         </article>
-        <article class="card">
-          <div class="card-ico ico-lock">⛨</div>
-          <h3>Private by design</h3>
-          <p>Your camera never leaves your machine. No accounts, no analytics, no cloud — captures are yours alone.</p>
+
+        <article class="frame develop" style="--n:'06'">
+          <div class="frame-shot shot-theme"></div>
+          <div class="rebate"><span class="rebate-n">06</span><span class="rebate-t">Themes &amp; community</span></div>
+          <p class="frame-note">Four crafted themes — Studio, Studio Dark, Classic Metal, Retro Film — plus securely sandboxed community themes and filters.</p>
         </article>
       </div>
     </section>
+
+    <!-- The one film-strip divider -->
+    <div class="sprockets" aria-hidden="true"><span class="sprockets-label">One app · Four moods · 36 EXP</span></div>
 
     <!-- Themes -->
     <section class="section section-tint" id="themes">
       <div class="section-head">
         <h2>One app, four moods</h2>
-        <p>The whole interface restyles instantly — not just a color swap.</p>
+        <p>The whole interface restyles instantly — not just a color swap. Import secure community themes and filters, too.</p>
       </div>
       <div class="themes">
-        <div class="theme-chip">
-          <div class="sw"><span style="background:#ececec"></span><span style="background:#1a1a1a"></span><span style="background:#ff3b30"></span><span style="background:#007aff"></span></div>
-          <strong>Studio</strong><em>Bright &amp; neutral</em>
-        </div>
-        <div class="theme-chip">
-          <div class="sw"><span style="background:#1e1e1e"></span><span style="background:#323232"></span><span style="background:#ff453a"></span><span style="background:#0a84ff"></span></div>
-          <strong>Studio Dark</strong><em>Cinematic</em>
-        </div>
-        <div class="theme-chip">
-          <div class="sw"><span style="background:#c8cacd"></span><span style="background:#7d8186"></span><span style="background:#d63a2f"></span><span style="background:#3a6ea5"></span></div>
-          <strong>Classic Metal</strong><em>Brushed aluminium</em>
-        </div>
-        <div class="theme-chip">
-          <div class="sw"><span style="background:#ece2cd"></span><span style="background:#e2542e"></span><span style="background:#1f7a6e"></span><span style="background:#3a2e20"></span></div>
-          <strong>Retro Film</strong><em>Warm vintage</em>
-        </div>
+        <figure class="print">
+          <div class="print-sw"><span style="background:#ececec"></span><span style="background:#1a1a1a"></span><span style="background:#ff3b30"></span><span style="background:#007aff"></span></div>
+          <figcaption><strong>Studio</strong><em>Bright &amp; neutral</em></figcaption>
+        </figure>
+        <figure class="print">
+          <div class="print-sw"><span style="background:#1e1e1e"></span><span style="background:#323232"></span><span style="background:#ff453a"></span><span style="background:#0a84ff"></span></div>
+          <figcaption><strong>Studio Dark</strong><em>Cinematic</em></figcaption>
+        </figure>
+        <figure class="print">
+          <div class="print-sw"><span style="background:#c8cacd"></span><span style="background:#7d8186"></span><span style="background:#d63a2f"></span><span style="background:#3a6ea5"></span></div>
+          <figcaption><strong>Classic Metal</strong><em>Brushed aluminium</em></figcaption>
+        </figure>
+        <figure class="print">
+          <div class="print-sw"><span style="background:#ece2cd"></span><span style="background:#e2542e"></span><span style="background:#1f7a6e"></span><span style="background:#3a2e20"></span></div>
+          <figcaption><strong>Retro Film</strong><em>Warm vintage</em></figcaption>
+        </figure>
       </div>
     </section>
 
     <!-- Privacy -->
     <section class="section privacy" id="privacy">
       <div class="privacy-inner">
+        <span class="vf-brackets" aria-hidden="true"></span>
         <h2>What happens on your camera<br />stays on your camera.</h2>
         <p>
           Photoshoot processes every frame locally — in Electron on your desktop, or
@@ -157,7 +181,7 @@
           <li>No cloud, ever</li>
           <li>No tracking or analytics</li>
           <li>Open-source &amp; auditable</li>
-          <li>Imported themes are sandboxed</li>
+          <li>Community themes &amp; filters are sandboxed</li>
         </ul>
       </div>
     </section>
@@ -165,7 +189,8 @@
     <!-- Get -->
     <section class="section get" id="get">
       <div class="get-card">
-        <img src="assets/icon.png" alt="" width="76" height="76" />
+        <span class="get-stamp">Build 06·14·26 · Web + Win</span>
+        <img src="assets/icon.png" alt="" width="72" height="72" />
         <h2>Start shooting</h2>
         <p>Open it instantly in your browser, or install the desktop app for Windows.</p>
         <div class="get-actions">
@@ -182,7 +207,7 @@
     <footer class="footer">
       <div class="footer-inner">
         <div class="brand">
-          <img src="assets/icon.png" alt="" width="26" height="26" /><span>Photoshoot</span>
+          <img src="assets/icon.png" alt="" width="24" height="24" /><span>Photoshoot</span>
         </div>
         <p>Original code, art, and sounds. A clean-room homage — not affiliated with or endorsed by Apple.</p>
         <div class="footer-links">
@@ -190,6 +215,7 @@
           <a href="https://github.com/yeegz/photoshoot">GitHub</a>
           <a href="#privacy">Privacy</a>
         </div>
+        <span class="footer-stamp">Photo·Shoot · 06·14·26</span>
       </div>
     </footer>
   </body>
