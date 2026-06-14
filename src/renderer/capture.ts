@@ -8,7 +8,7 @@ import { sound } from './sound';
 import { byId, qsa, clear, wait, el } from './dom';
 import { toast } from './toast';
 import { api } from './bridge';
-import { refreshGallery, exitReview } from './gallery';
+import { refreshGallery, exitReview, isReviewing } from './gallery';
 import type { CaptureKind } from '../shared/ipc-contract';
 
 // ---------------------------------------------------------------------------
@@ -392,7 +392,12 @@ export const videoRecorder = new VideoRecorder();
 
 /** Dispatch the shutter action based on the active mode. */
 export async function triggerShutter(): Promise<void> {
-  exitReview(); // leave photo-review and resume the live camera before capturing
+  // While viewing a photo the shutter is greyed: tapping it just returns to the
+  // live camera without taking a shot.
+  if (isReviewing()) {
+    exitReview();
+    return;
+  }
   if (app.mode === 'single') return captureSingle();
   if (app.mode === 'strip') return captureStrip();
   if (app.mode === 'video') return videoRecorder.toggle();

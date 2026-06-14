@@ -114,8 +114,13 @@ async function enterReview(item: GalleryItem): Promise<void> {
   reviewId = item.id;
   app.renderer?.stop(); // pause the live camera while viewing
   review.classList.remove('hidden');
-  (byId('shutter') as HTMLButtonElement).disabled = true; // grayed out while viewing
+  // Grey the shutter, but keep it clickable — clicking it returns to the camera.
+  byId('shutter').classList.add('greyed');
   markSelected();
+}
+
+export function isReviewing(): boolean {
+  return reviewId !== null;
 }
 
 export function exitReview(): void {
@@ -123,7 +128,7 @@ export function exitReview(): void {
   reviewId = null;
   byId('review').classList.add('hidden');
   byId<HTMLImageElement>('reviewImage').removeAttribute('src');
-  (byId('shutter') as HTMLButtonElement).disabled = false;
+  byId('shutter').classList.remove('greyed');
   if (app.renderer?.available) app.renderer.start();
   markSelected();
 }

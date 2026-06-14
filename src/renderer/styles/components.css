@@ -157,10 +157,19 @@
 .shutter:active {
   transform: scale(0.92);
 }
-.shutter:disabled {
+.shutter:disabled,
+.shutter.greyed {
   background: #bcbcbc;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+.shutter:disabled {
   cursor: default;
+}
+.shutter.greyed {
+  cursor: pointer;
+}
+.shutter.greyed:hover {
+  filter: brightness(0.96);
 }
 .shutter:focus-visible {
   outline: 2px solid var(--focus-ring);
