@@ -357,4 +357,55 @@ vec4 run(vec2 uv){
   c = mix(c, vec3(l) * vec3(0.6, 1.06, 0.7), 0.45);
   return vec4(clamp(c, 0.0, 1.0), 1.0);
 }`),
+
+  // The ONE shader that applies untrusted community filters. It reads only
+  // clamped numbers (u_cfA/B/C) and optionally samples a validated 512×512 LUT
+  // (u_lut). No part of a filter manifest ever reaches this as source — it just
+  // sets these uniforms. See shared/filter-schema.ts.
+  customfilter: frag(`
+uniform sampler2D u_lut;     // 512x512, 64-level square LUT (bound when u_cfC.w>0.5)
+uniform vec4 u_cfA;          // brightness, contrast, saturation, gamma
+uniform vec4 u_cfB;          // temperature, tint, fade, hue(deg)
+uniform vec4 u_cfC;          // vignette, grain, lutAmount, hasLut
+
+// Canonical 512x512 LUT lookup (8x8 tiles of 64x64), with blue interpolation.
+vec3 sampleLUT(vec3 col){
+  float blue = clamp(col.b, 0.0, 1.0) * 63.0;
+  vec2 q1; q1.y = floor(floor(blue) / 8.0); q1.x = floor(blue) - q1.y * 8.0;
+  vec2 q2; q2.y = floor(ceil(blue)  / 8.0); q2.x = ceil(blue)  - q2.y * 8.0;
+  float r = clamp(col.r, 0.0, 1.0), g = clamp(col.g, 0.0, 1.0);
+  vec2 t1 = vec2(q1.x * 0.125 + 0.5/512.0 + (0.125 - 1.0/512.0) * r,
+                 q1.y * 0.125 + 0.5/512.0 + (0.125 - 1.0/512.0) * g);
+  vec2 t2 = vec2(q2.x * 0.125 + 0.5/512.0 + (0.125 - 1.0/512.0) * r,
+                 q2.y * 0.125 + 0.5/512.0 + (0.125 - 1.0/512.0) * g);
+  return mix(texture(u_lut, t1).rgb, texture(u_lut, t2).rgb, fract(blue));
+}
+
+// Hue rotation about the (1,1,1) luminance axis (Rodrigues).
+vec3 hueRotate(vec3 col, float deg){
+  float a = radians(deg);
+  vec3 k = vec3(0.57735);
+  float ca = cos(a);
+  return col * ca + cross(k, col) * sin(a) + k * dot(k, col) * (1.0 - ca);
+}
+
+vec4 run(vec2 uv){
+  vec3 c = texture(u_tex, uv).rgb;
+  c += u_cfA.x;                                   // brightness
+  c = (c - 0.5) * u_cfA.y + 0.5;                  // contrast
+  float l = dot(clamp(c,0.0,1.0), lumv);
+  c = mix(vec3(l), c, u_cfA.z);                   // saturation
+  c.r += u_cfB.x * 0.12; c.b -= u_cfB.x * 0.12;   // temperature (warm/cool)
+  c.g += u_cfB.y * 0.10;                          // tint (green/magenta)
+  c = clamp(c, 0.0, 1.0);
+  c = pow(c, vec3(1.0 / u_cfA.w));                // gamma
+  c = mix(c, c * 0.82 + 0.12, u_cfB.z);           // fade (lift blacks)
+  if (abs(u_cfB.w) > 0.5) c = clamp(hueRotate(c, u_cfB.w), 0.0, 1.0);
+  if (u_cfC.w > 0.5) c = mix(c, clamp(sampleLUT(c), 0.0, 1.0), u_cfC.z); // LUT grade
+  float d = distance(uv, vec2(0.5));
+  c *= 1.0 - u_cfC.x * smoothstep(0.32, 0.85, d); // vignette
+  float n = fract(sin(dot(uv * u_res + u_time, vec2(12.9898, 78.233))) * 43758.5453);
+  c += (n - 0.5) * u_cfC.y * 0.16;                // grain
+  return vec4(clamp(c, 0.0, 1.0), 1.0);
+}`),
 };

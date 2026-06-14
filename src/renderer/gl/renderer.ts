@@ -11,6 +11,10 @@ import { VERTEX_SRC, FRAGMENTS } from './shaders';
 import { EFFECT_BY_ID } from './effects';
 import { CompiledProgram, linkProgram, createQuad, createVideoTexture } from './glcore';
 import { getFace } from '../faceTracker';
+import type { CustomFilter } from '../../shared/ipc-contract';
+import { clampParams } from '../../shared/filter-schema';
+
+const CUSTOM_PREFIX = 'custom:';
 
 type Source = HTMLVideoElement | HTMLCanvasElement;
 
@@ -34,6 +38,8 @@ export class GLRenderer {
   private texture: WebGLTexture | null = null;
   private programs = new Map<string, CompiledProgram>();
   private failed = new Set<string>();
+  private customFilters = new Map<string, CustomFilter>();
+  private lutTextures = new Map<string, WebGLTexture>();
 
   private source: Source | null = null;
   private effect = 'normal';
@@ -64,7 +70,11 @@ export class GLRenderer {
     canvas.addEventListener('webglcontextrestored', () => {
       this.programs.clear();
       this.failed.clear();
+      this.lutTextures.clear(); // textures died with the context; re-upload below
       this.init();
+      for (const f of this.customFilters.values()) {
+        if (f.lut) this.uploadLut(f.id, f.lut);
+      }
       if (this.source) this.start();
     });
   }
@@ -94,21 +104,78 @@ export class GLRenderer {
 
   private getProgram(id: string): CompiledProgram | null {
     if (!this.gl) return null;
-    const cached = this.programs.get(id);
+    // All custom filters share the single fixed `customfilter` program; their
+    // differences are uniforms, never shader source.
+    const key = id.startsWith(CUSTOM_PREFIX) ? 'customfilter' : id;
+    const cached = this.programs.get(key);
     if (cached) return cached;
-    const src = FRAGMENTS[id] ?? FRAGMENTS.normal;
+    const src = FRAGMENTS[key] ?? FRAGMENTS.normal;
     try {
       const prog = linkProgram(this.gl, VERTEX_SRC, src);
-      this.programs.set(id, prog);
+      this.programs.set(key, prog);
       return prog;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'shader error';
-      if (!this.failed.has(id)) {
-        this.failed.add(id);
-        this.onShaderError?.(id, message);
+      if (!this.failed.has(key)) {
+        this.failed.add(key);
+        this.onShaderError?.(key, message);
       }
       return this.getProgram('normal');
     }
+  }
+
+  /** Register the validated community filters this renderer can apply, and
+   *  (re)upload any LUT textures. Safe to call repeatedly. */
+  setCustomFilters(list: CustomFilter[]): void {
+    const next = new Map<string, CustomFilter>();
+    // Re-clamp every params object here (defense in depth): whatever the store
+    // held, only finite, in-range numbers ever reach gl.uniform4f.
+    for (const f of list) next.set(f.id, { ...f, params: clampParams(f.params) });
+    // Drop textures for filters that vanished or no longer carry a LUT.
+    for (const [id, tex] of this.lutTextures) {
+      const f = next.get(id);
+      if (!f || !f.lut) {
+        this.gl?.deleteTexture(tex);
+        this.lutTextures.delete(id);
+      }
+    }
+    for (const f of list) {
+      if (f.lut && !this.lutTextures.has(f.id)) this.uploadLut(f.id, f.lut);
+    }
+    this.customFilters = next;
+  }
+
+  private uploadLut(id: string, dataUri: string): void {
+    const img = new Image();
+    img.onload = () => {
+      const gl = this.gl;
+      if (!gl) return;
+      const tex = gl.createTexture();
+      if (!tex) return;
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); // a LUT is sampled un-flipped
+      try {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      } catch {
+        gl.deleteTexture(tex);
+        return;
+      }
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      // The filter may have been removed while this image decoded — don't
+      // orphan a texture for an id that's no longer tracked.
+      if (!this.customFilters.has(id)) {
+        gl.deleteTexture(tex);
+        return;
+      }
+      const prev = this.lutTextures.get(id);
+      if (prev) gl.deleteTexture(prev);
+      this.lutTextures.set(id, tex);
+    };
+    img.src = dataUri;
   }
 
   setSource(source: Source): void {
@@ -166,6 +233,7 @@ export class GLRenderer {
     const { w, h } = this.sourceDims();
     if (w === 0 || h === 0) return false;
     if (this.source instanceof HTMLVideoElement && this.source.readyState < 2) return false;
+    gl.activeTexture(gl.TEXTURE0); // the video always lives on unit 0
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     try {
@@ -218,6 +286,32 @@ export class GLRenderer {
     gl.uniform2f(u.u_cheekR, fx(f.cheekR), f.cheekR[1]);
     gl.uniform2f(u.u_faceC, fx(f.faceC), f.faceC[1]);
     gl.uniform1f(u.u_faceR, f.faceR);
+
+    // Custom community filter: feed the clamped grades + bind its LUT (always
+    // bind *something* to unit 1 so the sampler is valid; u_cfC.w gates use).
+    if (effectId.startsWith(CUSTOM_PREFIX)) {
+      const filt = this.customFilters.get(effectId.slice(CUSTOM_PREFIX.length));
+      const p = filt?.params;
+      if (p) {
+        const lutTex = filt?.lut ? this.lutTextures.get(filt.id) : undefined;
+        gl.uniform4f(u.u_cfA, p.brightness, p.contrast, p.saturation, p.gamma);
+        gl.uniform4f(u.u_cfB, p.temperature, p.tint, p.fade, p.hue);
+        gl.uniform4f(u.u_cfC, p.vignette, p.grain, p.lutAmount, lutTex ? 1 : 0);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, lutTex ?? this.texture);
+        gl.uniform1i(u.u_lut, 1);
+        gl.activeTexture(gl.TEXTURE0);
+      } else {
+        // Filter was removed underneath us → render as Normal.
+        gl.uniform4f(u.u_cfA, 0, 1, 1, 1);
+        gl.uniform4f(u.u_cfB, 0, 0, 0, 0);
+        gl.uniform4f(u.u_cfC, 0, 0, 1, 0);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        gl.uniform1i(u.u_lut, 1);
+        gl.activeTexture(gl.TEXTURE0);
+      }
+    }
 
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -293,6 +387,8 @@ export class GLRenderer {
     if (!gl) return;
     this.programs.forEach((p) => gl.deleteProgram(p.program));
     this.programs.clear();
+    this.lutTextures.forEach((t) => gl.deleteTexture(t));
+    this.lutTextures.clear();
     if (this.texture) gl.deleteTexture(this.texture);
     if (this.vao) gl.deleteVertexArray(this.vao);
   }

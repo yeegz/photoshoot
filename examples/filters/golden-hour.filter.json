@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "name": "Golden Hour",
+  "author": "Photoshoot",
+  "description": "A warm, faded late-afternoon grade with a soft vignette.",
+  "params": {
+    "brightness": 0.05,
+    "contrast": 1.15,
+    "saturation": 1.25,
+    "temperature": 0.4,
+    "tint": -0.05,
+    "gamma": 1.0,
+    "fade": 0.15,
+    "vignette": 0.3,
+    "grain": 0.08,
+    "hue": 0,
+    "lutAmount": 1.0
+  }
+}

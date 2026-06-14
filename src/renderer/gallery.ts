@@ -9,7 +9,7 @@ import { app } from './app';
 import { byId, el, clear } from './dom';
 import { toast } from './toast';
 import { sound } from './sound';
-import { effectLabel } from './gl/effects';
+import { effectDisplayLabel } from './customFilters';
 import type { GalleryItem } from '../shared/ipc-contract';
 
 let items: GalleryItem[] = [];
@@ -66,7 +66,7 @@ function renderTray(animateNewest: boolean): void {
     if (item.thumbnail) {
       const img = el('img');
       img.src = item.thumbnail;
-      img.alt = `Capture with ${effectLabel(item.effect)} effect`;
+      img.alt = `Capture with ${effectDisplayLabel(item.effect)} effect`;
       thumb.appendChild(img);
     } else {
       thumb.appendChild(el('span', { className: 'thumb-badge', text: '▶' }));

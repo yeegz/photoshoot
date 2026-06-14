@@ -2,6 +2,8 @@
 // and the renderer. Pure types + channel-name constants only — no Node or DOM
 // imports — so it is safe to bundle into all three execution contexts.
 
+import type { FilterParams } from './filter-schema';
+
 export const IPC = {
   appInfo: 'app:info',
   settingsGet: 'settings:get',
@@ -17,6 +19,9 @@ export const IPC = {
   themeImport: 'theme:import',
   themeListImported: 'theme:list',
   themeRemove: 'theme:remove',
+  filterImport: 'filter:import',
+  filterList: 'filter:list',
+  filterRemove: 'filter:remove',
   windowMinimize: 'window:minimize',
   windowMaximize: 'window:maximize',
   windowClose: 'window:close',
@@ -128,6 +133,26 @@ export interface ThemeImportResult {
   canceled?: boolean;
 }
 
+// A community color filter. After validation it is pure data: clamped numeric
+// grades and an optional LUT image as a validated data: URI. Applied by the
+// fixed `customfilter` shader — never as code. See shared/filter-schema.ts.
+export interface CustomFilter {
+  id: string;
+  name: string;
+  author: string;
+  description: string;
+  params: FilterParams;
+  lut?: string; // data: URI of a validated 512×512 PNG LUT, or absent
+}
+
+export interface FilterImportResult {
+  ok: boolean;
+  filter?: CustomFilter;
+  error?: string;
+  warnings?: string[];
+  canceled?: boolean;
+}
+
 // The shape exposed on `window.photoshoot` by the preload bridge.
 export interface PhotoshootBridge {
   getAppInfo(): Promise<AppInfo>;
@@ -144,6 +169,9 @@ export interface PhotoshootBridge {
   importTheme(): Promise<ThemeImportResult>;
   listImportedThemes(): Promise<ImportedTheme[]>;
   removeImportedTheme(id: string): Promise<{ ok: boolean }>;
+  importFilter(): Promise<FilterImportResult>;
+  listCustomFilters(): Promise<CustomFilter[]>;
+  removeCustomFilter(id: string): Promise<{ ok: boolean }>;
   minimizeWindow(): void;
   toggleMaximizeWindow(): void;
   closeWindow(): void;

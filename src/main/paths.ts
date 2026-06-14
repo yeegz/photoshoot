@@ -49,6 +49,16 @@ export function importedThemesFile(): string {
   return path.join(themesDir(), 'index.json');
 }
 
+export function filtersDir(): string {
+  const dir = path.join(userDataDir(), 'filters');
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+export function customFiltersFile(): string {
+  return path.join(filtersDir(), 'index.json');
+}
+
 /**
  * Returns true only when `target` resolves to a location inside `base`.
  * Used to guarantee no operation ever escapes an allowed directory.

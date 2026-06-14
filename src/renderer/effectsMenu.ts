@@ -6,10 +6,12 @@
 
 import { app } from './app';
 import { GLRenderer } from './gl/renderer';
-import { EFFECTS, effectLabel, isDraggable, isFaceEffect } from './gl/effects';
+import { EFFECTS, isDraggable, isFaceEffect } from './gl/effects';
+import type { EffectDef } from './gl/effects';
 import { byId, el, clear } from './dom';
 import { sound } from './sound';
 import { activateFaceTracking, deactivateFaceTracking } from './faceTracker';
+import { customFilterDefs, effectDisplayLabel, registerFilterSink } from './customFilters';
 
 const PAGE_SIZE = 9;
 
@@ -29,13 +31,25 @@ let cycle = 0;
 let running = false;
 let rafHandle = 0;
 
+// Built-in effects followed by any imported community filters.
+function allEffects(): EffectDef[] {
+  return EFFECTS.concat(customFilterDefs());
+}
+
 export function buildEffectsMenu(): void {
   const glCanvas = document.createElement('canvas');
   menuRenderer = new GLRenderer(glCanvas);
   menuRenderer.setSource(app.video);
   menuRenderer.setMaxSize(420);
-  pageCount = Math.max(1, Math.ceil(EFFECTS.length / PAGE_SIZE));
+  registerFilterSink(menuRenderer); // menu previews can draw custom filters too
+  pageCount = Math.max(1, Math.ceil(allEffects().length / PAGE_SIZE));
   renderPage(0);
+}
+
+/** Recompute pages after the set of custom filters changes. */
+export function refreshEffectsMenu(): void {
+  pageCount = Math.max(1, Math.ceil(allEffects().length / PAGE_SIZE));
+  renderPage(Math.min(currentPage, pageCount - 1));
 }
 
 function renderPage(page: number): void {
@@ -45,7 +59,7 @@ function renderPage(page: number): void {
   tiles = [];
 
   const start = currentPage * PAGE_SIZE;
-  const slice = EFFECTS.slice(start, start + PAGE_SIZE);
+  const slice = allEffects().slice(start, start + PAGE_SIZE);
 
   for (let i = 0; i < PAGE_SIZE; i++) {
     const def = slice[i];
@@ -112,7 +126,7 @@ function applyEffect(id: string): void {
   byId('viewfinder').classList.toggle('is-draggable', isDraggable(id));
   if (isFaceEffect(id)) void activateFaceTracking();
   byId('shutterHint').textContent =
-    id === 'normal' ? 'Tap to capture' : `Effect · ${effectLabel(id)}`;
+    id === 'normal' ? 'Tap to capture' : `Effect · ${effectDisplayLabel(id)}`;
 }
 
 /** Pick an effect from a tile: apply it and exit the effects view. */

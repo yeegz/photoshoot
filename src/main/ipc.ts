@@ -16,6 +16,7 @@ import {
   exportItemTo,
 } from './storage';
 import { importThemeFromPath, listImportedThemes, removeImportedTheme } from './themeImport';
+import { importFilterFromPath, listCustomFilters, removeCustomFilter } from './filterImport';
 
 function asString(x: unknown): string {
   return typeof x === 'string' ? x : '';
@@ -97,6 +98,22 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.themeListImported, () => listImportedThemes());
 
   ipcMain.handle(IPC.themeRemove, (_e, id: unknown) => removeImportedTheme(asString(id)));
+
+  ipcMain.handle(IPC.filterImport, async () => {
+    const win = getWindow();
+    const result = await dialog.showOpenDialog(win ?? undefined!, {
+      title: 'Import Photoshoot Filter',
+      message: 'Choose a filter.json manifest file',
+      filters: [{ name: 'Photoshoot Filter', extensions: ['json'] }],
+      properties: ['openFile'],
+    });
+    if (result.canceled || result.filePaths.length === 0) return { ok: false, canceled: true };
+    return importFilterFromPath(result.filePaths[0]);
+  });
+
+  ipcMain.handle(IPC.filterList, () => listCustomFilters());
+
+  ipcMain.handle(IPC.filterRemove, (_e, id: unknown) => removeCustomFilter(asString(id)));
 
   // Frameless-window controls (driven by the in-app traffic lights).
   ipcMain.on(IPC.windowMinimize, () => getWindow()?.minimize());

@@ -17,6 +17,12 @@ import {
   importThemeFlow,
   removeImportedTheme,
 } from './themes';
+import {
+  getCustomFilters,
+  importCustomFilterFlow,
+  removeCustomFilter as removeCustomFilterFlow,
+} from './customFilters';
+import { refreshEffectsMenu } from './effectsMenu';
 import { DEFAULT_SETTINGS } from '../shared/ipc-contract';
 import type { CameraDevice } from './camera';
 
@@ -213,6 +219,67 @@ function buildThemeSection(): HTMLElement {
   return group('Appearance', [block([list, actions, note])]);
 }
 
+// ---- custom filters -------------------------------------------------------
+
+function buildFilterSection(): HTMLElement {
+  const filters = getCustomFilters();
+  const children: Node[] = [];
+
+  if (filters.length) {
+    const chips = el('div', { className: 'filter-list' });
+    for (const f of filters) {
+      const chip = el('div', { className: 'filter-chip' }, [
+        el('div', { className: 'filter-chip-text' }, [
+          el('div', { className: 'filter-chip-name', text: f.name }),
+          el('div', { className: 'filter-chip-sub', text: `By ${f.author}${f.lut ? ' · LUT' : ''}` }),
+        ]),
+      ]);
+      const rm = el('button', { className: 'filter-chip-remove', type: 'button', ariaLabel: `Remove ${f.name}`, text: '✕' });
+      rm.addEventListener('click', async () => {
+        await removeCustomFilterFlow(f.id);
+        refreshEffectsMenu();
+        toast('Filter removed.', 'info');
+        render();
+      });
+      chip.appendChild(rm);
+      chips.appendChild(chip);
+    }
+    children.push(chips);
+  } else {
+    children.push(
+      el('p', { className: 'setting-desc', text: 'No custom filters yet. Import one to add it to the Effects grid.' })
+    );
+  }
+
+  const actions = el('div', { className: 'settings-actions' });
+  const importBtn = el('button', { className: 'btn btn-primary', type: 'button', text: 'Import Filter…' });
+  importBtn.addEventListener('click', async () => {
+    const result = await importCustomFilterFlow();
+    if (result.canceled) return;
+    if (result.ok) {
+      refreshEffectsMenu();
+      toast(`Added “${result.filter?.name}” to Effects.`, 'success');
+      if (result.warnings?.length) toast(`${result.warnings.length} item(s) skipped during validation.`, 'info', 4500);
+    } else {
+      toast(result.error ?? 'Filter could not be imported.', 'error', 5000);
+      sound.play('error');
+    }
+    render();
+  });
+  actions.appendChild(importBtn);
+  children.push(actions);
+
+  const note = el('p', {
+    className: 'setting-desc',
+    text:
+      'Filters are untrusted data, never code: only clamped color adjustments and an optional validated LUT image are applied through one fixed shader. No scripts, no remote resources, no file access.',
+  });
+  note.style.maxWidth = 'none';
+  children.push(note);
+
+  return group('Custom Filters', [block(children)]);
+}
+
 // ---- main render ----------------------------------------------------------
 
 export function render(): void {
@@ -236,6 +303,9 @@ export function render(): void {
 
   // Appearance (themes)
   body.appendChild(buildThemeSection());
+
+  // Custom filters (community)
+  body.appendChild(buildFilterSection());
 
   // Capture
   body.appendChild(

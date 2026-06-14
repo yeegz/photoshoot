@@ -27,9 +27,12 @@ import {
   isSafeAssetName,
   detectImageMime,
 } from '../shared/theme-schema';
+import type { CustomFilter, FilterImportResult } from '../shared/ipc-contract';
+import { FILTER_LIMITS, validateFilterManifest, validateLutPng } from '../shared/filter-schema';
 
 const SETTINGS_KEY = 'photoshoot.settings';
 const THEMES_KEY = 'photoshoot.themes';
+const FILTERS_KEY = 'photoshoot.filters';
 const DB_NAME = 'photoshoot';
 const STORE = 'captures';
 
@@ -134,6 +137,79 @@ function readImported(): ImportedTheme[] {
 }
 function writeImported(themes: ImportedTheme[]): void {
   localStorage.setItem(THEMES_KEY, JSON.stringify(themes));
+}
+
+function bytesToDataUrl(bytes: Uint8Array, mime: string): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return `data:${mime};base64,${btoa(binary)}`;
+}
+
+function readFilters(): CustomFilter[] {
+  try {
+    const arr = JSON.parse(localStorage.getItem(FILTERS_KEY) ?? '[]');
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+function writeFilters(filters: CustomFilter[]): boolean {
+  try {
+    localStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
+    return true;
+  } catch {
+    return false; // QuotaExceededError, etc. — caller surfaces a clean message
+  }
+}
+
+async function importFilterFromFiles(files: File[]): Promise<FilterImportResult> {
+  const warnings: string[] = [];
+  const manifestFile = files.find((f) => f.name.toLowerCase().endsWith('.json'));
+  if (!manifestFile) return { ok: false, error: 'No filter.json was selected.' };
+  if (manifestFile.size > FILTER_LIMITS.manifestBytes) return { ok: false, error: 'Filter manifest is too large.' };
+
+  let manifest: unknown;
+  try {
+    manifest = JSON.parse(await manifestFile.text());
+  } catch {
+    return { ok: false, error: 'Filter manifest is not valid JSON.' };
+  }
+
+  const v = validateFilterManifest(manifest);
+  if (!v.ok || !v.params) return { ok: false, error: v.error ?? 'Filter manifest is invalid.' };
+
+  let lut: string | undefined;
+  if (v.lutRef) {
+    const file = files.find((f) => f.name === v.lutRef);
+    if (!file) {
+      warnings.push(`LUT "${v.lutRef}" was not included in the selection.`);
+    } else if (file.size > FILTER_LIMITS.lutBytes) {
+      warnings.push(`Skipped oversized LUT "${v.lutRef}".`);
+    } else {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const check = validateLutPng(bytes);
+      if (check.ok) lut = bytesToDataUrl(bytes, 'image/png');
+      else warnings.push(`Skipped LUT "${v.lutRef}": ${check.reason}`);
+    }
+  }
+
+  const filter: CustomFilter = {
+    id: crypto.randomUUID(),
+    name: v.name ?? 'Untitled Filter',
+    author: v.author ?? 'Unknown',
+    description: v.description ?? '',
+    params: v.params,
+    lut,
+  };
+  const filters = readFilters();
+  if (filters.length >= FILTER_LIMITS.maxFilters) {
+    return { ok: false, error: 'Filter library is full; remove some filters first.' };
+  }
+  filters.push(filter);
+  if (!writeFilters(filters)) {
+    return { ok: false, error: 'Storage is full — could not save the filter. Remove some and try again.' };
+  }
+  return { ok: true, filter, warnings: warnings.length ? warnings : undefined };
 }
 
 function pickFiles(): Promise<File[]> {
@@ -348,6 +424,19 @@ const bridge: PhotoshootBridge = {
 
   removeImportedTheme: async (id: string) => {
     writeImported(readImported().filter((t) => t.id !== id));
+    return { ok: true };
+  },
+
+  importFilter: async (): Promise<FilterImportResult> => {
+    const files = await pickFiles();
+    if (files.length === 0) return { ok: false, canceled: true };
+    return importFilterFromFiles(files);
+  },
+
+  listCustomFilters: async () => readFilters(),
+
+  removeCustomFilter: async (id: string) => {
+    writeFilters(readFilters().filter((f) => f.id !== id));
     return { ok: true };
   },
 

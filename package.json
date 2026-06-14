@@ -17,6 +17,7 @@
     "build:win": "node esbuild.mjs --prod && electron-builder --win",
     "build:dir": "node esbuild.mjs --prod && electron-builder --dir",
     "build:web": "node web/build-web.mjs",
+    "test:filters": "esbuild build/filter-schema.test.mjs --bundle --platform=node --format=esm --outfile=build/.filter-test.mjs --log-level=warning && node build/.filter-test.mjs",
     "deploy": "node web/build-web.mjs && firebase deploy --only hosting"
   },
   "devDependencies": {

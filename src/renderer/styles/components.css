@@ -862,6 +862,49 @@ input[type="range"] {
   color: var(--danger);
 }
 
+/* ---------- Custom filter chips ---------- */
+.filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.filter-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.filter-chip-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.filter-chip-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+.filter-chip-remove {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.filter-chip-remove:hover {
+  background: var(--danger);
+  color: var(--accent-contrast, #fff);
+}
+
 /* ---------- Viewfinder overlays ---------- */
 .vf-overlay {
   position: absolute;

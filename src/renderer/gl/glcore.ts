@@ -22,6 +22,11 @@ export interface CompiledProgram {
     u_cheekR: WebGLUniformLocation | null;
     u_faceC: WebGLUniformLocation | null;
     u_faceR: WebGLUniformLocation | null;
+    // Custom-filter uniforms (only present on the `customfilter` program).
+    u_lut: WebGLUniformLocation | null;
+    u_cfA: WebGLUniformLocation | null;
+    u_cfB: WebGLUniformLocation | null;
+    u_cfC: WebGLUniformLocation | null;
   };
 }
 
@@ -82,6 +87,10 @@ export function linkProgram(
       u_cheekR: gl.getUniformLocation(program, 'u_cheekR'),
       u_faceC: gl.getUniformLocation(program, 'u_faceC'),
       u_faceR: gl.getUniformLocation(program, 'u_faceR'),
+      u_lut: gl.getUniformLocation(program, 'u_lut'),
+      u_cfA: gl.getUniformLocation(program, 'u_cfA'),
+      u_cfB: gl.getUniformLocation(program, 'u_cfB'),
+      u_cfC: gl.getUniformLocation(program, 'u_cfC'),
     },
   };
 }

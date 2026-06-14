@@ -11,6 +11,7 @@ import { sound } from './sound';
 import { byId, qsa } from './dom';
 import { toast } from './toast';
 import { loadImportedThemes, applyResolvedTheme, watchDeviceTheme } from './themes';
+import { loadCustomFilters, registerFilterSink } from './customFilters';
 import { refreshGallery, exitReview } from './gallery';
 import { buildEffectsMenu, toggleEffects, closeEffects, isEffectsOpen } from './effectsMenu';
 import { initBackgroundsMenu } from './backgroundsMenu';
@@ -241,6 +242,7 @@ async function bootstrap(): Promise<void> {
 
   const renderer = new GLRenderer(byId<HTMLCanvasElement>('glCanvas'));
   app.renderer = renderer;
+  registerFilterSink(renderer); // live preview can draw custom filters
   renderer.setSource(camera.video);
   renderer.onShaderError = (id, msg) => {
     toast(`Effect “${effectLabel(id)}” couldn't load; using Normal.`, 'error');
@@ -251,6 +253,7 @@ async function bootstrap(): Promise<void> {
 
   app.applySideEffects();
   await loadImportedThemes();
+  await loadCustomFilters();
   applyResolvedTheme();
   watchDeviceTheme();
   setPerfOverlay(app.settings.perfOverlay);

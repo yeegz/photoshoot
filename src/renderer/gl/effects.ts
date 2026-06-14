@@ -57,3 +57,7 @@ export function isDraggable(id: string): boolean {
 export function isFaceEffect(id: string): boolean {
   return EFFECT_BY_ID.get(id)?.face ?? false;
 }
+
+export function isCustomFilter(id: string): boolean {
+  return id.startsWith('custom:');
+}
