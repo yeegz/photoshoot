@@ -50,7 +50,6 @@ export class GLRenderer {
   private frameHook: (() => void) | null = null;
 
   private running = false;
-  private usingRVFC = false;
   private rafHandle = 0;
   private startTime = 0;
 
@@ -180,9 +179,6 @@ export class GLRenderer {
 
   setSource(source: Source): void {
     this.source = source;
-    this.usingRVFC =
-      source instanceof HTMLVideoElement &&
-      typeof (source as HTMLVideoElement).requestVideoFrameCallback === 'function';
   }
 
   setFrameHook(hook: (() => void) | null): void {
@@ -338,11 +334,15 @@ export class GLRenderer {
 
   private schedule(): void {
     if (!this.running) return;
-    if (this.usingRVFC && this.source instanceof HTMLVideoElement) {
-      this.source.requestVideoFrameCallback(this.tick);
-    } else {
-      this.rafHandle = requestAnimationFrame(this.tick);
-    }
+    // Always drive on requestAnimationFrame. We deliberately do NOT depend on
+    // requestVideoFrameCallback to pump the loop: rVFC can silently fail to fire
+    // for a hidden / off-screen / 1px-opacity:0 video (which is exactly how the
+    // camera element is mounted, since pixels flow through WebGL, not the tag)
+    // on some browser/GPU/OS combinations. When that happens, an rVFC-only loop
+    // never ticks and the preview stays blank even though the camera is live —
+    // i.e. "the camera doesn't work". rAF fires at display refresh regardless of
+    // video frame presentation, so the preview is always driven.
+    this.rafHandle = requestAnimationFrame(this.tick);
   }
 
   private trackFps(now: number): void {
@@ -376,7 +376,7 @@ export class GLRenderer {
       fps: this.fps,
       width: w,
       height: h,
-      backend: this.usingRVFC ? 'WebGL2 · rVFC' : 'WebGL2 · rAF',
+      backend: 'WebGL2 · rAF',
       dropped: this.dropped,
     };
   }
