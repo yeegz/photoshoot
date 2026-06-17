@@ -60,28 +60,47 @@ export class CameraManager {
     }
     this.stop();
 
-    const video: MediaTrackConstraints = {
+    const base: MediaTrackConstraints = {
       width: { ideal: 1280 },
       height: { ideal: 720 },
       frameRate: { ideal: 30, max: 60 },
     };
-    if (deviceId) video.deviceId = { exact: deviceId };
+    const want: MediaTrackConstraints = deviceId ? { ...base, deviceId: { exact: deviceId } } : base;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
-      this.stream = stream;
-      this.video.srcObject = stream;
-      await this.video.play().catch(() => undefined);
-      const track = stream.getVideoTracks()[0];
-      const activeId = track?.getSettings().deviceId ?? deviceId ?? '';
-      if (track) {
-        track.addEventListener('ended', () => this.onDeviceListChanged?.());
-      }
-      if (activeId) this.onActiveDevice?.(activeId);
-      return { ok: true, deviceId: activeId };
+      return await this.acquire(want, deviceId ?? null);
     } catch (err) {
+      // A specific camera was requested but couldn't be opened — most often a
+      // saved deviceId that's gone stale (browser device IDs rotate between
+      // sessions), or the device was unplugged. Rather than dead-end on
+      // "No camera found", fall back to the default camera. startCamera() then
+      // persists the new active id, so this self-heals the stale setting.
+      if (deviceId && isDeviceSpecificError(err)) {
+        try {
+          return await this.acquire(base, null);
+        } catch (err2) {
+          return { ok: false, ...classifyError(err2) };
+        }
+      }
       return { ok: false, ...classifyError(err) };
     }
+  }
+
+  private async acquire(
+    video: MediaTrackConstraints,
+    requestedId: string | null
+  ): Promise<CameraStartResult> {
+    const stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
+    this.stream = stream;
+    this.video.srcObject = stream;
+    await this.video.play().catch(() => undefined);
+    const track = stream.getVideoTracks()[0];
+    const activeId = track?.getSettings().deviceId ?? requestedId ?? '';
+    if (track) {
+      track.addEventListener('ended', () => this.onDeviceListChanged?.());
+    }
+    if (activeId) this.onActiveDevice?.(activeId);
+    return { ok: true, deviceId: activeId };
   }
 
   /** Wait until the video has real dimensions (or time out). */
@@ -114,9 +133,17 @@ export class CameraManager {
   }
 }
 
+// getUserMedia rejects with several error types. OverconstrainedError is NOT a
+// DOMException, so read `.name` generically rather than gating on DOMException.
+function errName(err: unknown): string {
+  if (err && typeof err === 'object' && 'name' in err) {
+    return String((err as { name: unknown }).name);
+  }
+  return '';
+}
+
 function classifyError(err: unknown): { error: CameraErrorKind; message: string } {
-  const name = err instanceof DOMException ? err.name : '';
-  switch (name) {
+  switch (errName(err)) {
     case 'NotAllowedError':
     case 'SecurityError':
       return { error: 'denied', message: 'Camera access was blocked.' };
@@ -128,5 +155,19 @@ function classifyError(err: unknown): { error: CameraErrorKind; message: string 
       return { error: 'inuse', message: 'The camera is in use by another app.' };
     default:
       return { error: 'unknown', message: 'Could not start the camera.' };
+  }
+}
+
+// Errors that mean "this specific device couldn't be opened" — worth retrying
+// with the default camera (no deviceId constraint) before giving up.
+function isDeviceSpecificError(err: unknown): boolean {
+  switch (errName(err)) {
+    case 'OverconstrainedError':
+    case 'NotFoundError':
+    case 'NotReadableError':
+    case 'AbortError':
+      return true;
+    default:
+      return false;
   }
 }
