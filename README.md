@@ -4,7 +4,7 @@
 
 Open your camera, choose an effect and capture a single photo, a four-shot strip or a short video. Photoshoot combines a live WebGL2 viewfinder, on-device face effects, five visual themes and a local gallery.
 
-[Open the web app](https://photoshoot-yeegz.web.app/app/) · [Product site](https://photoshoot-yeegz.web.app) · [Case study](https://yeegz.github.io/work/photoshoot/) · [Build locally](#getting-started)
+[Open the web app](https://photoshoot-yeegz.web.app/app/) · [Product site](https://photoshoot-yeegz.web.app) · [Case study](https://yousofselim.com/work/photoshoot/) · [Build locally](#getting-started)
 
 **The web app is live.** This repository includes the browser build and Electron desktop source. For Windows, build from source using `npm run build:win`; no downloadable release is currently published.
 
