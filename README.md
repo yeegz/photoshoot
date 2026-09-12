@@ -1,25 +1,14 @@
 # Photoshoot
 
-A modern Windows photobooth desktop app. Open your webcam, strike a pose, and
-capture single photos, 4‑shot vertical strips, or short videos — with real‑time
-WebGL effects, classic background replacement, four hand‑built themes, and
-original tactile sounds.
+**A photobooth for the browser and desktop.**
 
-Photoshoot is a **clean‑room homage** to the joyful feeling of classic webcam
-photobooth software. It deliberately evokes that look and feel using
-conventional desktop UI patterns, system‑standard colors (the familiar red
-shutter, system blue, neutral grays), and the OS system font — but every asset
-is original: **no Apple branding, logos, icon artwork, graphics, or sound files,
-and no Apple code is copied.** Every line of code, every pixel of art, and every
-sound is made from scratch.
+Open your camera, choose an effect and capture a single photo, a four-shot strip or a short video. Photoshoot combines a live WebGL2 viewfinder, on-device face effects, five visual themes and a local gallery.
 
-### ▶ Try it now
+[Open the web app](https://photoshoot-yeegz.web.app/app/) · [Product site](https://photoshoot-yeegz.web.app) · [Case study](https://yeegz.github.io/work/photoshoot/) · [Build locally](#getting-started)
 
-- **Use it online:** **https://photoshoot-yeegz.web.app/app/** — the full app runs in your browser, camera and all. Nothing is uploaded.
-- **Landing page:** https://photoshoot-yeegz.web.app
-- **Download for Windows:** see [Releases](https://github.com/yeegz/photoshoot/releases) (build it yourself with `npm run build:win`).
+**The web app is live.** This repository includes the browser build and Electron desktop source. For Windows, build from source using `npm run build:win`; no downloadable release is currently published.
 
----
+Camera processing and captures stay on the device. The app was designed and built by **Yousof Selim**, including the interface, Electron/WebGL2 implementation, effects and deployment.
 
 ## Highlights
 
