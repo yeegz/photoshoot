@@ -3,223 +3,374 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Photoshoot — a webcam photobooth for your desktop</title>
+    <title>Photoshoot — a photobooth for your webcam</title>
     <meta
       name="description"
-      content="Photoshoot is a free, private photobooth app. 17 real-time GLSL effects, 8 face-mesh effects, 4-shot strips, background replacement, four themes, and secure community filters. Use it online or download for Windows. Nothing ever leaves your device."
+      content="Photoshoot is a free, private photobooth for your webcam. 17 live effects, 8 face effects, 4-shot strips, background replacement, five themes and sandboxed community filters. Use it in your browser or download it for Windows. Nothing leaves your device."
     />
+    <meta name="theme-color" content="#f1ece2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#12110e" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="assets/icon.png" />
-    <meta property="og:title" content="Photoshoot — a webcam photobooth for your desktop" />
-    <meta property="og:description" content="Real-time effects, face-mesh fun, 4-shot strips, themes, community filters, and total privacy. Use online or download for Windows." />
+    <meta property="og:title" content="Photoshoot — a photobooth for your webcam" />
+    <meta property="og:description" content="Live effects, face effects, 4-shot strips and five themes. Runs in your browser or on Windows. Nothing leaves your device." />
     <meta property="og:image" content="assets/icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap"
+    />
     <link rel="stylesheet" href="landing.css" />
   </head>
   <body>
-    <!-- Nav -->
-    <header class="nav">
-      <a class="brand" href="#top">
-        <img src="assets/icon.png" alt="" width="32" height="32" />
-        <span>Photoshoot</span>
-      </a>
-      <nav class="nav-links">
-        <a href="#features">Features</a>
+    <header class="top">
+      <a class="wordmark" href="#top" aria-label="Photoshoot, back to top">Photoshoot</a>
+      <nav class="top-links" aria-label="Sections">
+        <a href="#inside">What's inside</a>
         <a href="#themes">Themes</a>
         <a href="#privacy">Privacy</a>
         <a href="#get">Download</a>
       </nav>
-      <a class="btn btn-primary btn-sm" href="app/">Launch web app</a>
+      <a class="btn btn-ink btn-sm" href="app/">Open the app</a>
     </header>
 
-    <!-- Hero -->
-    <section class="hero" id="top">
-      <div class="hero-copy">
-        <span class="plate">Free · Private · No account</span>
-        <h1>Your webcam,<br />but <span class="wink">fun</span>.</h1>
-        <p class="lede">
-          A photobooth for your desktop. Snap photos and 4-shot strips,
-          pile on real-time effects, warp your face, swap your background, and
-          hear every satisfying click — all developed right on your device.
-        </p>
-        <div class="hero-cta">
-          <a class="btn btn-primary" href="app/">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Launch in your browser
-          </a>
-          <a class="btn btn-ghost" href="#get">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Download for Windows
-          </a>
-        </div>
-        <p class="hero-foot">Works in any modern browser. No sign-up, no uploads, no tracking.</p>
-      </div>
-
-      <!-- Hero art: a real photo strip + the app, sitting on the paper -->
-      <div class="hero-art" aria-hidden="true">
-        <div class="window">
-          <div class="win-bar">
-            <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-            <span class="win-title">Photoshoot</span>
+    <main id="top">
+      <!-- Hero: the page is the booth -->
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Free photobooth · Browser &amp; Windows</p>
+          <h1 class="headline">
+            <span class="hl hl-1">Sit down.</span>
+            <span class="hl hl-2">Look here.</span>
+            <span class="hl hl-3">Smile.</span>
+          </h1>
+          <p class="lede">A photobooth for your webcam. Nothing leaves your device.</p>
+          <div class="cta-row">
+            <a class="btn btn-signal" href="app/">Open Photoshoot</a>
+            <a class="btn btn-line" href="#get">Download for Windows</a>
           </div>
-          <div class="win-view">
-            <div class="subject"></div>
-            <div class="vf-brackets"></div>
-            <span class="rec"><span class="rec-dot"></span>REC</span>
-            <span class="exposure">ISO 400 · f/1.8 · ON-DEVICE</span>
-          </div>
-          <div class="win-tools">
-            <div class="seg"><span></span><span class="on"></span><span></span></div>
-            <div class="shutter"><svg viewBox="0 0 28 28" width="20" height="20"><path fill="#fff" fill-rule="evenodd" d="M9.6 5.4 8.4 7H5A2.2 2.2 0 0 0 2.8 9.2V19.4A2.2 2.2 0 0 0 5 21.6H23A2.2 2.2 0 0 0 25.2 19.4V9.2A2.2 2.2 0 0 0 23 7H19.6L18.4 5.4Z M14 9.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2Z M14 11.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z"/></svg></div>
-            <div class="fx">Effects</div>
-          </div>
+          <p class="hint"><span class="hint-arrow" aria-hidden="true"></span>Or try it right here</p>
         </div>
 
-        <div class="strip">
-          <div class="strip-frame f1 develop"></div>
-          <div class="strip-frame f2 develop"></div>
-          <div class="strip-frame f3 develop"></div>
-          <div class="strip-frame f4 develop"></div>
-          <div class="strip-foot"><span class="strip-word">Photo·Shoot</span><span class="strip-date">06·14·26</span></div>
+        <div class="booth" id="booth">
+          <div class="cabinet">
+            <div class="cabinet-sign" aria-hidden="true">
+              <span>Photos</span>
+              <span class="sign-small">4 poses · 1 strip</span>
+            </div>
+
+            <div class="window" id="booth-window">
+              <video id="booth-video" playsinline muted aria-label="Live camera preview"></video>
+              <div class="count" id="booth-count" aria-live="assertive"></div>
+              <div class="flash" id="booth-flash" aria-hidden="true"></div>
+              <button class="curtain" id="booth-curtain" type="button" aria-describedby="booth-note">
+                <span class="curtain-label">Pull the curtain</span>
+              </button>
+              <p class="booth-note" id="booth-note" role="status"></p>
+            </div>
+
+            <div class="controls">
+              <div class="looks" role="radiogroup" aria-label="Look">
+                <button type="button" role="radio" aria-checked="true" data-look="colour">Colour</button>
+                <button type="button" role="radio" aria-checked="false" data-look="silver">Silver</button>
+                <button type="button" role="radio" aria-checked="false" data-look="sepia">Sepia</button>
+                <button type="button" role="radio" aria-checked="false" data-look="pop">Pop</button>
+              </div>
+              <button class="shutter" id="booth-shutter" type="button" disabled aria-label="Take four photos">
+                <span aria-hidden="true"></span>
+              </button>
+            </div>
+
+            <div class="slot" aria-hidden="true"></div>
+          </div>
+
+          <div class="strip-tray" id="strip-tray" hidden>
+            <img id="strip-img" alt="Your four-shot photo strip" />
+            <div class="strip-actions">
+              <a class="btn btn-ink btn-sm" id="strip-save" download="photoshoot-strip.png">Save strip</a>
+              <button class="btn btn-line btn-sm" id="strip-again" type="button">Again</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Marquee of effect names -->
+      <div class="marquee" aria-hidden="true">
+        <div class="marquee-track">
+          <span>Sepia</span><span>Thermal</span><span>X-Ray</span><span>Comic</span><span>Pop Art</span><span>Bulge</span><span>Twirl</span><span>Fish Eye</span><span>Bug Out</span><span>Chipmunk</span><span>Frog</span><span>Dizzy</span><span>Blockhead</span><span>Nose Twirl</span><span>Lovestruck</span><span>Space Alien</span>
+          <span>Sepia</span><span>Thermal</span><span>X-Ray</span><span>Comic</span><span>Pop Art</span><span>Bulge</span><span>Twirl</span><span>Fish Eye</span><span>Bug Out</span><span>Chipmunk</span><span>Frog</span><span>Dizzy</span><span>Blockhead</span><span>Nose Twirl</span><span>Lovestruck</span><span>Space Alien</span>
         </div>
       </div>
-    </section>
 
-    <!-- Features: a contact sheet -->
-    <section class="section" id="features">
-      <div class="kicker"><span>Contact Sheet</span><span class="kicker-rule"></span><span>25 effects · 6 reasons</span></div>
-      <div class="section-head">
-        <h2>Everything you need to make a moment</h2>
-        <p>Built for fun, developed like a finished print.</p>
-      </div>
+      <!-- What's inside: a price-board of numbers -->
+      <section class="section" id="inside">
+        <header class="section-head">
+          <h2>What's inside<br />the booth</h2>
+        </header>
 
-      <div class="sheet">
-        <article class="frame frame-wide develop" style="--n:'01'">
-          <div class="frame-shot shot-effects">
-            <span class="chip chip-a">Sepia</span>
-            <span class="chip chip-b">Thermal</span>
-            <span class="chip chip-c">Pop Art</span>
-            <span class="chip chip-d">Twirl</span>
-            <span class="chip chip-e">X-Ray</span>
-          </div>
-          <div class="rebate"><span class="rebate-n">01</span><span class="rebate-t">17 real-time GLSL effects</span></div>
-          <p class="frame-note">Sepia, Thermal, X-Ray, Comic, Pop Art, Bulge, Twirl, Fish Eye and more — rendered live on the GPU with hand-written WebGL shaders. Distortions have a draggable center.</p>
-        </article>
+        <ol class="board">
+          <li>
+            <span class="num">17</span>
+            <div>
+              <h3>Live effects</h3>
+              <p>Thermal, X-Ray, Pop Art, Twirl, Fish Eye…</p>
+            </div>
+          </li>
+          <li>
+            <span class="num">8</span>
+            <div>
+              <h3>Face effects</h3>
+              <p>Bug Out, Chipmunk, Frog, Lovestruck…</p>
+            </div>
+          </li>
+          <li>
+            <span class="num">4</span>
+            <div>
+              <h3>Shots per strip</h3>
+              <p>Countdown, flash, strip.</p>
+            </div>
+          </li>
+          <li>
+            <span class="num">5</span>
+            <div>
+              <h3>Themes</h3>
+              <p>Plus community themes and filters.</p>
+            </div>
+          </li>
+          <li>
+            <span class="num">0</span>
+            <div>
+              <h3>Sound files</h3>
+              <p>Every sound is synthesised live.</p>
+            </div>
+          </li>
+          <li>
+            <span class="num">0</span>
+            <div>
+              <h3>Uploads</h3>
+              <p>No servers, no account, no tracking.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
 
-        <article class="frame develop" style="--n:'02'">
-          <div class="frame-shot shot-face"></div>
-          <div class="rebate"><span class="rebate-n">02</span><span class="rebate-t">8 face-mesh effects</span></div>
-          <p class="frame-note">Bug Out, Chipmunk, Frog, Lovestruck and more — playful overlays that lock to your features in real time. The face mesh runs entirely on your device.</p>
-        </article>
-
-        <article class="frame develop" style="--n:'03'">
-          <div class="frame-shot shot-strip"></div>
-          <div class="rebate"><span class="rebate-n">03</span><span class="rebate-t">Photos, strips &amp; video</span></div>
-          <p class="frame-note">Single shots, the classic 4-shot vertical strip with a real paper finish, or short clips — with a 3-2-1 countdown and a white flash.</p>
-        </article>
-
-        <article class="frame develop" style="--n:'04'">
-          <div class="frame-shot shot-bg"></div>
-          <div class="rebate"><span class="rebate-n">04</span><span class="rebate-t">Background replacement</span></div>
-          <p class="frame-note">Step out, step back in, and drop into dreamy clouds, a space horizon, or a sunset — all original procedural art.</p>
-        </article>
-
-        <article class="frame develop" style="--n:'05'">
-          <div class="frame-shot shot-sound"></div>
-          <div class="rebate"><span class="rebate-n">05</span><span class="rebate-t">Original sound design</span></div>
-          <p class="frame-note">Every click, tick and chime is synthesized in-app from oscillators and filtered noise — no audio files at all.</p>
-        </article>
-
-        <article class="frame develop" style="--n:'06'">
-          <div class="frame-shot shot-theme"></div>
-          <div class="rebate"><span class="rebate-n">06</span><span class="rebate-t">Themes &amp; community</span></div>
-          <p class="frame-note">Four crafted themes — Studio, Studio Dark, Classic Metal, Retro Film — plus securely sandboxed community themes and filters.</p>
-        </article>
-      </div>
-    </section>
-
-    <!-- The one film-strip divider -->
-    <div class="sprockets" aria-hidden="true"><span class="sprockets-label">One app · Five moods · 36 EXP</span></div>
-
-    <!-- Themes -->
-    <section class="section section-tint" id="themes">
-      <div class="section-head">
-        <h2>One app, five moods</h2>
-        <p>The whole interface restyles instantly — not just a color swap. Import secure community themes and filters, too.</p>
-      </div>
-      <div class="themes">
-        <figure class="print">
-          <div class="print-sw"><span style="background:#ececec"></span><span style="background:#1a1a1a"></span><span style="background:#ff3b30"></span><span style="background:#007aff"></span></div>
-          <figcaption><strong>Studio</strong><em>Bright &amp; neutral</em></figcaption>
-        </figure>
-        <figure class="print">
-          <div class="print-sw"><span style="background:#1e1e1e"></span><span style="background:#323232"></span><span style="background:#ff453a"></span><span style="background:#0a84ff"></span></div>
-          <figcaption><strong>Studio Dark</strong><em>Cinematic</em></figcaption>
-        </figure>
-        <figure class="print">
-          <div class="print-sw"><span style="background:#c8cacd"></span><span style="background:#7d8186"></span><span style="background:#d63a2f"></span><span style="background:#3a6ea5"></span></div>
-          <figcaption><strong>Classic Metal</strong><em>Brushed aluminium</em></figcaption>
-        </figure>
-        <figure class="print">
-          <div class="print-sw"><span style="background:#ece2cd"></span><span style="background:#e2542e"></span><span style="background:#1f7a6e"></span><span style="background:#3a2e20"></span></div>
-          <figcaption><strong>Retro Film</strong><em>Warm vintage</em></figcaption>
-        </figure>
-        <figure class="print">
-          <div class="print-sw"><span style="background:#efe7d4"></span><span style="background:#1f1c17"></span><span style="background:#b0151b"></span><span style="background:#8a7d68"></span></div>
-          <figcaption><strong>Darkroom</strong><em>Safelight red</em></figcaption>
-        </figure>
-      </div>
-    </section>
-
-    <!-- Privacy -->
-    <section class="section privacy" id="privacy">
-      <div class="privacy-inner">
-        <span class="vf-brackets" aria-hidden="true"></span>
-        <h2>What happens on your camera<br />stays on your camera.</h2>
-        <p>
-          Photoshoot processes every frame locally — in Electron on your desktop, or
-          in your browser tab on the web. There are no uploads, no servers, no
-          analytics, and no account. The web version keeps your gallery in your
-          browser; the desktop version saves to your Pictures folder. That's it.
-        </p>
-        <ul class="ticks">
-          <li>No cloud, ever</li>
-          <li>No tracking or analytics</li>
-          <li>Open-source &amp; auditable</li>
-          <li>Community themes &amp; filters are sandboxed</li>
+      <!-- Themes: paint chips -->
+      <section class="section section-band" id="themes">
+        <header class="section-head">
+          <h2>Five rooms,<br />one booth</h2>
+        </header>
+        <ul class="chips">
+          <li class="chip">
+            <div class="chip-sw"><i style="background:#ececec"></i><i style="background:#1a1a1a"></i><i style="background:#ff3b30"></i><i style="background:#007aff"></i></div>
+            <strong>Studio</strong><span>Bright and neutral</span>
+          </li>
+          <li class="chip">
+            <div class="chip-sw"><i style="background:#1e1e1e"></i><i style="background:#323232"></i><i style="background:#ff453a"></i><i style="background:#0a84ff"></i></div>
+            <strong>Studio Dark</strong><span>Lights down</span>
+          </li>
+          <li class="chip">
+            <div class="chip-sw"><i style="background:#c8cacd"></i><i style="background:#7d8186"></i><i style="background:#d63a2f"></i><i style="background:#3a6ea5"></i></div>
+            <strong>Classic Metal</strong><span>Brushed aluminium</span>
+          </li>
+          <li class="chip">
+            <div class="chip-sw"><i style="background:#ece2cd"></i><i style="background:#e2542e"></i><i style="background:#1f7a6e"></i><i style="background:#3a2e20"></i></div>
+            <strong>Retro Film</strong><span>Warm and faded</span>
+          </li>
+          <li class="chip">
+            <div class="chip-sw"><i style="background:#efe7d4"></i><i style="background:#1f1c17"></i><i style="background:#b0151b"></i><i style="background:#8a7d68"></i></div>
+            <strong>Darkroom</strong><span>Safelight red</span>
+          </li>
         </ul>
-      </div>
-    </section>
+      </section>
 
-    <!-- Get -->
-    <section class="section get" id="get">
-      <div class="get-card">
-        <span class="get-stamp">Build 06·14·26 · Web + Win</span>
-        <img src="assets/icon.png" alt="" width="72" height="72" />
-        <h2>Start shooting</h2>
-        <p>Open it instantly in your browser, or install the desktop app for Windows.</p>
-        <div class="get-actions">
-          <a class="btn btn-primary btn-lg" href="app/">Launch web app</a>
-          <a class="btn btn-dark btn-lg" href="https://github.com/yeegz/photoshoot/releases/latest">Download for Windows</a>
-        </div>
-        <a class="ghlink" href="https://github.com/yeegz/photoshoot">
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.7 0 0 .84-.28 2.75 1.05a9.4 9.4 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.4.2 2.44.1 2.7.64.72 1.03 1.63 1.03 2.75 0 3.93-2.35 4.79-4.58 5.05.36.32.68.95.68 1.92 0 1.39-.01 2.51-.01 2.85 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>
-          View the source on GitHub
-        </a>
-      </div>
-    </section>
+      <!-- Privacy -->
+      <section class="section privacy" id="privacy">
+        <h2 class="statement">Nothing leaves<br /><em>the booth.</em></h2>
+        <p class="privacy-line">Processed on your device. Open source.</p>
+      </section>
 
-    <footer class="footer">
-      <div class="footer-inner">
-        <div class="brand">
-          <img src="assets/icon.png" alt="" width="24" height="24" /><span>Photoshoot</span>
+      <!-- Get -->
+      <section class="section get" id="get">
+        <h2 class="get-title">Two ways in</h2>
+        <div class="doors">
+          <a class="door door-web" href="app/">
+            <span class="door-kind">In your browser</span>
+            <span class="door-name">Open the web app</span>
+            <span class="door-meta">No install</span>
+            <span class="door-go" aria-hidden="true"></span>
+          </a>
+          <a class="door door-win" href="https://github.com/yeegz/photoshoot/releases/latest">
+            <span class="door-kind">On your desktop</span>
+            <span class="door-name">Download for Windows</span>
+            <span class="door-meta">Works offline</span>
+            <span class="door-go" aria-hidden="true"></span>
+          </a>
         </div>
-        <p>Original code, art, and sounds. A clean-room homage — not affiliated with or endorsed by Apple.</p>
-        <div class="footer-links">
-          <a href="app/">Web app</a>
-          <a href="https://github.com/yeegz/photoshoot">GitHub</a>
-          <a href="#privacy">Privacy</a>
-        </div>
-        <span class="footer-stamp">Photo·Shoot · 06·14·26</span>
-      </div>
+        <a class="source" href="https://github.com/yeegz/photoshoot">Read the source on GitHub</a>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <span class="wordmark wordmark-sm">Photoshoot</span>
+      <p>A clean-room homage. Not affiliated with Apple.</p>
+      <nav class="foot-links" aria-label="Footer">
+        <a href="app/">Web app</a>
+        <a href="https://github.com/yeegz/photoshoot">GitHub</a>
+        <a href="#privacy">Privacy</a>
+      </nav>
     </footer>
+
+    <script>
+      (function () {
+        var LOOKS = {
+          colour: 'none',
+          silver: 'grayscale(1) contrast(1.25) brightness(1.04)',
+          sepia: 'sepia(0.85) contrast(1.08) brightness(1.03)',
+          pop: 'saturate(1.9) contrast(1.22)'
+        };
+        var $ = function (id) { return document.getElementById(id); };
+        var booth = $('booth');
+        var video = $('booth-video');
+        var curtain = $('booth-curtain');
+        var shutter = $('booth-shutter');
+        var count = $('booth-count');
+        var flash = $('booth-flash');
+        var note = $('booth-note');
+        var tray = $('strip-tray');
+        var stripImg = $('strip-img');
+        var save = $('strip-save');
+        var again = $('strip-again');
+        var lookButtons = booth.querySelectorAll('[data-look]');
+        var look = 'colour';
+        var stream = null;
+        var shooting = false;
+        var lastUrl = null;
+
+        function setLook(name) {
+          look = name;
+          video.style.filter = LOOKS[name];
+          lookButtons.forEach(function (b) {
+            b.setAttribute('aria-checked', String(b.dataset.look === name));
+          });
+        }
+        lookButtons.forEach(function (b) {
+          b.addEventListener('click', function () { setLook(b.dataset.look); });
+        });
+
+        async function open() {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            note.textContent = 'This browser can’t open a camera here. The full app may still work.';
+            return;
+          }
+          curtain.disabled = true;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } },
+              audio: false
+            });
+            video.srcObject = stream;
+            await video.play();
+            booth.classList.add('is-open');
+            shutter.disabled = false;
+            note.textContent = '';
+          } catch (err) {
+            curtain.disabled = false;
+            note.textContent = err && err.name === 'NotAllowedError'
+              ? 'Camera access was declined. Nothing was recorded.'
+              : 'No camera found. Plug one in and try again.';
+          }
+        }
+        curtain.addEventListener('click', open);
+
+        function close() {
+          if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+          stream = null;
+          video.srcObject = null;
+          booth.classList.remove('is-open');
+          shutter.disabled = true;
+          curtain.disabled = false;
+        }
+        document.addEventListener('visibilitychange', function () {
+          if (document.hidden && !shooting) close();
+        });
+
+        var wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+
+        function grab(size) {
+          var c = document.createElement('canvas');
+          c.width = c.height = size;
+          var ctx = c.getContext('2d');
+          var vw = video.videoWidth, vh = video.videoHeight;
+          var s = Math.min(vw, vh);
+          ctx.translate(size, 0);
+          ctx.scale(-1, 1);
+          ctx.filter = LOOKS[look];
+          ctx.drawImage(video, (vw - s) / 2, (vh - s) / 2, s, s, 0, 0, size, size);
+          return c;
+        }
+
+        function compose(frames) {
+          var size = 360, pad = 22, gap = 14, foot = 74;
+          var c = document.createElement('canvas');
+          c.width = size + pad * 2;
+          c.height = pad + frames.length * size + (frames.length - 1) * gap + foot;
+          var ctx = c.getContext('2d');
+          ctx.fillStyle = '#fbf8f1';
+          ctx.fillRect(0, 0, c.width, c.height);
+          frames.forEach(function (f, i) {
+            ctx.drawImage(f, pad, pad + i * (size + gap));
+          });
+          var date = new Date().toLocaleDateString(undefined, { dateStyle: 'medium' });
+          ctx.fillStyle = '#16130f';
+          ctx.textAlign = 'center';
+          ctx.font = '800 22px Archivo, sans-serif';
+          ctx.fillText('PHOTOSHOOT', c.width / 2, c.height - foot / 2 + 2);
+          ctx.fillStyle = '#7a7266';
+          ctx.font = '500 14px Archivo, sans-serif';
+          ctx.fillText(date, c.width / 2, c.height - foot / 2 + 24);
+          return c;
+        }
+
+        async function shoot() {
+          if (shooting || !stream) return;
+          shooting = true;
+          shutter.disabled = true;
+          tray.hidden = true;
+          booth.classList.remove('has-strip');
+          var frames = [];
+          for (var i = 0; i < 4; i++) {
+            for (var n = 3; n > 0; n--) {
+              count.textContent = n;
+              count.classList.remove('tick');
+              void count.offsetWidth;
+              count.classList.add('tick');
+              await wait(i === 0 ? 800 : 560);
+            }
+            count.textContent = '';
+            frames.push(grab(360));
+            flash.classList.remove('go');
+            void flash.offsetWidth;
+            flash.classList.add('go');
+            await wait(420);
+          }
+          var strip = compose(frames);
+          strip.toBlob(function (blob) {
+            if (lastUrl) URL.revokeObjectURL(lastUrl);
+            lastUrl = URL.createObjectURL(blob);
+            stripImg.src = lastUrl;
+            save.href = lastUrl;
+            tray.hidden = false;
+            booth.classList.add('has-strip');
+            shooting = false;
+            shutter.disabled = !stream;
+          }, 'image/png');
+        }
+        shutter.addEventListener('click', shoot);
+        again.addEventListener('click', function () {
+          if (!stream) { open(); return; }
+          shoot();
+        });
+      })();
+    </script>
   </body>
 </html>
