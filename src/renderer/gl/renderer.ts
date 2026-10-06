@@ -4,8 +4,8 @@
 // live preview and the effects-menu thumbnails each own one instance.
 //
 // Performance: one reusable texture and one program per effect (compiled
-// lazily, cached). Frames are driven by requestVideoFrameCallback when the
-// source is a <video> (no wasted frames), falling back to requestAnimationFrame.
+// lazily, cached). Frames are driven by requestAnimationFrame (see schedule()
+// for why requestVideoFrameCallback is not used to pump the loop).
 
 import { VERTEX_SRC, FRAGMENTS } from './shaders';
 import { EFFECT_BY_ID } from './effects';
