@@ -125,6 +125,9 @@ async function startCamera(deviceId: string | null): Promise<void> {
     handleCameraError(res.error);
     return;
   }
+  // A graphics reset can happen while camera permissions or playback settle.
+  // Keep its recovery message until context restoration starts the camera again.
+  if (!app.renderer.available) return;
 
   document.documentElement.style.setProperty('--vf-aspect', String(camera.aspect));
   app.renderer.setSource(camera.video);

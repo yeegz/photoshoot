@@ -100,3 +100,26 @@ test('a graphics reset during countdown cancels the photo and keeps capture disa
   await expect(page.locator('#shutter')).toBeDisabled();
   await expect(page.locator('#trayScroll .thumb')).toHaveCount(0);
 });
+
+test('camera acquisition cannot clear a graphics reset that happened while it was pending', async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = async (constraints) => {
+      const stream = await original(constraints);
+      return new Promise((resolve) => {
+        Object.assign(window, { releaseCamera: () => resolve(stream) });
+      });
+    };
+  });
+  await page.goto('/app/');
+  await page.waitForFunction(() => 'releaseCamera' in window);
+  await page.locator('#glCanvas').evaluate((canvas: HTMLCanvasElement) => {
+    canvas.getContext('webgl2')!.getExtension('WEBGL_lose_context')!.loseContext();
+  });
+  await expect(page.locator('#vfMessageTitle')).toHaveText('Graphics reset');
+  await page.evaluate(() => (window as unknown as { releaseCamera: () => void }).releaseCamera());
+  await page.waitForFunction(() => document.querySelector('video')!.readyState >= 2);
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(page.locator('#vfMessageTitle')).toHaveText('Graphics reset');
+  await expect(page.locator('#shutter')).toBeDisabled();
+});
