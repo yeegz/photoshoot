@@ -21,7 +21,9 @@
     "deploy": "node web/build-web.mjs && firebase deploy --only hosting",
     "test:camera": "esbuild build/camera.test.mjs --bundle --platform=node --format=esm --outfile=build/.camera-test.mjs --log-level=warning && node --test build/.camera-test.mjs",
     "test:lifecycle": "node --test build/lifecycle.test.mjs",
-    "test": "npm run test:filters && npm run test:camera && npm run test:lifecycle",
+    "test:unit": "vitest run",
+    "test:node": "npm run test:filters && npm run test:camera && npm run test:lifecycle",
+    "test": "npm run test:unit && npm run test:node",
     "test:e2e": "playwright test",
     "web:dev": "npm run build:web && node web/serve.mjs",
     "verify": "npm run typecheck && npm test && npm run build:app:prod && npm run test:e2e"
@@ -32,7 +34,8 @@
     "electron": "^44.5.1",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^5.0.3"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.18"
