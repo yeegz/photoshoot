@@ -40,15 +40,15 @@ sound is made from scratch.
 ## Requirements
 
 - **Windows 10/11** (the target platform). Development also runs on macOS/Linux.
-- **Node.js 18+** and npm.
-- A webcam, and a GPU/driver with **WebGL2** support (virtually all modern machines).
+- **Node.js 22+** and npm.
+- A webcam, and a browser or desktop environment that supports camera capture. **WebGL2** enables effects; basic photo and video capture also works without it.
 
 ---
 
 ## Getting started
 
 ```bash
-npm install      # install dev dependencies (the app itself has zero runtime deps)
+npm ci           # install the locked dependencies, including local MediaPipe assets
 npm run dev      # build once, then launch the app
 ```
 
@@ -383,3 +383,29 @@ esbuild.mjs    Build pipeline (bundles all three targets)
 MIT. All bundled assets, art, and sounds are original to Photoshoot.
 
 **No Apple branding, logos, icons, graphics, layouts, code, or sounds are used.**
+
+## Camera troubleshooting and verification
+
+Allow camera access both in the browser and in the operating system. If the
+camera still cannot open, close other camera apps and choose another device in
+Settings. Photoshoot retries basic capture settings and recovers stale device
+IDs automatically. Playback failures show a retry action instead of claiming
+that a blank preview is live. On systems without WebGL2, basic camera mode
+supports capture and mirroring; GPU effects are disabled.
+
+On macOS, allow the packaged Photoshoot app under System Settings → Privacy &
+Security → Camera. Development Electron and the packaged app have separate
+permission identities. Windows desktop camera permission must also be enabled.
+
+```bash
+npm run web:dev           # local browser app at http://localhost:4178/app/
+npx playwright install chromium
+npm run verify           # types, filters, camera lifecycle, web and Electron camera tests
+npm run build:win        # Windows installer and portable app, run on Windows
+```
+
+The browser and desktop tests use a synthetic camera, check rendered pixels,
+and exercise failure recovery. They do not prove compatibility with every
+physical camera or driver. Test an affected real computer before declaring its
+hardware-specific failure resolved. Windows CI builds upload installable
+artifacts; a published, signed release remains a separate release step.

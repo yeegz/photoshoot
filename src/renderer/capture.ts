@@ -15,12 +15,16 @@ import type { CaptureKind } from '../shared/ipc-contract';
 // Shared busy state + primitives
 // ---------------------------------------------------------------------------
 
+function captureReady(source: MediaProvider | null = app.video.srcObject): boolean {
+  return source !== null && source === app.video.srcObject && app.video.readyState >= 2 && app.renderer.available;
+}
+
 function setBusy(busy: boolean): void {
   app.busy = busy;
-  (byId('shutter') as HTMLButtonElement).disabled = busy;
+  (byId('shutter') as HTMLButtonElement).disabled = busy || !captureReady();
   qsa<HTMLButtonElement>('.mode-option').forEach((b) => (b.disabled = busy));
   ['btnEffects', 'btnBackgrounds'].forEach((id) => {
-    (byId(id) as HTMLButtonElement).disabled = busy;
+    (byId(id) as HTMLButtonElement).disabled = busy || !app.renderer.supportsEffects;
   });
 }
 
@@ -170,13 +174,15 @@ async function saveCanvas(canvas: HTMLCanvasElement, kind: CaptureKind): Promise
 // ---------------------------------------------------------------------------
 
 export async function captureSingle(): Promise<void> {
-  if (app.busy || !app.renderer.available) return;
+  const source = app.video.srcObject;
+  if (app.busy || !captureReady(source)) return;
   sound.unlock();
   setBusy(true);
   try {
     await runCountdown(app.settings.countdownSeconds);
     fireFlash();
     await wait(40); // let the flash hit its peak before we grab
+    if (!captureReady(source)) return;
     const frame = grabFrame();
     await saveCanvas(frame, 'single');
   } finally {
@@ -252,7 +258,8 @@ function composeStrip(frames: HTMLCanvasElement[]): HTMLCanvasElement {
 }
 
 export async function captureStrip(): Promise<void> {
-  if (app.busy || !app.renderer.available) return;
+  const source = app.video.srcObject;
+  if (app.busy || !captureReady(source)) return;
   sound.unlock();
   setBusy(true);
   stripDots(4);
@@ -263,6 +270,7 @@ export async function captureStrip(): Promise<void> {
       await runCountdown(cd);
       fireFlash();
       await wait(40);
+      if (!captureReady(source)) return;
       frames.push(grabFrame());
       markDot(i);
       if (i < 3) await wait(650);
@@ -392,6 +400,11 @@ export const videoRecorder = new VideoRecorder();
 
 /** Dispatch the shutter action based on the active mode. */
 export async function triggerShutter(): Promise<void> {
+  if (videoRecorder.recording) {
+    videoRecorder.stop();
+    return;
+  }
+  if (!captureReady()) return;
   // While viewing a photo the shutter is greyed: tapping it just returns to the
   // live camera without taking a shot.
   if (isReviewing()) {

@@ -8,3 +8,7 @@ web-dist/
 build/.filter-test.mjs
 
 .claude/
+
+build/.camera-test.mjs
+test-results/
+playwright-report/

@@ -32,6 +32,10 @@ export class GLRenderer {
   lastError: string | null = null;
   onShaderError: ((effectId: string, message: string) => void) | null = null;
   onContextLost: (() => void) | null = null;
+  onContextRestored: (() => void) | null = null;
+  private ctx2d: CanvasRenderingContext2D | null = null;
+
+  get supportsEffects(): boolean { return this.gl !== null; }
 
   private gl: WebGL2RenderingContext | null = null;
   private vao: WebGLVertexArrayObject | null = null;
@@ -75,6 +79,7 @@ export class GLRenderer {
         if (f.lut) this.uploadLut(f.id, f.lut);
       }
       if (this.source) this.start();
+      if (this.available) this.onContextRestored?.();
     });
   }
 
@@ -87,8 +92,9 @@ export class GLRenderer {
       powerPreference: 'high-performance',
     }) as WebGL2RenderingContext | null;
     if (!gl) {
-      this.available = false;
-      this.lastError = 'WebGL2 is not available on this system.';
+      this.ctx2d = this.canvas.getContext('2d');
+      this.available = this.ctx2d !== null;
+      this.lastError = this.available ? null : 'No camera renderer is available on this system.';
       return;
     }
     this.gl = gl;
@@ -97,7 +103,7 @@ export class GLRenderer {
     gl.clearColor(0, 0, 0, 1);
     this.available = true;
     // Pre-compile the Normal program so a fallback always exists.
-    this.getProgram('normal');
+    if (!this.getProgram('normal')) this.available = false;
     this.startTime = performance.now();
   }
 
@@ -118,6 +124,11 @@ export class GLRenderer {
       if (!this.failed.has(key)) {
         this.failed.add(key);
         this.onShaderError?.(key, message);
+      }
+      if (key === 'normal') {
+        this.lastError = message;
+        this.available = false;
+        return null;
       }
       return this.getProgram('normal');
     }
@@ -225,10 +236,12 @@ export class GLRenderer {
    *  upload once and then draw many effects from the same texture. */
   prepareFrame(): boolean {
     const gl = this.gl;
-    if (!gl || !this.source) return false;
+    if (!this.source || (!gl && !this.ctx2d)) return false;
     const { w, h } = this.sourceDims();
     if (w === 0 || h === 0) return false;
     if (this.source instanceof HTMLVideoElement && this.source.readyState < 2) return false;
+    if (this.ctx2d) return true;
+    if (!gl) return false;
     gl.activeTexture(gl.TEXTURE0); // the video always lives on unit 0
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -242,6 +255,20 @@ export class GLRenderer {
 
   /** Draw an effect from the already-uploaded texture into the canvas. */
   drawEffect(effectId: string, amount: number, mirror: boolean): void {
+    if (this.ctx2d && this.source) {
+      const { w, h } = this.sourceDims();
+      if (!w || !h) return;
+      const scale = this.maxSize ? Math.min(1, this.maxSize / Math.max(w, h)) : 1;
+      this.ensureSize(Math.round(w * scale), Math.round(h * scale));
+      this.ctx2d.save();
+      if (mirror) {
+        this.ctx2d.translate(this.canvas.width, 0);
+        this.ctx2d.scale(-1, 1);
+      }
+      this.ctx2d.drawImage(this.source, 0, 0, this.canvas.width, this.canvas.height);
+      this.ctx2d.restore();
+      return;
+    }
     const gl = this.gl;
     if (!gl) return;
     const { w, h } = this.sourceDims();
@@ -376,7 +403,7 @@ export class GLRenderer {
       fps: this.fps,
       width: w,
       height: h,
-      backend: 'WebGL2 · rAF',
+      backend: this.ctx2d ? 'Basic camera · Canvas2D' : 'WebGL2 · rAF',
       dropped: this.dropped,
     };
   }
