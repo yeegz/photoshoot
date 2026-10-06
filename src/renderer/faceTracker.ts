@@ -41,6 +41,7 @@ let landmarker: FaceLandmarker | null = null;
 let loadState: 'idle' | 'loading' | 'ready' | 'failed' = 'idle';
 let loadPromise: Promise<boolean> | null = null;
 let running = false;
+let activation = 0;
 let rafId = 0;
 let lastDetect = 0;
 let latest: FacePoints = EMPTY;
@@ -79,13 +80,15 @@ async function load(): Promise<boolean> {
 
 export async function activateFaceTracking(): Promise<void> {
   if (running) return;
+  const request = activation;
   const ok = await load();
-  if (!ok) return;
+  if (!ok || request !== activation || running) return;
   running = true;
   loop();
 }
 
 export function deactivateFaceTracking(): void {
+  activation++;
   running = false;
   if (rafId) cancelAnimationFrame(rafId);
   rafId = 0;

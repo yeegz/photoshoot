@@ -68,6 +68,7 @@ function setStatus(text: string, kind: '' | 'live' | 'error'): void {
 function handleCameraError(kind: CameraErrorKind | undefined): void {
   sound.play('error');
   setStatus('Camera unavailable', 'error');
+  byId<HTMLButtonElement>('shutter').disabled = true;
   const retry: MessageAction = {
     label: 'Try Again',
     action: () => void startCamera(app.settings.cameraId),
@@ -79,15 +80,26 @@ function handleCameraError(kind: CameraErrorKind | undefined): void {
         'Camera access blocked',
         app.info?.platform === 'web'
           ? 'Photoshoot needs your webcam. Allow camera access for this site in your browser (look for the camera icon near the address bar), then try again.'
-          : 'Photoshoot needs your webcam. On Windows, allow camera access in Settings → Privacy & security → Camera, then try again.',
+          : app.info?.platform === 'darwin'
+            ? 'Allow Photoshoot in System Settings → Privacy & Security → Camera, then restart the app.'
+            : 'Allow camera access for desktop apps in your system privacy settings, then try again.',
         retry
       );
+      break;
+    case 'playback':
+    case 'timeout':
+      showMessage('⚠', 'Camera preview could not start',
+        'No playable video arrived. Check the camera permission prompt, close other camera apps, try another camera in Settings, or press Try Again.', retry);
+      break;
+    case 'insecure':
+      showMessage('🔒', 'A secure connection is required',
+        'Open Photoshoot over HTTPS or localhost to use the camera.', retry);
       break;
     case 'notfound':
       showMessage('📷', 'No camera found', 'Connect a webcam, then try again.', retry);
       break;
     case 'inuse':
-      showMessage('⏳', 'Camera in use', 'Another app is using your camera. Close it and try again.', retry);
+      showMessage('⏳', 'Camera in use', 'The camera could not be read. Close other camera apps, check your system camera permissions, or select another camera in Settings.', retry);
       break;
     default:
       showMessage('⚠', 'Camera could not start', 'Something went wrong starting the camera.', retry);
@@ -100,17 +112,23 @@ function handleCameraError(kind: CameraErrorKind | undefined): void {
 
 async function startCamera(deviceId: string | null): Promise<void> {
   if (!app.renderer.available) return;
+  videoRecorder.stop();
   if (bgReplacer?.isActive()) bgReplacer.stop();
+  app.renderer.stop();
+  byId<HTMLButtonElement>('shutter').disabled = true;
   setStatus('Starting camera…', '');
   showMessage('◌', 'Just a moment', 'Waking up your webcam…', null);
 
   const res = await camera.start(deviceId);
   if (!res.ok) {
+    if (res.error === 'cancelled') return;
     handleCameraError(res.error);
     return;
   }
+  // A graphics reset can happen while camera permissions or playback settle.
+  // Keep its recovery message until context restoration starts the camera again.
+  if (!app.renderer.available) return;
 
-  await camera.waitForFrame();
   document.documentElement.style.setProperty('--vf-aspect', String(camera.aspect));
   app.renderer.setSource(camera.video);
   app.renderer.setMirror(app.settings.mirror);
@@ -118,6 +136,7 @@ async function startCamera(deviceId: string | null): Promise<void> {
   app.renderer.start();
   hideMessage();
   setStatus('Camera live', 'live');
+  byId<HTMLButtonElement>('shutter').disabled = app.busy;
 
   if (res.deviceId && res.deviceId !== app.settings.cameraId) {
     await app.updateSettings({ cameraId: res.deviceId });
@@ -248,8 +267,15 @@ async function bootstrap(): Promise<void> {
     toast(`Effect “${effectLabel(id)}” couldn't load; using Normal.`, 'error');
     console.warn('[shader]', id, msg);
   };
-  renderer.onContextLost = () =>
+  renderer.onContextLost = () => {
+    videoRecorder.stop();
+    byId<HTMLButtonElement>('shutter').disabled = true;
     showMessage('⚠', 'Graphics reset', 'The graphics context was lost. It should recover shortly…', null);
+  };
+  renderer.onContextRestored = () => {
+    // Recheck the camera too: it may have been unplugged during the reset.
+    void startCamera(app.settings.cameraId);
+  };
 
   app.applySideEffects();
   await loadImportedThemes();
@@ -286,6 +312,23 @@ async function bootstrap(): Promise<void> {
     (byId('shutter') as HTMLButtonElement).disabled = true;
     return;
   }
+
+  if (!renderer.supportsEffects) {
+    byId<HTMLButtonElement>('btnEffects').disabled = true;
+    byId<HTMLButtonElement>('btnBackgrounds').disabled = true;
+    byId('btnEffects').title = 'Effects need WebGL2. Basic camera capture is available.';
+    toast('Basic camera mode: photos and video work; effects need WebGL2.', 'info');
+  }
+
+  camera.onDeviceListChanged = () => {
+    const media = camera.video.srcObject as MediaStream | null;
+    if (media && media.getVideoTracks().every((track) => track.readyState === 'ended')) {
+      videoRecorder.stop();
+      app.renderer.stop();
+      camera.stop();
+      handleCameraError('notfound');
+    }
+  };
 
   window.addEventListener('beforeunload', () => {
     camera.stop();

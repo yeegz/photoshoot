@@ -2,7 +2,7 @@
 // states so the UI can show the right "no camera / permission denied / camera
 // busy" screen. Tracks are always stopped on teardown.
 
-export type CameraErrorKind = 'denied' | 'notfound' | 'inuse' | 'insecure' | 'unknown';
+export type CameraErrorKind = 'denied' | 'notfound' | 'inuse' | 'insecure' | 'playback' | 'timeout' | 'cancelled' | 'unknown';
 
 export interface CameraStartResult {
   ok: boolean;
@@ -19,6 +19,7 @@ export interface CameraDevice {
 export class CameraManager {
   readonly video: HTMLVideoElement;
   private stream: MediaStream | null = null;
+  private generation = 0;
   onActiveDevice: ((id: string) => void) | null = null;
   onDeviceListChanged: (() => void) | null = null;
 
@@ -60,68 +61,97 @@ export class CameraManager {
     }
     this.stop();
 
-    const base: MediaTrackConstraints = {
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
-      frameRate: { ideal: 30, max: 60 },
+    const generation = this.generation;
+    const preferred: MediaTrackConstraints = {
+      width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 },
     };
-    const want: MediaTrackConstraints = deviceId ? { ...base, deviceId: { exact: deviceId } } : base;
-
-    try {
-      return await this.acquire(want, deviceId ?? null);
-    } catch (err) {
-      // A specific camera was requested but couldn't be opened — most often a
-      // saved deviceId that's gone stale (browser device IDs rotate between
-      // sessions), or the device was unplugged. Rather than dead-end on
-      // "No camera found", fall back to the default camera. startCamera() then
-      // persists the new active id, so this self-heals the stale setting.
-      if (deviceId && isDeviceSpecificError(err)) {
-        try {
-          return await this.acquire(base, null);
-        } catch (err2) {
-          return { ok: false, ...classifyError(err2) };
-        }
+    // Some drivers reject even optional capture settings. Relax them on the
+    // requested camera before trying the default device; never retry denial.
+    const attempts: (MediaTrackConstraints | true)[] = deviceId
+      ? [{ ...preferred, deviceId: { exact: deviceId } }, { deviceId: { exact: deviceId } }, preferred, true]
+      : [preferred, true];
+    let lastError: unknown;
+    for (const constraints of attempts) {
+      let stream: MediaStream;
+      let expired = false;
+      try {
+        const acquisition = navigator.mediaDevices.getUserMedia({ video: constraints, audio: false })
+          .then((media) => {
+            // getUserMedia cannot be aborted. Release any result that arrives
+            // after our deadline, camera switch, or teardown.
+            if (expired || generation !== this.generation) media.getTracks().forEach((track) => track.stop());
+            return media;
+          });
+        stream = await withTimeout(acquisition, 30000);
+      } catch (err) {
+        expired = true;
+        if (generation !== this.generation) return { ok: false, error: 'cancelled' };
+        lastError = err;
+        if (isDeviceSpecificError(err)) continue;
+        return { ok: false, ...classifyError(err) };
       }
-      return { ok: false, ...classifyError(err) };
+      if (generation !== this.generation) {
+        stream.getTracks().forEach((track) => track.stop());
+        return { ok: false, error: 'cancelled' };
+      }
+      this.stream = stream;
+      this.video.srcObject = stream;
+      try {
+        const track = stream.getVideoTracks()[0];
+        if (!track || track.readyState === 'ended') throw new Error('No live video track.');
+        // Permission to acquire a device does not guarantee video playback.
+        await withTimeout(this.video.play(), 10000);
+        if (generation !== this.generation) return { ok: false, error: 'cancelled' };
+        if (!(await this.waitForFrame(10000))) throw { name: 'TimeoutError' };
+        if (generation !== this.generation) return { ok: false, error: 'cancelled' };
+        const activeId = track.getSettings().deviceId ?? '';
+        track.addEventListener('ended', () => {
+          if (generation === this.generation) this.onDeviceListChanged?.();
+        });
+        if (activeId) this.onActiveDevice?.(activeId);
+        return { ok: true, deviceId: activeId };
+      } catch (err) {
+        if (generation !== this.generation) return { ok: false, error: 'cancelled' };
+        this.stop();
+        return { ok: false, error: errName(err) === 'TimeoutError' ? 'timeout' : 'playback',
+          message: 'The camera opened but did not produce playable video.' };
+      }
     }
+    return { ok: false, ...classifyError(lastError) };
   }
 
-  private async acquire(
-    video: MediaTrackConstraints,
-    requestedId: string | null
-  ): Promise<CameraStartResult> {
-    const stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
-    this.stream = stream;
-    this.video.srcObject = stream;
-    await this.video.play().catch(() => undefined);
-    const track = stream.getVideoTracks()[0];
-    const activeId = track?.getSettings().deviceId ?? requestedId ?? '';
-    if (track) {
-      track.addEventListener('ended', () => this.onDeviceListChanged?.());
-    }
-    if (activeId) this.onActiveDevice?.(activeId);
-    return { ok: true, deviceId: activeId };
-  }
-
-  /** Wait until the video has real dimensions (or time out). */
-  async waitForFrame(timeoutMs = 6000): Promise<boolean> {
-    if (this.video.videoWidth > 0) return true;
+  /** Wait for a decoded frame, not just metadata. All listeners are bounded. */
+  async waitForFrame(timeoutMs = 10000): Promise<boolean> {
+    const generation = this.generation;
+    const ready = () => generation === this.generation && this.video.readyState >= 2 &&
+      this.video.videoWidth > 0 && this.video.videoHeight > 0;
+    if (ready()) return true;
     return new Promise((resolve) => {
       const done = (ok: boolean) => {
+        clearTimeout(timer);
+        clearInterval(poll);
         this.video.removeEventListener('loadeddata', onData);
+        this.video.removeEventListener('playing', onData);
         resolve(ok);
       };
-      const onData = () => done(this.video.videoWidth > 0);
+      const onData = () => { if (ready()) done(true); };
+      const timer = setTimeout(() => done(ready()), timeoutMs);
+      const poll = setInterval(() => {
+        if (generation !== this.generation) done(false);
+        else onData();
+      }, 50);
       this.video.addEventListener('loadeddata', onData);
-      setTimeout(() => done(this.video.videoWidth > 0), timeoutMs);
+      this.video.addEventListener('playing', onData);
     });
   }
 
   stop(): void {
+    this.generation++;
     if (this.stream) {
       this.stream.getTracks().forEach((t) => t.stop());
       this.stream = null;
     }
+    this.video.pause();
     this.video.srcObject = null;
   }
 
@@ -153,6 +183,8 @@ function classifyError(err: unknown): { error: CameraErrorKind; message: string 
     case 'NotReadableError':
     case 'AbortError':
       return { error: 'inuse', message: 'The camera is in use by another app.' };
+    case 'TimeoutError':
+      return { error: 'timeout', message: 'The camera did not respond. Check the permission prompt and try again.' };
     default:
       return { error: 'unknown', message: 'Could not start the camera.' };
   }
@@ -169,5 +201,16 @@ function isDeviceSpecificError(err: unknown): boolean {
       return true;
     default:
       return false;
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([promise, new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject({ name: 'TimeoutError' }), timeoutMs);
+    })]);
+  } finally {
+    clearTimeout(timer);
   }
 }

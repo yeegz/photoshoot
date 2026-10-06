@@ -9,18 +9,22 @@ import { byId, qsa, clear, wait, el } from './dom';
 import { toast } from './toast';
 import { api } from './bridge';
 import { refreshGallery, exitReview, isReviewing } from './gallery';
-import type { CaptureKind } from '../shared/ipc-contract';
+import type { CaptureKind, SaveRequest } from '../shared/ipc-contract';
 
 // ---------------------------------------------------------------------------
 // Shared busy state + primitives
 // ---------------------------------------------------------------------------
 
+function captureReady(source: MediaProvider | null = app.video.srcObject): boolean {
+  return source !== null && source === app.video.srcObject && app.video.readyState >= 2 && app.renderer.available;
+}
+
 function setBusy(busy: boolean): void {
   app.busy = busy;
-  (byId('shutter') as HTMLButtonElement).disabled = busy;
+  (byId('shutter') as HTMLButtonElement).disabled = busy || !captureReady();
   qsa<HTMLButtonElement>('.mode-option').forEach((b) => (b.disabled = busy));
   ['btnEffects', 'btnBackgrounds'].forEach((id) => {
-    (byId(id) as HTMLButtonElement).disabled = busy;
+    (byId(id) as HTMLButtonElement).disabled = busy || !app.renderer.supportsEffects;
   });
 }
 
@@ -170,13 +174,15 @@ async function saveCanvas(canvas: HTMLCanvasElement, kind: CaptureKind): Promise
 // ---------------------------------------------------------------------------
 
 export async function captureSingle(): Promise<void> {
-  if (app.busy || !app.renderer.available) return;
+  const source = app.video.srcObject;
+  if (app.busy || !captureReady(source)) return;
   sound.unlock();
   setBusy(true);
   try {
     await runCountdown(app.settings.countdownSeconds);
     fireFlash();
     await wait(40); // let the flash hit its peak before we grab
+    if (!captureReady(source)) return;
     const frame = grabFrame();
     await saveCanvas(frame, 'single');
   } finally {
@@ -252,7 +258,8 @@ function composeStrip(frames: HTMLCanvasElement[]): HTMLCanvasElement {
 }
 
 export async function captureStrip(): Promise<void> {
-  if (app.busy || !app.renderer.available) return;
+  const source = app.video.srcObject;
+  if (app.busy || !captureReady(source)) return;
   sound.unlock();
   setBusy(true);
   stripDots(4);
@@ -263,6 +270,7 @@ export async function captureStrip(): Promise<void> {
       await runCountdown(cd);
       fireFlash();
       await wait(40);
+      if (!captureReady(source)) return;
       frames.push(grabFrame());
       markDot(i);
       if (i < 3) await wait(650);
@@ -281,7 +289,7 @@ export async function captureStrip(): Promise<void> {
 
 class VideoRecorder {
   private recorder: MediaRecorder | null = null;
-  private chunks: Blob[] = [];
+  private releaseRecording: (() => void) | null = null;
   private startedAt = 0;
   private timer = 0;
   recording = false;
@@ -306,19 +314,52 @@ class VideoRecorder {
       return;
     }
     sound.unlock();
-    const stream = app.renderer.canvas.captureStream(30);
+    let stream: MediaStream | null = null;
+    let recorder: MediaRecorder;
+    const chunks: Blob[] = [];
     try {
-      this.recorder = new MediaRecorder(stream, { mimeType: this.pickMime() });
+      stream = app.renderer.canvas.captureStream(30);
+      recorder = new MediaRecorder(stream, { mimeType: this.pickMime() });
+      recorder.ondataavailable = (e) => {
+        if (e.data.size) chunks.push(e.data);
+      };
+      recorder.start(200);
     } catch {
+      stream?.getTracks().forEach((track) => track.stop());
       toast('Could not start the recorder.', 'error');
       return;
     }
-    this.chunks = [];
-    this.recorder.ondataavailable = (e) => {
-      if (e.data.size) this.chunks.push(e.data);
+    this.recorder = recorder;
+    const metadata = {
+      width: app.renderer.canvas.width,
+      height: app.renderer.canvas.height,
+      effect: app.effect,
     };
-    this.recorder.onstop = () => void this.finalize();
-    this.recorder.start(200);
+    // A prior recorder may deliver its final events after a new recording
+    // starts. Keep its data and cleanup local to that recording.
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      stream?.getTracks().forEach((track) => track.stop());
+      if (this.recorder !== recorder) return;
+      this.recorder = null;
+      this.releaseRecording = null;
+      this.recording = false;
+      window.clearInterval(this.timer);
+      this.timer = 0;
+      byId('shutter').classList.remove('is-recording');
+      byId('recBadge').classList.add('hidden');
+      qsa<HTMLButtonElement>('.mode-option').forEach((b) => (b.disabled = false));
+    };
+    this.releaseRecording = release;
+    recorder.onstop = () => {
+      release();
+      void this.finalize(chunks, metadata).catch(() => {
+        toast('Could not save video.', 'error');
+        sound.play('error');
+      });
+    };
     this.recording = true;
     this.startedAt = performance.now();
     sound.play('button');
@@ -342,30 +383,26 @@ class VideoRecorder {
 
   stop(): void {
     if (!this.recording || !this.recorder) return;
-    this.recording = false;
-    window.clearInterval(this.timer);
+    const release = this.releaseRecording;
     try {
       this.recorder.stop();
     } catch {
       /* already stopped */
+    } finally {
+      release?.();
     }
-    byId('shutter').classList.remove('is-recording');
-    byId('recBadge').classList.add('hidden');
-    qsa<HTMLButtonElement>('.mode-option').forEach((b) => (b.disabled = false));
   }
 
-  private async finalize(): Promise<void> {
-    const blob = new Blob(this.chunks, { type: 'video/webm' });
-    this.chunks = [];
+  private async finalize(chunks: Blob[], metadata: Pick<SaveRequest, 'width' | 'height' | 'effect'>): Promise<void> {
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    chunks.length = 0;
     if (blob.size === 0) return;
     const dataUrl = await blobToDataUrl(blob);
     const res = await api.saveCapture({
       kind: 'video',
       format: 'png',
       dataUrl,
-      width: app.renderer.canvas.width,
-      height: app.renderer.canvas.height,
-      effect: app.effect,
+      ...metadata,
       thumbnail: '',
     });
     if (res.ok) {
@@ -392,6 +429,11 @@ export const videoRecorder = new VideoRecorder();
 
 /** Dispatch the shutter action based on the active mode. */
 export async function triggerShutter(): Promise<void> {
+  if (videoRecorder.recording) {
+    videoRecorder.stop();
+    return;
+  }
+  if (!captureReady()) return;
   // While viewing a photo the shutter is greyed: tapping it just returns to the
   // live camera without taking a shot.
   if (isReviewing()) {

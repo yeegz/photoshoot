@@ -28,3 +28,8 @@ nsis:
   shortcutName: Photoshoot
 portable:
   artifactName: ${productName}-${version}-portable.${ext}
+
+mac:
+  category: public.app-category.photography
+  extendInfo:
+    NSCameraUsageDescription: Photoshoot uses your camera to take photos and videos on this device.
