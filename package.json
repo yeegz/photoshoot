@@ -20,7 +20,8 @@
     "test:filters": "esbuild build/filter-schema.test.mjs --bundle --platform=node --format=esm --outfile=build/.filter-test.mjs --log-level=warning && node build/.filter-test.mjs",
     "deploy": "node web/build-web.mjs && firebase deploy --only hosting",
     "test:camera": "esbuild build/camera.test.mjs --bundle --platform=node --format=esm --outfile=build/.camera-test.mjs --log-level=warning && node --test build/.camera-test.mjs",
-    "test": "npm run test:filters && npm run test:camera",
+    "test:lifecycle": "node --test build/lifecycle.test.mjs",
+    "test": "npm run test:filters && npm run test:camera && npm run test:lifecycle",
     "test:e2e": "playwright test",
     "web:dev": "npm run build:web && node web/serve.mjs",
     "verify": "npm run typecheck && npm test && npm run build:app:prod && npm run test:e2e"

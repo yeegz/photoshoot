@@ -9,7 +9,7 @@ import { byId, qsa, clear, wait, el } from './dom';
 import { toast } from './toast';
 import { api } from './bridge';
 import { refreshGallery, exitReview, isReviewing } from './gallery';
-import type { CaptureKind } from '../shared/ipc-contract';
+import type { CaptureKind, SaveRequest } from '../shared/ipc-contract';
 
 // ---------------------------------------------------------------------------
 // Shared busy state + primitives
@@ -289,7 +289,7 @@ export async function captureStrip(): Promise<void> {
 
 class VideoRecorder {
   private recorder: MediaRecorder | null = null;
-  private chunks: Blob[] = [];
+  private releaseRecording: (() => void) | null = null;
   private startedAt = 0;
   private timer = 0;
   recording = false;
@@ -314,19 +314,52 @@ class VideoRecorder {
       return;
     }
     sound.unlock();
-    const stream = app.renderer.canvas.captureStream(30);
+    let stream: MediaStream | null = null;
+    let recorder: MediaRecorder;
+    const chunks: Blob[] = [];
     try {
-      this.recorder = new MediaRecorder(stream, { mimeType: this.pickMime() });
+      stream = app.renderer.canvas.captureStream(30);
+      recorder = new MediaRecorder(stream, { mimeType: this.pickMime() });
+      recorder.ondataavailable = (e) => {
+        if (e.data.size) chunks.push(e.data);
+      };
+      recorder.start(200);
     } catch {
+      stream?.getTracks().forEach((track) => track.stop());
       toast('Could not start the recorder.', 'error');
       return;
     }
-    this.chunks = [];
-    this.recorder.ondataavailable = (e) => {
-      if (e.data.size) this.chunks.push(e.data);
+    this.recorder = recorder;
+    const metadata = {
+      width: app.renderer.canvas.width,
+      height: app.renderer.canvas.height,
+      effect: app.effect,
     };
-    this.recorder.onstop = () => void this.finalize();
-    this.recorder.start(200);
+    // A prior recorder may deliver its final events after a new recording
+    // starts. Keep its data and cleanup local to that recording.
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      stream?.getTracks().forEach((track) => track.stop());
+      if (this.recorder !== recorder) return;
+      this.recorder = null;
+      this.releaseRecording = null;
+      this.recording = false;
+      window.clearInterval(this.timer);
+      this.timer = 0;
+      byId('shutter').classList.remove('is-recording');
+      byId('recBadge').classList.add('hidden');
+      qsa<HTMLButtonElement>('.mode-option').forEach((b) => (b.disabled = false));
+    };
+    this.releaseRecording = release;
+    recorder.onstop = () => {
+      release();
+      void this.finalize(chunks, metadata).catch(() => {
+        toast('Could not save video.', 'error');
+        sound.play('error');
+      });
+    };
     this.recording = true;
     this.startedAt = performance.now();
     sound.play('button');
@@ -350,30 +383,26 @@ class VideoRecorder {
 
   stop(): void {
     if (!this.recording || !this.recorder) return;
-    this.recording = false;
-    window.clearInterval(this.timer);
+    const release = this.releaseRecording;
     try {
       this.recorder.stop();
     } catch {
       /* already stopped */
+    } finally {
+      release?.();
     }
-    byId('shutter').classList.remove('is-recording');
-    byId('recBadge').classList.add('hidden');
-    qsa<HTMLButtonElement>('.mode-option').forEach((b) => (b.disabled = false));
   }
 
-  private async finalize(): Promise<void> {
-    const blob = new Blob(this.chunks, { type: 'video/webm' });
-    this.chunks = [];
+  private async finalize(chunks: Blob[], metadata: Pick<SaveRequest, 'width' | 'height' | 'effect'>): Promise<void> {
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    chunks.length = 0;
     if (blob.size === 0) return;
     const dataUrl = await blobToDataUrl(blob);
     const res = await api.saveCapture({
       kind: 'video',
       format: 'png',
       dataUrl,
-      width: app.renderer.canvas.width,
-      height: app.renderer.canvas.height,
-      effect: app.effect,
+      ...metadata,
       thumbnail: '',
     });
     if (res.ok) {
