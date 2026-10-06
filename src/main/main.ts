@@ -8,7 +8,7 @@ import { app, BrowserWindow, net, protocol, session, shell } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { registerIpc } from './ipc';
-import { isInside } from './paths';
+import { resolveAppRequestPath } from './pathSafety';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -49,17 +49,9 @@ protocol.registerSchemesAsPrivileged([
 function registerAppProtocol(): void {
   const distDir = __dirname; // main.js lives in dist/ alongside index.html etc.
   protocol.handle('app', async (request) => {
-    let rel: string;
-    try {
-      rel = decodeURIComponent(new URL(request.url).pathname).replace(/^\/+/, '');
-    } catch {
-      return new Response('Bad Request', { status: 400 });
-    }
-    if (rel === '') rel = 'index.html';
-    const filePath = path.join(distDir, rel);
-    if (!isInside(distDir, filePath)) {
-      return new Response('Forbidden', { status: 403 });
-    }
+    const filePath = resolveAppRequestPath(distDir, request.url);
+    if (filePath === 'bad-request') return new Response('Bad Request', { status: 400 });
+    if (filePath === 'forbidden') return new Response('Forbidden', { status: 403 });
     return net.fetch(pathToFileURL(filePath).toString());
   });
 }

@@ -59,11 +59,5 @@ export function customFiltersFile(): string {
   return path.join(filtersDir(), 'index.json');
 }
 
-/**
- * Returns true only when `target` resolves to a location inside `base`.
- * Used to guarantee no operation ever escapes an allowed directory.
- */
-export function isInside(base: string, target: string): boolean {
-  const rel = path.relative(path.resolve(base), path.resolve(target));
-  return rel.length > 0 && !rel.startsWith('..') && !path.isAbsolute(rel);
-}
+// Re-exported from the Electron-free module so existing imports keep working.
+export { isInside } from './pathSafety';
