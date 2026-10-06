@@ -1,7 +1,10 @@
 name: Verify Photoshoot
 on:
   push:
+    branches: [main]
   pull_request:
+permissions:
+  contents: read
 jobs:
   camera-and-build:
     runs-on: ubuntu-latest
@@ -30,7 +33,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build:win
+      - run: npm run build:win -- --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: photoshoot-windows
