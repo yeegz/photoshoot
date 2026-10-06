@@ -1,5 +1,7 @@
 # Photoshoot
 
+[![Verify Photoshoot](https://github.com/yeegz/photoshoot/actions/workflows/ci.yml/badge.svg)](https://github.com/yeegz/photoshoot/actions/workflows/ci.yml)
+
 **A photobooth for the browser and desktop.**
 
 Open your camera, choose an effect and capture a single photo, a four-shot strip or a short video. Photoshoot combines a live WebGL2 viewfinder, on-device face effects, five visual themes and a local gallery.
@@ -22,7 +24,7 @@ Camera processing and captures stay on the device. The app was designed and buil
 - 🔊 **Original sound design** synthesized at runtime (no audio files at all)
 - 🖼 **Local gallery** with preview, open file, show in folder, delete
 - 🛡 **Secure Electron architecture** — context isolation, sandbox, strict CSP, camera‑only permissions, local‑only processing
-- ⚡ **Performance‑minded** — `requestVideoFrameCallback`, reused GPU textures/programs, optional FPS/debug overlay
+- ⚡ **Performance‑minded** — a `requestAnimationFrame` render loop, reused GPU textures/programs, optional FPS/debug overlay
 
 ---
 
@@ -48,6 +50,8 @@ npm start            # launch the already‑built app (electron .)
 npm run build:app    # bundle main/preload/renderer into dist/ (no packaging)
 npm run watch        # rebuild on change (then run npm start in another terminal)
 npm run typecheck    # strict TypeScript type checking (no emit)
+npm run lint         # ESLint (typescript-eslint recommended rules)
+npm test             # Vitest unit tests, then the Node filter, camera and lifecycle tests
 ```
 
 ---
@@ -140,8 +144,10 @@ locally. If audio can't initialize, the app continues silently.
 The live preview is a full WebGL2 pipeline (see [`src/renderer/gl`](src/renderer/gl)):
 
 1. The webcam stream feeds a hidden `<video>` element.
-2. Frames drive the loop via `requestVideoFrameCallback` (falling back to
-   `requestAnimationFrame`), uploading each frame to a **reused** GPU texture.
+2. A `requestAnimationFrame` loop uploads the current frame to a **reused** GPU
+   texture. The loop deliberately does not rely on `requestVideoFrameCallback`,
+   which can stop firing for the hidden camera element on some systems and
+   leave the preview blank.
 3. A per‑effect GLSL fragment shader renders the processed image to the canvas.
 4. Captures read the canvas directly, so the saved image exactly matches the
    live preview (effect + mirror + background included).
@@ -389,7 +395,7 @@ permission identities. Windows desktop camera permission must also be enabled.
 ```bash
 npm run web:dev           # local browser app at http://localhost:4178/app/
 npx playwright install chromium
-npm run verify           # types, filters, camera lifecycle, web and Electron camera tests
+npm run verify           # types, lint, unit tests, camera lifecycle, web and Electron camera tests
 npm run build:win        # Windows installer and portable app, run on Windows
 ```
 

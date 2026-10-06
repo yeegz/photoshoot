@@ -122,6 +122,7 @@ export function isSafeLutName(name: unknown): name is string {
   if (name.length === 0 || name.length > 80) return false;
   if (name.includes('..') || name.includes('/') || name.includes('\\')) return false;
   if (name.startsWith('.')) return false;
+  // eslint-disable-next-line no-control-regex -- control characters are deliberately matched
   if (/[\x00-\x1f<>:"|?*]/.test(name)) return false;
   return ALLOWED_LUT_EXT.some((ext) => name.toLowerCase().endsWith(ext));
 }
