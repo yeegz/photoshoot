@@ -1,0 +1,50 @@
+name: Release Photoshoot
+on:
+  push:
+    tags: ['v[0-9]*']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: xvfb-run --auto-servernum npm run verify
+  windows-release:
+    needs: verify
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check the tag matches the package version
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw 'Release tag must match package.json version' }
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build:win -- --publish never
+      - run: npx playwright test test/browser/electron.spec.ts
+      - name: Publish verified Windows packages and checksums
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $packages = @(Get-ChildItem release -Filter '*.exe' | Sort-Object Name)
+          if ($packages.Count -ne 2) { throw 'Expected installer and portable executable' }
+          $lines = $packages | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" }
+          $lines | Set-Content release/SHA256SUMS.txt -Encoding utf8NoBOM
+          gh release create $env:GITHUB_REF_NAME $packages.FullName release/SHA256SUMS.txt --verify-tag --title "Photoshoot $env:GITHUB_REF_NAME" --notes-file .github/RELEASE_NOTES.md
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub release publication failed' }
