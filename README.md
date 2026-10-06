@@ -6,7 +6,7 @@ Open your camera, choose an effect and capture a single photo, a four-shot strip
 
 [Open the web app](https://photoshoot-yeegz.web.app/app/) · [Product site](https://photoshoot-yeegz.web.app) · [Case study](https://yousofselim.com/work/photoshoot/) · [Build locally](#getting-started)
 
-**The web app is live.** This repository includes the browser build and Electron desktop source. For Windows, build from source using `npm run build:win`; no downloadable release is currently published.
+**The web app is live.** [Download the Windows installer or portable app](https://github.com/yeegz/photoshoot/releases/latest), or build from source using `npm run build:win`. Release notes include checksums and platform limitations. Windows packages are unsigned; no signed or notarised macOS release is provided.
 
 Camera processing and captures stay on the device. The app was designed and built by **Yousof Selim**, including the interface, Electron/WebGL2 implementation, effects and deployment.
 
@@ -72,9 +72,9 @@ Output is written to `release/`:
 The app icon (`build/icon.png`) is generated, original art. You can regenerate it
 with `node build/make-icon.mjs`.
 
-> The download link on the website points at GitHub Releases. To publish a
-> Windows build, run `npm run build:win` **on Windows**, then attach the
-> `release/*.exe` files to a GitHub Release.
+> Version tags (`v` followed by the package version) run the release workflow.
+> It requires the browser/Electron verification suite and Windows camera smoke
+> test to pass, then publishes the installer, portable app and SHA-256 checksums.
 
 ---
 
