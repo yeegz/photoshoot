@@ -62,15 +62,57 @@ export class CameraManager {
     this.stop();
 
     const generation = this.generation;
+    // Laptops (especially on Windows) often expose cameras that open but never
+    // send usable video: the Windows Hello IR sensor, depth cameras, virtual
+    // cameras with no source. So a failure on one camera is never final; try
+    // the requested camera, then the system default, then every other camera.
+    const queue: (string | null)[] = deviceId ? [deviceId, null] : [null];
+    const tried = new Set<string>();
+    let enumerated = false;
+    let sensorFallback: string | null = null;
+    let failure: { error: CameraErrorKind; message: string } | null = null;
+    while (queue.length) {
+      const id = queue.shift() ?? null;
+      if (id && tried.has(id)) continue;
+      if (id) tried.add(id);
+      const attempt = await this.tryCamera(id, generation, sensorFallback === null);
+      if (attempt.final) return attempt.final;
+      if (attempt.activeId) tried.add(attempt.activeId);
+      if (attempt.sensor) sensorFallback = attempt.activeId ?? null;
+      if (attempt.failure && rank(attempt.failure.error) > rank(failure?.error)) failure = attempt.failure;
+      if (!enumerated) {
+        enumerated = true;
+        queue.push(...(await this.otherCameras(tried)));
+        if (generation !== this.generation) return { ok: false, error: 'cancelled' };
+      }
+    }
+    // Only an IR/depth sensor produced video. Better than nothing.
+    if (sensorFallback) {
+      const attempt = await this.tryCamera(sensorFallback, generation, false);
+      if (attempt.final) return attempt.final;
+    }
+    return { ok: false, ...(failure ?? classifyError(null)) };
+  }
+
+  /**
+   * Open one camera (null = system default), relaxing capture settings when a
+   * driver rejects them or opens without delivering frames. `final` is set for
+   * outcomes that end the whole start(): success, cancellation, denial.
+   */
+  private async tryCamera(id: string | null, generation: number, skipSensors: boolean): Promise<{
+    final?: CameraStartResult;
+    failure?: { error: CameraErrorKind; message: string };
+    activeId?: string;
+    sensor?: boolean;
+  }> {
     const preferred: MediaTrackConstraints = {
       width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 },
     };
-    // Some drivers reject even optional capture settings. Relax them on the
-    // requested camera before trying the default device; never retry denial.
-    const attempts: (MediaTrackConstraints | true)[] = deviceId
-      ? [{ ...preferred, deviceId: { exact: deviceId } }, { deviceId: { exact: deviceId } }, preferred, true]
+    const attempts: (MediaTrackConstraints | true)[] = id
+      ? [{ ...preferred, deviceId: { exact: id } }, { deviceId: { exact: id } }]
       : [preferred, true];
-    let lastError: unknown;
+    let failure: { error: CameraErrorKind; message: string } | undefined;
+    let activeId: string | undefined;
     for (const constraints of attempts) {
       let stream: MediaStream;
       let expired = false;
@@ -85,39 +127,54 @@ export class CameraManager {
         stream = await withTimeout(acquisition, 30000);
       } catch (err) {
         expired = true;
-        if (generation !== this.generation) return { ok: false, error: 'cancelled' };
-        lastError = err;
-        if (isDeviceSpecificError(err)) continue;
-        return { ok: false, ...classifyError(err) };
+        if (generation !== this.generation) return { final: { ok: false, error: 'cancelled' } };
+        if (!isDeviceSpecificError(err)) return { final: { ok: false, ...classifyError(err) } };
+        failure = classifyError(err);
+        continue;
       }
       if (generation !== this.generation) {
         stream.getTracks().forEach((track) => track.stop());
-        return { ok: false, error: 'cancelled' };
+        return { final: { ok: false, error: 'cancelled' } };
+      }
+      const track = stream.getVideoTracks()[0];
+      activeId = track?.getSettings().deviceId || activeId;
+      if (skipSensors && track && isSensorCamera(track.label)) {
+        // Keep looking for a colour camera; come back to this one last.
+        stream.getTracks().forEach((t) => t.stop());
+        return { activeId, sensor: true };
       }
       this.stream = stream;
       this.video.srcObject = stream;
       try {
-        const track = stream.getVideoTracks()[0];
         if (!track || track.readyState === 'ended') throw new Error('No live video track.');
         // Permission to acquire a device does not guarantee video playback.
         await withTimeout(this.video.play(), 10000);
-        if (generation !== this.generation) return { ok: false, error: 'cancelled' };
+        if (generation !== this.generation) return { final: { ok: false, error: 'cancelled' } };
         if (!(await this.waitForFrame(10000))) throw { name: 'TimeoutError' };
-        if (generation !== this.generation) return { ok: false, error: 'cancelled' };
-        const activeId = track.getSettings().deviceId ?? '';
+        if (generation !== this.generation) return { final: { ok: false, error: 'cancelled' } };
+        const liveId = track.getSettings().deviceId ?? '';
         track.addEventListener('ended', () => {
           if (generation === this.generation) this.onDeviceListChanged?.();
         });
-        if (activeId) this.onActiveDevice?.(activeId);
-        return { ok: true, deviceId: activeId };
+        if (liveId) this.onActiveDevice?.(liveId);
+        return { final: { ok: true, deviceId: liveId } };
       } catch (err) {
-        if (generation !== this.generation) return { ok: false, error: 'cancelled' };
-        this.stop();
-        return { ok: false, error: errName(err) === 'TimeoutError' ? 'timeout' : 'playback',
+        if (generation !== this.generation) return { final: { ok: false, error: 'cancelled' } };
+        this.release();
+        failure = { error: errName(err) === 'TimeoutError' ? 'timeout' : 'playback',
           message: 'The camera opened but did not produce playable video.' };
       }
     }
-    return { ok: false, ...classifyError(lastError) };
+    return { failure, activeId };
+  }
+
+  /** Cameras not tried yet, colour cameras first. Labels need permission. */
+  private async otherCameras(tried: Set<string>): Promise<string[]> {
+    const devices = await this.listDevices();
+    return devices
+      .filter((d) => d.id && !tried.has(d.id))
+      .sort((a, b) => Number(isSensorCamera(a.label)) - Number(isSensorCamera(b.label)))
+      .map((d) => d.id);
   }
 
   /** Wait for a decoded frame, not just metadata. All listeners are bounded. */
@@ -147,6 +204,10 @@ export class CameraManager {
 
   stop(): void {
     this.generation++;
+    this.release();
+  }
+
+  private release(): void {
     if (this.stream) {
       this.stream.getTracks().forEach((t) => t.stop());
       this.stream = null;
@@ -175,12 +236,16 @@ function errName(err: unknown): string {
 function classifyError(err: unknown): { error: CameraErrorKind; message: string } {
   switch (errName(err)) {
     case 'NotAllowedError':
+    case 'PermissionDeniedError':
     case 'SecurityError':
       return { error: 'denied', message: 'Camera access was blocked.' };
     case 'NotFoundError':
+    case 'DevicesNotFoundError':
     case 'OverconstrainedError':
+    case 'ConstraintNotSatisfiedError':
       return { error: 'notfound', message: 'No camera was found.' };
     case 'NotReadableError':
+    case 'TrackStartError':
     case 'AbortError':
       return { error: 'inuse', message: 'The camera is in use by another app.' };
     case 'TimeoutError':
@@ -190,13 +255,28 @@ function classifyError(err: unknown): { error: CameraErrorKind; message: string 
   }
 }
 
+// When several cameras fail, report the most useful reason.
+function rank(kind: CameraErrorKind | undefined): number {
+  return kind === 'inuse' ? 4 : kind === 'timeout' || kind === 'playback' ? 3 : kind === 'notfound' ? 2 : kind ? 1 : 0;
+}
+
+// Windows Hello IR sensors and depth cameras show up as ordinary cameras but
+// give grey/black or no video.
+function isSensorCamera(label: string): boolean {
+  return /\b(ir|infrared|depth)\b|hello/i.test(label);
+}
+
 // Errors that mean "this specific device couldn't be opened" — worth retrying
 // with the default camera (no deviceId constraint) before giving up.
 function isDeviceSpecificError(err: unknown): boolean {
   switch (errName(err)) {
+    // Older Chromium/Edge builds use the legacy names.
     case 'OverconstrainedError':
+    case 'ConstraintNotSatisfiedError':
     case 'NotFoundError':
+    case 'DevicesNotFoundError':
     case 'NotReadableError':
+    case 'TrackStartError':
     case 'AbortError':
       return true;
     default:

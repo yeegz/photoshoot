@@ -12,21 +12,22 @@ class Video extends EventTarget {
   play() { return Promise.resolve(); }
   pause() {}
 }
-function stream(id = 'working') {
+function stream(id = 'working', label = '') {
   const track = new EventTarget();
+  track.label = label;
   track.readyState = 'live';
   track.stopped = false;
   track.stop = () => { track.stopped = true; };
   track.getSettings = () => ({ deviceId: id });
   return { getTracks: () => [track], getVideoTracks: () => [track], track };
 }
-function setup(getUserMedia) {
+function setup(getUserMedia, devices = []) {
   const video = new Video();
   Object.defineProperty(globalThis, 'document', { configurable: true, value: {
     createElement: () => video, body: { appendChild() {} },
   } });
   Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {
-    mediaDevices: { getUserMedia, enumerateDevices: async () => [] },
+    mediaDevices: { getUserMedia, enumerateDevices: async () => devices.map(([deviceId, label]) => ({ kind: 'videoinput', deviceId, label })) },
   } });
   return { camera: new CameraManager(), video };
 }
@@ -114,4 +115,61 @@ test('a stalled acquisition times out and releases a stream arriving later', asy
   await Promise.resolve();
   assert.equal(media.track.stopped, true);
   assert.equal(video.srcObject, null);
+});
+
+const laptop = [['ir', 'Integrated IR Camera'], ['rgb', 'Integrated Camera']];
+const byId = (video) => video.deviceId?.exact;
+
+test('a default camera that never sends frames falls through to another camera', async () => {
+  const { camera, video } = setup(async ({ video: c }) => {
+    video.readyState = byId(c) === 'rgb' ? 2 : 0;
+    return stream(byId(c) ?? 'dead');
+  }, [['dead', 'Virtual Camera'], ['rgb', 'Integrated Camera']]);
+  camera.waitForFrame = function (ms) { return Promise.resolve(this.video.readyState >= 2); };
+  const res = await camera.start();
+  assert.equal(res.ok, true);
+  assert.equal(res.deviceId, 'rgb');
+  camera.stop();
+});
+
+test('a Windows Hello IR sensor opened by default is skipped for the colour camera', async () => {
+  const opened = [];
+  const { camera } = setup(async ({ video: c }) => {
+    const id = byId(c) ?? 'ir';
+    opened.push(id);
+    return stream(id, laptop.find(([d]) => d === id)[1]);
+  }, laptop);
+  const res = await camera.start();
+  assert.equal(res.deviceId, 'rgb');
+  assert.deepEqual(opened, ['ir', 'rgb']);
+  camera.stop();
+});
+
+test('an IR sensor is still used when it is the only camera that works', async () => {
+  const { camera } = setup(async ({ video: c }) => {
+    const id = byId(c) ?? 'ir';
+    if (id === 'rgb') throw { name: 'NotReadableError' };
+    return stream(id, 'Integrated IR Camera');
+  }, laptop);
+  assert.equal((await camera.start()).deviceId, 'ir');
+  camera.stop();
+});
+
+test('every camera busy reports in use after trying each one', async () => {
+  const asked = new Set();
+  const { camera } = setup(async ({ video: c }) => {
+    asked.add(c === true ? 'basic' : byId(c) ?? 'default');
+    throw { name: 'NotReadableError' };
+  }, laptop);
+  assert.equal((await camera.start()).error, 'inuse');
+  assert.deepEqual([...asked].sort(), ['basic', 'default', 'ir', 'rgb']);
+});
+
+test('legacy Chromium error names are understood', async () => {
+  const { camera } = setup(async ({ video: c }) => {
+    if (c !== true) throw { name: 'ConstraintNotSatisfiedError' };
+    return stream();
+  });
+  assert.equal((await camera.start()).ok, true);
+  camera.stop();
 });

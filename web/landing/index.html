@@ -257,27 +257,93 @@
           b.addEventListener('click', function () { setLook(b.dataset.look); });
         });
 
+        // Try settings from best to most basic, then every other camera, so a
+        // driver that rejects a resolution, a camera held by another app, or a
+        // laptop IR sensor listed as a camera does not end the attempt.
+        var SENSOR = /\b(ir|infrared|depth)\b|hello/i;
+        function release(s) { if (s) s.getTracks().forEach(function (t) { t.stop(); }); }
+        function frameArrives(ms) {
+          return new Promise(function (resolve) {
+            var start = Date.now();
+            (function check() {
+              if (video.readyState >= 2 && video.videoWidth > 0) return resolve(true);
+              if (Date.now() - start > ms) return resolve(false);
+              setTimeout(check, 80);
+            })();
+          });
+        }
+        async function tryCamera(id, skipSensor) {
+          var ladder = id
+            ? [{ deviceId: { exact: id }, width: { ideal: 1280 }, height: { ideal: 960 } }, { deviceId: { exact: id } }]
+            : [{ facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } }, true];
+          var lastErr = null;
+          for (var i = 0; i < ladder.length; i++) {
+            var s;
+            try {
+              s = await navigator.mediaDevices.getUserMedia({ video: ladder[i], audio: false });
+            } catch (err) {
+              if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.name === 'SecurityError')) throw err;
+              lastErr = err;
+              continue;
+            }
+            var track = s.getVideoTracks()[0];
+            if (skipSensor && track && SENSOR.test(track.label)) { release(s); return { sensor: track.getSettings().deviceId }; }
+            video.srcObject = s;
+            try {
+              await video.play();
+              if (await frameArrives(10000)) return { stream: s };
+            } catch (e) { /* try the next setting */ }
+            video.srcObject = null;
+            release(s);
+            lastErr = { name: 'NotReadableError' };
+          }
+          return { error: lastErr };
+        }
+        async function acquire() {
+          var first = await tryCamera(null, true);
+          if (first.stream) return first.stream;
+          var lastErr = first.error, sensor = first.sensor || null;
+          var devices = (await navigator.mediaDevices.enumerateDevices())
+            .filter(function (d) { return d.kind === 'videoinput' && d.deviceId; })
+            .sort(function (a, b) { return SENSOR.test(a.label) - SENSOR.test(b.label); });
+          for (var i = 0; i < devices.length; i++) {
+            if (devices[i].deviceId === sensor) continue;
+            var r = await tryCamera(devices[i].deviceId, true);
+            if (r.stream) return r.stream;
+            if (r.sensor && !sensor) sensor = r.sensor;
+            if (r.error && (!lastErr || r.error.name === 'NotReadableError')) lastErr = r.error;
+          }
+          if (sensor) {
+            var last = await tryCamera(sensor, false);
+            if (last.stream) return last.stream;
+          }
+          throw lastErr || { name: 'NotFoundError' };
+        }
+
         async function open() {
           if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             note.textContent = 'This browser can’t open a camera here. The full app may still work.';
             return;
           }
           curtain.disabled = true;
+          note.textContent = '';
+          var windows = /Windows/i.test(navigator.userAgent);
           try {
-            stream = await navigator.mediaDevices.getUserMedia({
-              video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } },
-              audio: false
-            });
-            video.srcObject = stream;
-            await video.play();
+            stream = await acquire();
             booth.classList.add('is-open');
             shutter.disabled = false;
-            note.textContent = '';
           } catch (err) {
             curtain.disabled = false;
-            note.textContent = err && err.name === 'NotAllowedError'
-              ? 'Camera access was declined. Nothing was recorded.'
-              : 'No camera found. Plug one in and try again.';
+            var name = err && err.name;
+            note.textContent = name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError'
+              ? (windows
+                ? 'Camera access is blocked. Allow it for this site (camera icon by the address bar) and in Windows Settings → Privacy & security → Camera.'
+                : 'Camera access was declined. Nothing was recorded.')
+              : name === 'NotFoundError' || name === 'DevicesNotFoundError'
+                ? 'No camera found. Plug one in and try again.'
+                : (windows
+                  ? 'The camera is busy or switched off. Close Teams, Zoom or the Camera app, check your laptop’s camera key or shutter, then try again.'
+                  : 'The camera is busy or switched off. Close other camera apps, then try again.');
           }
         }
         curtain.addEventListener('click', open);

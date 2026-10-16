@@ -4,7 +4,7 @@
 // and hard navigation/window-open guards. All media processing happens locally
 // in the renderer; nothing is ever uploaded.
 
-import { app, BrowserWindow, net, protocol, session, shell } from 'electron';
+import { app, BrowserWindow, net, protocol, session, shell, systemPreferences } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { registerIpc } from './ipc';
@@ -120,8 +120,14 @@ function hardenSession(): void {
   });
 
   // Camera only. Everything else (geolocation, notifications, MIDI, etc.) denied.
+  // On macOS, Chromium inside Electron never asks the OS for camera access, so
+  // without this the stream opens but delivers no frames until the user grants
+  // it by hand in System Settings. askForMediaAccess shows the system prompt
+  // once and returns the stored answer after that.
   ses.setPermissionRequestHandler((_wc, permission, callback) => {
-    callback(permission === 'media');
+    if (permission !== 'media') return callback(false);
+    if (process.platform !== 'darwin') return callback(true);
+    systemPreferences.askForMediaAccess('camera').then(callback, () => callback(false));
   });
   ses.setPermissionCheckHandler((_wc, permission) => permission === 'media');
 

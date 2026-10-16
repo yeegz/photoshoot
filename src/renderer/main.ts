@@ -65,6 +65,33 @@ function setStatus(text: string, kind: '' | 'live' | 'error'): void {
   lbl.classList.toggle('is-hidden', kind === 'live' || text === '');
 }
 
+function isWindows(): boolean {
+  return app.info?.platform === 'win32' || /Windows/i.test(navigator.userAgent);
+}
+
+function deniedHelp(): string {
+  const os = isWindows()
+    ? ' On Windows, also turn on Settings → Privacy & security → Camera → "Camera access" and "Let apps access your camera".'
+    : '';
+  if (app.info?.platform === 'web') {
+    return `Allow camera access for this site in your browser (the camera icon near the address bar), then try again.${os}`;
+  }
+  if (app.info?.platform === 'darwin') {
+    return 'Allow Photoshoot in System Settings → Privacy & Security → Camera, then restart the app.';
+  }
+  return isWindows()
+    ? 'Turn on Settings → Privacy & security → Camera → "Camera access" and "Let desktop apps access your camera", then try again.'
+    : 'Allow camera access for desktop apps in your system privacy settings, then try again.';
+}
+
+// Windows lets only one app use a camera at a time, and a privacy switch or a
+// laptop's camera key/shutter can block it without any prompt.
+function busyHelp(): string {
+  return isWindows()
+    ? 'Close other apps that use the camera (Teams, Zoom, Camera, other browser tabs), check the camera shutter or camera key on your laptop, and check Settings → Privacy & security → Camera.'
+    : 'Close other apps that use the camera, check any camera shutter, and check your system camera permissions.';
+}
+
 function handleCameraError(kind: CameraErrorKind | undefined): void {
   sound.play('error');
   setStatus('Camera unavailable', 'error');
@@ -75,21 +102,12 @@ function handleCameraError(kind: CameraErrorKind | undefined): void {
   };
   switch (kind) {
     case 'denied':
-      showMessage(
-        '🔒',
-        'Camera access blocked',
-        app.info?.platform === 'web'
-          ? 'Photoshoot needs your webcam. Allow camera access for this site in your browser (look for the camera icon near the address bar), then try again.'
-          : app.info?.platform === 'darwin'
-            ? 'Allow Photoshoot in System Settings → Privacy & Security → Camera, then restart the app.'
-            : 'Allow camera access for desktop apps in your system privacy settings, then try again.',
-        retry
-      );
+      showMessage('🔒', 'Camera access blocked', deniedHelp(), retry);
       break;
     case 'playback':
     case 'timeout':
       showMessage('⚠', 'Camera preview could not start',
-        'No playable video arrived. Check the camera permission prompt, close other camera apps, try another camera in Settings, or press Try Again.', retry);
+        `No camera sent video. ${busyHelp()} You can also pick another camera in Settings.`, retry);
       break;
     case 'insecure':
       showMessage('🔒', 'A secure connection is required',
@@ -99,7 +117,7 @@ function handleCameraError(kind: CameraErrorKind | undefined): void {
       showMessage('📷', 'No camera found', 'Connect a webcam, then try again.', retry);
       break;
     case 'inuse':
-      showMessage('⏳', 'Camera in use', 'The camera could not be read. Close other camera apps, check your system camera permissions, or select another camera in Settings.', retry);
+      showMessage('⏳', 'Camera in use', `The camera could not be read. ${busyHelp()}`, retry);
       break;
     default:
       showMessage('⚠', 'Camera could not start', 'Something went wrong starting the camera.', retry);
