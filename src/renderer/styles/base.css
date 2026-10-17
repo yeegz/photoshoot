@@ -52,6 +52,21 @@
   --tl-min: #febc2e;
   --tl-zoom: #28c840;
 
+  /* ---- Photo Booth anatomy (measured from the reference window) ---- */
+  --titlebar-h: 28px;
+  --toolbar-h: 58px;
+  --tray-h: 60px;
+  --shutter-size: 50px;
+  --pill-h: 28px;
+  --pill-radius: 9px;
+
+  /* ---- Liquid Glass pills: translucent fill + specular edge ---- */
+  --glass-fill: rgba(255, 255, 255, 0.1);
+  --glass-fill-hover: rgba(255, 255, 255, 0.15);
+  --glass-fill-active: rgba(255, 255, 255, 0.07);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+  --glass-specular: rgba(255, 255, 255, 0.22);
+
   /* ---- length: a deliberate radius + 4/8 spacing system ---- */
   --radius-sm: 6px;
   --radius: 10px;

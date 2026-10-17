@@ -12,3 +12,5 @@ build/.filter-test.mjs
 build/.camera-test.mjs
 test-results/
 playwright-report/
+
+.superpowers/

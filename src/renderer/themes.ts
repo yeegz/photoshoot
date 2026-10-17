@@ -15,6 +15,7 @@ import {
 } from '../shared/theme-schema';
 
 export const BUILTIN_THEMES = [
+  { id: 'booth', name: 'Photo Booth', sub: 'Dark glass', swatches: ['#1d1d1f', '#2b2b2d', '#d61f16', '#1b7bf3'] },
   { id: 'modern', name: 'Studio', sub: 'Bright & neutral', swatches: ['#ececec', '#1a1a1a', '#ff3b30', '#007aff'] },
   { id: 'metal', name: 'Classic Metal', sub: 'Brushed aluminium', swatches: ['#c8cacd', '#7d8186', '#d63a2f', '#3a6ea5'] },
   { id: 'glass', name: 'Studio Dark', sub: 'Dark & cinematic', swatches: ['#1e1e1e', '#323232', '#ff453a', '#0a84ff'] },
@@ -41,7 +42,7 @@ function clearImportedTokens(root: HTMLElement): void {
 }
 
 function applyImported(root: HTMLElement, theme: ImportedTheme): void {
-  root.dataset.theme = BUILTIN_IDS.includes(theme.base) ? theme.base : 'modern';
+  root.dataset.theme = BUILTIN_IDS.includes(theme.base) ? theme.base : 'booth';
   for (const [name, value] of Object.entries(theme.tokens)) {
     const result = validateTokenValue(name, value);
     if (result.ok && result.value) {
@@ -74,16 +75,16 @@ export function applyTheme(themeId: string): void {
       applyImported(root, theme);
       return;
     }
-    root.dataset.theme = 'modern'; // referenced theme was removed
+    root.dataset.theme = 'booth'; // referenced theme was removed
     return;
   }
 
-  root.dataset.theme = BUILTIN_IDS.includes(themeId) ? themeId : 'modern';
+  root.dataset.theme = BUILTIN_IDS.includes(themeId) ? themeId : 'booth';
 }
 
 /** The built-in theme that matches the device's light/dark appearance. */
 export function deviceTheme(): string {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'glass' : 'modern';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'booth' : 'modern';
 }
 
 /** Apply whatever theme the settings resolve to (device theme when on Auto). */
@@ -123,7 +124,7 @@ export async function removeImportedTheme(id: string): Promise<void> {
   await api.removeImportedTheme(id);
   await loadImportedThemes();
   if (!app.settings.autoTheme && app.settings.theme === `imported:${id}`) {
-    await setTheme('modern');
+    await setTheme('booth');
   } else {
     applyResolvedTheme();
   }

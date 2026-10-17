@@ -29,7 +29,7 @@ export const IPC = {
 
 export type CaptureFormat = 'png' | 'jpg';
 export type CaptureKind = 'single' | 'strip' | 'video';
-export type BuiltInThemeId = 'modern' | 'metal' | 'glass' | 'retro' | 'darkroom';
+export type BuiltInThemeId = 'booth' | 'modern' | 'metal' | 'glass' | 'retro' | 'darkroom';
 
 export interface AppInfo {
   name: string;
@@ -56,8 +56,8 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  theme: 'modern',
-  autoTheme: true,
+  theme: 'booth',
+  autoTheme: false,
   cameraId: null,
   mirror: true,
   countdownSeconds: 3,

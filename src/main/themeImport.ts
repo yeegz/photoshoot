@@ -86,7 +86,7 @@ export async function importThemeFromPath(manifestPath: string): Promise<ThemeIm
     const description = sanitizeText(manifest.description, THEME_LIMITS.maxTextLength);
     const base: BuiltInThemeId = (ALLOWED_BASES as readonly string[]).includes(manifest.base as string)
       ? (manifest.base as BuiltInThemeId)
-      : 'modern';
+      : 'booth';
 
     // ---- tokens ----
     const tokens: Record<string, string> = {};

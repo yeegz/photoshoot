@@ -4,6 +4,61 @@
    selection accent, the red shutter as the only color pop. */
 
 /* ======================================================================
+   PHOTO BOOTH — the default. Dark unified chrome, Liquid Glass pills, the
+   glossy red shutter. Values measured from the reference window; see
+   docs/superpowers/specs/2026-10-17-photo-booth-parity-design.md.
+   ====================================================================== */
+html[data-theme="booth"] {
+  --app-bg: #1d1d1f;
+  --app-bg-2: #2b2b2d;
+  --toolbar-bg: #1d1d1f;
+  --tray-bg: linear-gradient(180deg, #3a3a3c, #2e2e30);
+  --app-bg-accent: #1b7bf3;
+  --surface: #2a2a2c;
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --surface-3: #3a3a3c;
+  --panel: rgba(40, 40, 42, 0.78);
+  --panel-border: rgba(255, 255, 255, 0.12);
+  --text: rgba(255, 255, 255, 0.92);
+  --text-dim: rgba(255, 255, 255, 0.6);
+  --text-faint: rgba(255, 255, 255, 0.34);
+  --accent: #1b7bf3;
+  --accent-2: #1b7bf3;
+  --accent-contrast: #ffffff;
+  --btn-bg: rgba(255, 255, 255, 0.1);
+  --btn-bg-hover: rgba(255, 255, 255, 0.15);
+  --btn-text: rgba(255, 255, 255, 0.92);
+  --btn-border: rgba(255, 255, 255, 0.14);
+  --shutter: #d61f16;
+  --shutter-2: #b41109;
+  --shutter-top: #ff5146;
+  --shutter-ring: rgba(255, 255, 255, 0.28);
+  --shutter-glow: transparent;
+  --tray-border: rgba(255, 255, 255, 0.08);
+  --thumb-border: transparent;
+  --modal-bg: rgba(40, 40, 42, 0.82);
+  --modal-border: rgba(255, 255, 255, 0.12);
+  --menu-bg: #2a2a2c;
+  --menu-tile: #333335;
+  --menu-tile-active: rgba(27, 123, 243, 0.24);
+  --countdown-color: #ffffff;
+  --countdown-glow: rgba(0, 0, 0, 0.6);
+  --flash-color: #ffffff;
+  --viewfinder-frame: #000000;
+  --viewfinder-inner: #000000;
+  --scrollbar: rgba(255, 255, 255, 0.2);
+  --focus-ring: #1b7bf3;
+  --danger: #ff453a;
+  --success: #30d158;
+}
+html[data-theme="booth"] .stage {
+  background: #000;
+}
+html[data-theme="booth"] .switch .track {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ======================================================================
    STUDIO DARK — macOS dark mode (system grays + system blue + red shutter)
    ====================================================================== */
 html[data-theme="glass"] {

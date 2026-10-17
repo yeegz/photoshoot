@@ -204,7 +204,7 @@ function buildThemeSection(): HTMLElement {
   });
   const resetBtn = el('button', { className: 'btn', type: 'button', text: 'Reset to Studio' });
   resetBtn.addEventListener('click', async () => {
-    await setTheme('modern');
+    await setTheme('booth');
     render();
   });
   actions.append(importBtn, resetBtn);
