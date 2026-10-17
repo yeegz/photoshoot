@@ -18,20 +18,27 @@ const windowsDirect3D11: Project = {
   },
 };
 
+// Point the browser specs at a deployed site instead of a local build, e.g.
+//   PHOTOSHOOT_BASE_URL=https://photoshoot-yeegz.web.app npx playwright test test/browser/viewfinder.spec.ts
+// (used by the "Probe live site on Windows" workflow).
+const liveSite = process.env.PHOTOSHOOT_BASE_URL;
+
 export default defineConfig({
   testDir: './test/browser',
   workers: 1,
   timeout: 30000,
   use: {
-    baseURL: 'http://localhost:4178',
+    baseURL: liveSite ?? 'http://localhost:4178',
     launchOptions: { args: fakeCamera },
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
-  webServer: {
-    command: 'npm run build:web && node web/serve.mjs',
-    url: 'http://localhost:4178/app/',
-    reuseExistingServer: false,
-  },
+  webServer: liveSite
+    ? undefined
+    : {
+        command: 'npm run build:web && node web/serve.mjs',
+        url: 'http://localhost:4178/app/',
+        reuseExistingServer: false,
+      },
   projects: [{ name: 'chromium' }, ...(process.platform === 'win32' ? [windowsDirect3D11] : [])],
 });

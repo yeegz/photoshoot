@@ -30,6 +30,10 @@ import {
 import type { CustomFilter, FilterImportResult } from '../shared/ipc-contract';
 import { FILTER_LIMITS, validateFilterManifest, validateLutPng } from '../shared/filter-schema';
 
+// Injected by web/build-web.mjs from package.json, so the web app reports the
+// same version as the desktop app.
+declare const __PHOTOSHOOT_VERSION__: string;
+
 const SETTINGS_KEY = 'photoshoot.settings';
 const THEMES_KEY = 'photoshoot.themes';
 const FILTERS_KEY = 'photoshoot.filters';
@@ -326,7 +330,7 @@ async function importThemeFromFiles(files: File[]): Promise<ThemeImportResult> {
 const bridge: PhotoshootBridge = {
   getAppInfo: async (): Promise<AppInfo> => ({
     name: 'Photoshoot',
-    version: '1.0.0',
+    version: typeof __PHOTOSHOOT_VERSION__ === 'string' ? __PHOTOSHOOT_VERSION__ : '0.0.0',
     saveFolder: 'your browser downloads',
     themesFolder: '',
     platform: 'web',

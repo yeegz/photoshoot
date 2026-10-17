@@ -36,7 +36,9 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build:win -- --publish never
-      - run: npx playwright test test/browser/electron.spec.ts
+      - run: npx playwright test test/browser/electron.spec.ts --project chromium
+      - name: Verify the viewfinder renders on Windows Direct3D 11 with GPU compositing
+        run: npx playwright test test/browser/viewfinder.spec.ts --project win-d3d11
       - name: Publish verified Windows packages and checksums
         shell: pwsh
         env:

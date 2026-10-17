@@ -59,7 +59,10 @@ async function run() {
   await mkdir(path.join(out, 'assets'), { recursive: true });
 
   // 1) Bundle the browser shim + the (unchanged) renderer, content-hashed.
-  const shimFile = await bundleHashed(path.join(root, 'src/web/shim.ts'));
+  const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+  const shimFile = await bundleHashed(path.join(root, 'src/web/shim.ts'), {
+    __PHOTOSHOOT_VERSION__: JSON.stringify(pkg.version),
+  });
   const rendererFile = await bundleHashed(path.join(root, 'src/renderer/main.ts'), {
     'process.env.NODE_ENV': '"production"',
   });
