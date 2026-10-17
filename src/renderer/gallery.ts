@@ -17,7 +17,7 @@ let reviewId: string | null = null;
 let ctxMenu: HTMLElement | null = null;
 
 const KIND_BADGE: Record<string, string> = {
-  strip: '4‑Shot',
+  strip: '', // the 2×2 thumbnail speaks for itself, as in Photo Booth
   video: 'Video',
   single: '',
 };
