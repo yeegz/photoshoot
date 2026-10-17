@@ -5,7 +5,7 @@
 
 import { app } from './app';
 import { sound } from './sound';
-import { byId, qsa, clear, wait, el } from './dom';
+import { byId, qsa, clear, wait } from './dom';
 import { toast } from './toast';
 import { api } from './bridge';
 import { refreshGallery, exitReview, isReviewing } from './gallery';
@@ -28,28 +28,23 @@ function setBusy(busy: boolean): void {
   });
 }
 
-// Photo Booth-style countdown: the toolbar turns red and the numbers count
-// down inside the bar — it never covers the live preview.
+// Photo Booth-style countdown: big numerals in the middle of the live preview,
+// one per second, each with a tick. The toolbar is untouched.
 async function runCountdown(seconds: number): Promise<void> {
   if (seconds <= 0) return;
-  const toolbar = byId('toolbar');
-  const nums = byId('cdNums');
-  clear(nums);
-  const spans: HTMLElement[] = [];
+  const overlay = byId('countdown');
+  const number = byId('countdownNumber');
+  overlay.classList.remove('hidden');
   for (let n = seconds; n >= 1; n--) {
-    const span = el('span', { className: 'cd-num', text: String(n) });
-    nums.appendChild(span);
-    spans.push(span);
-  }
-  toolbar.classList.add('is-counting');
-  for (let i = 0; i < seconds; i++) {
-    const current = seconds - i; // counts seconds … 1
-    spans.forEach((s, idx) => s.classList.toggle('active', seconds - idx === current));
+    number.textContent = String(n);
+    number.classList.remove('tick');
+    void number.offsetWidth; // restart the animation
+    number.classList.add('tick');
     sound.play('tick');
     await wait(1000);
   }
-  toolbar.classList.remove('is-counting');
-  clear(nums);
+  number.classList.remove('tick');
+  overlay.classList.add('hidden');
 }
 
 function fireFlash(): void {

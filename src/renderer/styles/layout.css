@@ -202,51 +202,6 @@ html[data-platform="web"] .titlebar {
   justify-self: end;
 }
 
-/* Countdown takes over the whole bar (the bar turns red, numbers count in it) */
-.bar-countdown {
-  position: absolute;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  gap: 46px;
-  background: var(--shutter);
-  z-index: 4;
-}
-.toolbar.is-counting .toolbar-zone {
-  opacity: 0;
-  pointer-events: none;
-}
-.toolbar.is-counting .bar-countdown {
-  display: flex;
-}
-.cd-num {
-  font-family: var(--font-display);
-  font-size: 40px;
-  font-weight: 600;
-  line-height: 1;
-  color: #fff;
-  opacity: 0.4;
-  transition: opacity 0.15s var(--ease), transform 0.15s var(--ease);
-}
-.cd-num.active {
-  opacity: 1;
-  transform: scale(1.06);
-}
-.cd-cam {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-}
-.cd-cam svg {
-  width: 21px;
-  height: 21px;
-  color: rgba(255, 255, 255, 0.85);
-}
-
 /* Effects-browsing state: page dots replace the mode control + shutter */
 .toolbar.is-effects .toolbar-zone.left,
 .toolbar.is-effects .toolbar-zone.center {

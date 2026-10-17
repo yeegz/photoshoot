@@ -80,11 +80,11 @@ test('a graphics reset during countdown cancels the photo and keeps capture disa
   await page.goto('/app/');
   await expectLive(page);
   await page.locator('#shutter').click();
-  await expect(page.locator('#toolbar')).toHaveClass(/is-counting/);
+  await expect(page.locator('#countdown')).toBeVisible();
   await page.locator('#glCanvas').evaluate((canvas: HTMLCanvasElement) => {
     canvas.getContext('webgl2')!.getExtension('WEBGL_lose_context')!.loseContext();
   });
-  await expect(page.locator('#toolbar')).not.toHaveClass(/is-counting/);
+  await expect(page.locator('#countdown')).toBeHidden();
   await expect(page.locator('#shutter')).toBeDisabled();
   await expect(page.locator('#trayScroll .thumb')).toHaveCount(0);
 });

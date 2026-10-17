@@ -51,3 +51,15 @@ test('the tray is a 60px band of 90x60 thumbnails flush right, hidden when empty
   expect(Math.round(vw - (thumb.x + thumb.width))).toBe(19);
   expect((await page.locator('.stage').boundingBox())!.height).toBeLessThan(stageBefore.height);
 });
+
+test('countdown numerals sit in the viewfinder and the flash covers the window', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#shutter').click();
+  await expect(page.locator('#countdown')).toBeVisible();
+  await expect(page.locator('#countdownNumber')).toHaveText('3');
+  await expect(page.locator('#toolbar')).not.toHaveClass(/is-counting/);
+  const flash = (await page.locator('#flash').boundingBox())!;
+  const vp = page.viewportSize()!;
+  expect([Math.round(flash.width), Math.round(flash.height)]).toEqual([vp.width, vp.height]);
+});
