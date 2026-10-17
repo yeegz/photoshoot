@@ -6,10 +6,10 @@
 // Windows PC with a working GPU takes), where Chromium's low-latency canvas
 // hint used to turn the preview and every capture black.
 import { expect, test } from '@playwright/test';
-import { expectLive, hasRealPixels } from './live';
+import { expectLive, hasRealPixels, PIXEL_TIMEOUT } from './live';
 
 // Software Direct3D (WARP) on the CI runner is slow; keep timing loose.
-test.describe.configure({ timeout: 120000 });
+test.describe.configure({ timeout: 240000 });
 
 test('live preview, a GPU effect and a saved photo all contain real pixels', async ({ page }) => {
   await page.goto('/app/');
@@ -23,6 +23,6 @@ test('live preview, a GPU effect and a saved photo all contain real pixels', asy
 
   await page.locator('#shutter').click();
   const thumb = page.locator('#trayScroll img').first();
-  await expect(thumb).toBeVisible({ timeout: 60000 });
-  await expect.poll(() => thumb.evaluate(hasRealPixels)).toBe(true);
+  await expect(thumb).toBeVisible({ timeout: PIXEL_TIMEOUT });
+  await expect.poll(() => thumb.evaluate(hasRealPixels), { timeout: PIXEL_TIMEOUT }).toBe(true);
 });
