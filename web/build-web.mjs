@@ -26,10 +26,10 @@ const appOut = path.join(out, 'app');
 const hash8 = (buf) => createHash('sha256').update(buf).digest('hex').slice(0, 8);
 
 // Bundle one entry with a content-hashed name; return its emitted basename.
-async function bundleHashed(entry, define) {
+async function bundleHashed(entry, define, outdir = appOut) {
   const result = await esbuild.build({
     entryPoints: [entry],
-    outdir: appOut,
+    outdir,
     entryNames: '[name]-[hash]',
     bundle: true,
     minify: true,
@@ -95,15 +95,20 @@ async function run() {
   );
   await writeFile(path.join(appOut, 'index.html'), html);
 
-  // 4) Landing page (hashed CSS) + assets.
+  // 4) Landing page: hashed CSS + its own hashed bundle (the hero window and
+  //    filmstrip), the package version injected, then assets.
   const landingCss = await hashCss(path.join(__dirname, 'landing/landing.css'), out, 'landing');
+  const landingJs = await bundleHashed(path.join(__dirname, 'landing/landing.ts'), undefined, out);
   let landing = await readFile(path.join(__dirname, 'landing/index.html'), 'utf8');
   landing = landing.replace('href="landing.css"', `href="${landingCss}"`);
+  landing = landing.replaceAll('{{version}}', pkg.version);
+  if (!landing.includes('</body>')) throw new Error('landing/index.html has no </body> to attach the bundle to');
+  landing = landing.replace('</body>', `    <script defer src="${landingJs}"></script>\n  </body>`);
   await writeFile(path.join(out, 'index.html'), landing);
   await cp(path.join(root, 'build/icon.png'), path.join(out, 'assets/icon.png'));
   await cp(path.join(root, 'build/icon.png'), path.join(appOut, 'icon.png'));
 
-  console.log(`[photoshoot] web build complete → web-dist/  (${rendererFile}, ${shimFile})`);
+  console.log(`[photoshoot] web build complete → web-dist/  (${rendererFile}, ${shimFile}, ${landingJs})`);
 }
 
 run().catch((err) => {
