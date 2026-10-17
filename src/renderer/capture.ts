@@ -180,6 +180,7 @@ export async function captureSingle(): Promise<void> {
   setBusy(true);
   try {
     await runCountdown(app.settings.countdownSeconds);
+    if (!captureReady(source)) return; // a reset mid-countdown cancels the shot, flash and all
     fireFlash();
     await wait(40); // let the flash hit its peak before we grab
     if (!captureReady(source)) return;
@@ -268,6 +269,7 @@ export async function captureStrip(): Promise<void> {
     for (let i = 0; i < 4; i++) {
       const cd = i === 0 ? Math.max(1, app.settings.countdownSeconds) : 2;
       await runCountdown(cd);
+      if (!captureReady(source)) return;
       fireFlash();
       await wait(40);
       if (!captureReady(source)) return;

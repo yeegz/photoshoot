@@ -195,3 +195,47 @@ test('on a phone the window fits the visible screen, not the iOS layout viewport
   const tb = (await page.locator('#toolbar').boundingBox())!;
   expect(Math.round(tb.y + tb.height)).toBe(664);
 });
+
+// ---- deferred review items ----
+
+test('the mode pill is 94px wide, as measured', async ({ page }) => {
+  await page.goto('/app/');
+  const mode = (await page.locator('#modeSwitch').boundingBox())!;
+  expect(Math.round(mode.width)).toBe(94);
+});
+
+test('the screen flash fires when it is on', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('photoshoot.settings', JSON.stringify({ countdownSeconds: 0 })));
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#shutter').click();
+  await expect(page.locator('#flash')).toHaveClass(/fire/);
+});
+
+test('no flash when the graphics reset during the countdown', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#shutter').click();
+  await expect(page.locator('#countdown')).toBeVisible();
+  await page.locator('#glCanvas').evaluate((c: HTMLCanvasElement) =>
+    c.getContext('webgl2')!.getExtension('WEBGL_lose_context')!.loseContext()
+  );
+  await page.waitForTimeout(3500);
+  await expect(page.locator('#flash')).not.toHaveClass(/fire/);
+});
+
+test('restarting the camera clears the selected backdrop', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#btnEffects').click();
+  await page.keyboard.press('End');
+  await page.locator('[data-backdrop="space"]').click();
+  await page.locator('#btnSettings').click();
+  await page.locator('#settingsBody select').first().dispatchEvent('change');
+  await page.keyboard.press('Escape');
+  await expectLive(page);
+  await page.locator('#btnEffects').click();
+  await page.keyboard.press('End');
+  await expect(page.locator('[data-backdrop="space"]')).not.toHaveClass(/is-active/);
+  await expect(page.locator('#btnBackgrounds')).not.toHaveClass(/is-on/);
+});

@@ -257,7 +257,7 @@ async function importThemeFromFiles(files: File[]): Promise<ThemeImportResult> {
   const description = sanitizeText(manifest.description, THEME_LIMITS.maxTextLength);
   const base: BuiltInThemeId = (ALLOWED_BASES as readonly string[]).includes(manifest.base as string)
     ? (manifest.base as BuiltInThemeId)
-    : 'modern';
+    : 'booth';
 
   const tokens: Record<string, string> = {};
   if (manifest.tokens && typeof manifest.tokens === 'object') {

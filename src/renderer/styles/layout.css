@@ -1,6 +1,6 @@
 /* Photoshoot — app shell layout, Photo Booth style: a slim unified titlebar, a
    full-bleed black viewfinder, and a single neutral bottom toolbar. Trays,
-   panels and modals float above so the WebGL canvas never resizes. */
+   panels and modals float above. The tray band takes a grid row of its own. */
 
 .app {
   position: relative;
@@ -37,12 +37,6 @@ html[data-platform="web"] .titlebar {
   -webkit-app-region: no-drag;
 }
 
-.titlebar-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
 .traffic {
   display: flex;
   align-items: center;

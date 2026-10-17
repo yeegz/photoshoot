@@ -14,7 +14,7 @@ import { loadImportedThemes, applyResolvedTheme, watchDeviceTheme } from './them
 import { loadCustomFilters, registerFilterSink } from './customFilters';
 import { refreshGallery, exitReview, initReviewActions } from './gallery';
 import { buildEffectsMenu, toggleEffects, closeEffects, isEffectsOpen, openEffects, backdropPageStart } from './effectsMenu';
-import { initBackgroundsMenu } from './backgroundsMenu';
+import { initBackgroundsMenu, pickBackground, currentBackground } from './backgroundsMenu';
 import { BackgroundReplacer } from './backgroundReplace';
 import { initSettings, openSettings } from './settings';
 import { setPerfOverlay } from './perf';
@@ -131,7 +131,8 @@ function handleCameraError(kind: CameraErrorKind | undefined): void {
 async function startCamera(deviceId: string | null): Promise<void> {
   if (!app.renderer.available) return;
   videoRecorder.stop();
-  if (bgReplacer?.isActive()) bgReplacer.stop();
+  // Any selected backdrop (even one still learning the background) is cleared.
+  if (bgReplacer?.isActive() || currentBackground() !== 'none') void pickBackground('none');
   app.renderer.stop();
   byId<HTMLButtonElement>('shutter').disabled = true;
   setStatus('Starting camera…', '');
