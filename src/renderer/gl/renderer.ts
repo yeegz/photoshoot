@@ -84,11 +84,17 @@ export class GLRenderer {
   }
 
   private init(): void {
+    // No `desynchronized` hint: Chromium ignores it on macOS but honours it on
+    // Windows, where it moves the canvas onto the low-latency surface path. On
+    // the Direct3D 11 backend with GPU compositing (any Windows PC with a
+    // working GPU) that path presents a black drawing buffer — the context,
+    // shaders and video upload all succeed, so the app reports "Camera live"
+    // while the viewfinder and every capture are black. The hint buys nothing
+    // for a camera preview; see the win-d3d11 Playwright project.
     const gl = this.canvas.getContext('webgl2', {
       premultipliedAlpha: false,
       preserveDrawingBuffer: true,
       antialias: true,
-      desynchronized: true,
       powerPreference: 'high-performance',
     }) as WebGL2RenderingContext | null;
     if (!gl) {
