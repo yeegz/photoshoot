@@ -8,6 +8,12 @@ import { closeOverlay } from './overlays';
 import { toast } from './toast';
 
 let replacer: BackgroundReplacer | null = null;
+let activeId = 'none';
+
+/** The backdrop currently selected ('none' when background replacement is off). */
+export function currentBackground(): string {
+  return activeId;
+}
 
 export function initBackgroundsMenu(bgReplacer: BackgroundReplacer): void {
   replacer = bgReplacer;
@@ -46,6 +52,7 @@ function buildBackgroundsMenu(): void {
 }
 
 function markActive(id: string): void {
+  activeId = id;
   byId('backgroundsGrid')
     .querySelectorAll('.bg-tile')
     .forEach((t) => {
@@ -54,6 +61,11 @@ function markActive(id: string): void {
       t.setAttribute('aria-pressed', String(active));
     });
   byId('btnBackgrounds').classList.toggle('is-on', id !== 'none');
+}
+
+/** Select a backdrop by id ('none' turns background replacement off). */
+export async function pickBackground(id: string): Promise<void> {
+  return selectBackground(id);
 }
 
 async function selectBackground(id: string): Promise<void> {

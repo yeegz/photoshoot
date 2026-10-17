@@ -63,3 +63,18 @@ test('countdown numerals sit in the viewfinder and the flash covers the window',
   const vp = page.viewportSize()!;
   expect([Math.round(flash.width), Math.round(flash.height)]).toEqual([vp.width, vp.height]);
 });
+
+test('effects browser has black 2px gutters, arrow-key paging and backdrop pages', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#btnEffects').click();
+  await expect(page.locator('#effectsGrid')).toHaveCSS('gap', '2px');
+  await expect(page.locator('#effectsGrid')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+  const dots = page.locator('.page-dot');
+  await expect(dots.first()).toHaveClass(/active/);
+  await page.keyboard.press('ArrowRight');
+  await expect(dots.nth(1)).toHaveClass(/active/);
+  await page.keyboard.press('End');
+  await expect(page.locator('[data-backdrop]').first()).toBeVisible();
+  await expect(page.locator('.effect-tile', { hasText: 'Normal' })).toBeVisible();
+});

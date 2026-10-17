@@ -13,13 +13,13 @@ import { toast } from './toast';
 import { loadImportedThemes, applyResolvedTheme, watchDeviceTheme } from './themes';
 import { loadCustomFilters, registerFilterSink } from './customFilters';
 import { refreshGallery, exitReview } from './gallery';
-import { buildEffectsMenu, toggleEffects, closeEffects, isEffectsOpen } from './effectsMenu';
+import { buildEffectsMenu, toggleEffects, closeEffects, isEffectsOpen, openEffects, backdropPageStart } from './effectsMenu';
 import { initBackgroundsMenu } from './backgroundsMenu';
 import { BackgroundReplacer } from './backgroundReplace';
 import { initSettings, openSettings } from './settings';
 import { setPerfOverlay } from './perf';
 import { triggerShutter, videoRecorder } from './capture';
-import { openOverlay, closeOverlay, closeTop, isAnyOpen } from './overlays';
+import { closeOverlay, closeTop, isAnyOpen } from './overlays';
 import { effectLabel, isDraggable } from './gl/effects';
 import type { CameraErrorKind } from './camera';
 import type { CaptureKind } from '../shared/ipc-contract';
@@ -193,7 +193,7 @@ function wireControls(): void {
   byId('shutter').addEventListener('click', () => void triggerShutter());
 
   byId('btnEffects').addEventListener('click', () => toggleEffects());
-  byId('btnBackgrounds').addEventListener('click', () => openOverlay('backgroundsPanel'));
+  byId('btnBackgrounds').addEventListener('click', () => openEffects(backdropPageStart()));
   byId('btnSettings').addEventListener('click', () => void openSettings());
 
   // Click the reviewed photo to return to the live camera.

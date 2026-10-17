@@ -1,19 +1,31 @@
-// Effects view: a full-bleed 3×3 grid of LIVE preview tiles that replaces the
-// viewfinder (Photo Booth style), paged with dots in the toolbar. A second,
-// small WebGL renderer shares the camera video and renders each effect into its
-// tile on a round-robin (upload once per tick, draw several effects from it),
-// running only while the view is open. Picking a tile applies it and exits.
+// Effects browser: a full-bleed 3×3 grid of LIVE preview tiles that replaces
+// the viewfinder (Photo Booth style), paged with dots in the toolbar. The
+// effect pages come first; the backdrops follow as their own pages, each with
+// "Normal" in the centre cell. A second, small WebGL renderer shares the camera
+// video and renders each effect into its tile on a round-robin (upload once per
+// tick, draw several effects from it), running only while the view is open.
+// Picking a tile applies it and exits. ←/→ (Home/End) flip pages.
 
 import { app } from './app';
 import { GLRenderer } from './gl/renderer';
 import { EFFECTS, isDraggable, isFaceEffect } from './gl/effects';
 import type { EffectDef } from './gl/effects';
+import { BACKGROUNDS } from './backgrounds';
+import type { BackgroundDef } from './backgrounds';
+import { pickBackground, currentBackground } from './backgroundsMenu';
 import { byId, el, clear } from './dom';
 import { sound } from './sound';
 import { activateFaceTracking, deactivateFaceTracking } from './faceTracker';
 import { customFilterDefs, effectDisplayLabel, registerFilterSink } from './customFilters';
 
 const PAGE_SIZE = 9;
+const CENTER = 4;
+
+type PageItem =
+  | { kind: 'effect'; def: EffectDef }
+  | { kind: 'backdrop'; def: BackgroundDef }
+  | { kind: 'normal' }
+  | null;
 
 interface Tile {
   id: string;
@@ -25,7 +37,7 @@ interface Tile {
 
 let menuRenderer: GLRenderer | null = null;
 let tiles: Tile[] = [];
-let pageCount = 1;
+let pages: PageItem[][] = [];
 let currentPage = 0;
 let cycle = 0;
 let running = false;
@@ -36,92 +48,160 @@ function allEffects(): EffectDef[] {
   return EFFECTS.concat(customFilterDefs());
 }
 
+function chunk<T>(list: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
+
+/** Effect pages, then backdrop pages (eight backdrops + "Normal" in the middle). */
+function buildPages(): PageItem[][] {
+  const effectPages: PageItem[][] = chunk(allEffects(), PAGE_SIZE).map((defs) =>
+    defs.map((def) => ({ kind: 'effect', def }) as PageItem)
+  );
+  const backdropPages: PageItem[][] = chunk(BACKGROUNDS, PAGE_SIZE - 1).map((defs) => {
+    const items: PageItem[] = defs.map((def) => ({ kind: 'backdrop', def }) as PageItem);
+    items.splice(CENTER, 0, { kind: 'normal' });
+    return items;
+  });
+  return effectPages.concat(backdropPages).map((items) => {
+    while (items.length < PAGE_SIZE) items.push(null);
+    return items;
+  });
+}
+
+/** Index of the first backdrop page (moves when community filters are imported). */
+export function backdropPageStart(): number {
+  return Math.max(1, Math.ceil(allEffects().length / PAGE_SIZE));
+}
+
 export function buildEffectsMenu(): void {
   const glCanvas = document.createElement('canvas');
   menuRenderer = new GLRenderer(glCanvas);
   menuRenderer.setSource(app.video);
   menuRenderer.setMaxSize(420);
   registerFilterSink(menuRenderer); // menu previews can draw custom filters too
-  pageCount = Math.max(1, Math.ceil(allEffects().length / PAGE_SIZE));
+  pages = buildPages();
   renderPage(0);
 }
 
 /** Recompute pages after the set of custom filters changes. */
 export function refreshEffectsMenu(): void {
-  pageCount = Math.max(1, Math.ceil(allEffects().length / PAGE_SIZE));
-  renderPage(Math.min(currentPage, pageCount - 1));
+  pages = buildPages();
+  renderPage(Math.min(currentPage, pages.length - 1));
 }
 
 function renderPage(page: number): void {
-  currentPage = Math.min(Math.max(0, page), pageCount - 1);
+  currentPage = Math.min(Math.max(0, page), pages.length - 1);
   const grid = byId('effectsGrid');
   clear(grid);
   tiles = [];
 
-  const start = currentPage * PAGE_SIZE;
-  const slice = allEffects().slice(start, start + PAGE_SIZE);
-
-  for (let i = 0; i < PAGE_SIZE; i++) {
-    const def = slice[i];
-    if (!def) {
+  for (const item of pages[currentPage] ?? []) {
+    if (!item) {
       grid.appendChild(el('div', { className: 'effect-tile tile-empty' }));
       continue;
     }
-    const tileEl = el('button', {
-      className: 'effect-tile',
-      type: 'button',
-      ariaLabel: def.label,
-      dataset: { id: def.id },
-      attrs: { 'aria-pressed': String(def.id === app.effect) },
-      onClick: () => pick(def.id),
-    });
-    const canvas = document.createElement('canvas');
-    canvas.width = 320;
-    canvas.height = 240;
-    const ctx = canvas.getContext('2d')!;
-    tileEl.append(canvas, el('span', { className: 'effect-name', text: def.label }));
-    grid.appendChild(tileEl);
-    tiles.push({ id: def.id, amount: def.amount, canvas, ctx, el: tileEl });
+    if (item.kind === 'effect') grid.appendChild(effectTile(item.def));
+    else if (item.kind === 'backdrop') grid.appendChild(backdropTile(item.def));
+    else grid.appendChild(normalTile());
   }
 
   renderPageDots();
-  markActive(app.effect);
+  markActive();
+}
+
+function effectTile(def: EffectDef): HTMLElement {
+  const tileEl = el('button', {
+    className: 'effect-tile',
+    type: 'button',
+    ariaLabel: def.label,
+    dataset: { id: def.id },
+    onClick: () => pick(def.id),
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = 320;
+  canvas.height = 240;
+  const ctx = canvas.getContext('2d')!;
+  tileEl.append(canvas, el('span', { className: 'effect-name', text: def.label }));
+  tiles.push({ id: def.id, amount: def.amount, canvas, ctx, el: tileEl });
+  return tileEl;
+}
+
+function backdropTile(def: BackgroundDef): HTMLElement {
+  const tileEl = el('button', {
+    className: 'effect-tile',
+    type: 'button',
+    ariaLabel: `${def.label} backdrop`,
+    dataset: { backdrop: def.id },
+    onClick: () => pickBackdrop(def.id),
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = 320;
+  canvas.height = 240;
+  def.draw(canvas.getContext('2d')!, canvas.width, canvas.height);
+  tileEl.append(canvas, el('span', { className: 'effect-name', text: def.label }));
+  return tileEl;
+}
+
+// The centre cell of a backdrop page: no backdrop, no effect.
+function normalTile(): HTMLElement {
+  const tileEl = el('button', {
+    className: 'effect-tile',
+    type: 'button',
+    ariaLabel: 'Normal',
+    dataset: { id: 'normal', backdrop: 'none' },
+    onClick: () => pick('normal'),
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = 320;
+  canvas.height = 240;
+  const ctx = canvas.getContext('2d')!;
+  tileEl.append(canvas, el('span', { className: 'effect-name', text: 'Normal' }));
+  tiles.push({ id: 'normal', amount: 0, canvas, ctx, el: tileEl });
+  return tileEl;
 }
 
 function renderPageDots(): void {
   const bar = byId('barPages');
   clear(bar);
-  if (pageCount <= 1) return;
+  if (pages.length <= 1) return;
 
   const prev = el('button', { className: 'page-arrow', type: 'button', ariaLabel: 'Previous page', text: '◀' });
   (prev as HTMLButtonElement).disabled = currentPage === 0;
   prev.addEventListener('click', () => renderPage(currentPage - 1));
   bar.appendChild(prev);
 
-  for (let p = 0; p < pageCount; p++) {
+  for (let p = 0; p < pages.length; p++) {
     const dot = el('span', { className: `page-dot${p === currentPage ? ' active' : ''}` });
     bar.appendChild(dot);
   }
 
   const next = el('button', { className: 'page-arrow', type: 'button', ariaLabel: 'Next page', text: '▶' });
-  (next as HTMLButtonElement).disabled = currentPage === pageCount - 1;
+  (next as HTMLButtonElement).disabled = currentPage === pages.length - 1;
   next.addEventListener('click', () => renderPage(currentPage + 1));
   bar.appendChild(next);
 }
 
-function markActive(id: string): void {
-  tiles.forEach((t) => {
-    const active = t.id === id;
-    t.el.classList.toggle('is-active', active);
-    t.el.setAttribute('aria-pressed', String(active));
-  });
+function markActive(): void {
+  const backdrop = currentBackground();
+  byId('effectsGrid')
+    .querySelectorAll<HTMLElement>('.effect-tile')
+    .forEach((t) => {
+      const active =
+        t.dataset.backdrop !== undefined
+          ? t.dataset.backdrop === backdrop && (backdrop !== 'none' || app.effect === 'normal')
+          : t.dataset.id === app.effect;
+      t.classList.toggle('is-active', active);
+      t.setAttribute('aria-pressed', String(active));
+    });
 }
 
 function applyEffect(id: string): void {
   app.effect = id;
   app.renderer.setEffect(id);
   app.renderer.setCenter(0.5, 0.5); // each effect starts centered; drag to move it
-  markActive(id);
+  markActive();
   byId('btnEffects').classList.toggle('is-on', id !== 'normal');
   byId('viewfinder').classList.toggle('is-draggable', isDraggable(id));
   if (isFaceEffect(id)) void activateFaceTracking();
@@ -129,9 +209,19 @@ function applyEffect(id: string): void {
     id === 'normal' ? 'Tap to capture' : `Effect · ${effectDisplayLabel(id)}`;
 }
 
-/** Pick an effect from a tile: apply it and exit the effects view. */
+/** Pick an effect from a tile: apply it and exit the effects view. "Normal"
+ *  also turns any backdrop off, like Photo Booth. */
 function pick(id: string): void {
   applyEffect(id);
+  if (id === 'normal') void pickBackground('none');
+  sound.play('button');
+  closeEffects();
+}
+
+/** Pick a backdrop from a tile: start background replacement and exit. */
+function pickBackdrop(id: string): void {
+  void pickBackground(id);
+  markActive();
   sound.play('button');
   closeEffects();
 }
@@ -142,12 +232,13 @@ export function isEffectsOpen(): boolean {
   return running;
 }
 
-export function openEffects(): void {
+export function openEffects(page = 0): void {
   if (!menuRenderer || !menuRenderer.available || running) return;
   running = true;
+  renderPage(page);
   byId('effectsPanel').classList.add('is-open');
   byId('toolbar').classList.add('is-effects');
-  renderPageDots();
+  document.addEventListener('keydown', onKey);
   sound.play('button');
   void activateFaceTracking(); // so face-effect tiles preview live
   loop();
@@ -157,6 +248,7 @@ export function closeEffects(): void {
   running = false;
   if (rafHandle) cancelAnimationFrame(rafHandle);
   rafHandle = 0;
+  document.removeEventListener('keydown', onKey);
   byId('effectsPanel').classList.remove('is-open');
   byId('toolbar').classList.remove('is-effects');
   if (!isFaceEffect(app.effect)) deactivateFaceTracking();
@@ -164,7 +256,28 @@ export function closeEffects(): void {
 
 export function toggleEffects(): void {
   if (running) closeEffects();
-  else openEffects();
+  else openEffects(currentPage);
+}
+
+function onKey(e: KeyboardEvent): void {
+  if (!running) return;
+  switch (e.key) {
+    case 'ArrowLeft':
+      renderPage(currentPage - 1);
+      break;
+    case 'ArrowRight':
+      renderPage(currentPage + 1);
+      break;
+    case 'Home':
+      renderPage(0);
+      break;
+    case 'End':
+      renderPage(pages.length - 1);
+      break;
+    default:
+      return;
+  }
+  e.preventDefault();
 }
 
 function loop(): void {
