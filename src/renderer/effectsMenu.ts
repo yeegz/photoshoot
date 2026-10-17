@@ -15,6 +15,7 @@ import type { BackgroundDef } from './backgrounds';
 import { pickBackground, currentBackground } from './backgroundsMenu';
 import { byId, el, clear } from './dom';
 import { sound } from './sound';
+import { isAnyOpen } from './overlays';
 import { activateFaceTracking, deactivateFaceTracking } from './faceTracker';
 import { customFilterDefs, effectDisplayLabel, registerFilterSink } from './customFilters';
 
@@ -233,7 +234,11 @@ export function isEffectsOpen(): boolean {
 }
 
 export function openEffects(page = 0): void {
-  if (!menuRenderer || !menuRenderer.available || running) return;
+  if (!menuRenderer || !menuRenderer.available) return;
+  if (running) {
+    renderPage(page); // already browsing: just jump to the page
+    return;
+  }
   running = true;
   renderPage(page);
   byId('effectsPanel').classList.add('is-open');
@@ -261,6 +266,11 @@ export function toggleEffects(): void {
 
 function onKey(e: KeyboardEvent): void {
   if (!running) return;
+  // Only plain arrow keys aimed at the page: never steal keystrokes from a
+  // slider, select or text field, or from a panel open above the browser.
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  const target = e.target as HTMLElement | null;
+  if (target?.closest('input, select, textarea, [contenteditable="true"]') || isAnyOpen()) return;
   switch (e.key) {
     case 'ArrowLeft':
       renderPage(currentPage - 1);

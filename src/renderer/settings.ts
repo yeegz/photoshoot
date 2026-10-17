@@ -202,7 +202,7 @@ function buildThemeSection(): HTMLElement {
     }
     render();
   });
-  const resetBtn = el('button', { className: 'btn', type: 'button', text: 'Reset to Studio' });
+  const resetBtn = el('button', { className: 'btn', type: 'button', text: 'Reset to Photo Booth' });
   resetBtn.addEventListener('click', async () => {
     await setTheme('booth');
     render();

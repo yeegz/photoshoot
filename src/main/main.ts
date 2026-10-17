@@ -64,7 +64,7 @@ function createWindow(): void {
     minHeight: 520,
     show: false,
     frame: false,
-    backgroundColor: '#ececec',
+    backgroundColor: '#1d1d1f', // Photo Booth chrome: no light flash before the renderer paints
     title: 'Photoshoot',
     autoHideMenuBar: true,
     webPreferences: {

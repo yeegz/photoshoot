@@ -126,3 +126,53 @@ test('with no captures the toolbar sits on the bottom edge and the effects brows
   expect(Math.round(fx.y)).toBe(28);
   expect(Math.round(fx.y + fx.height)).toBe(vp.height - 58);
 });
+
+// ---- fixes from the whole-branch review ----
+
+test('the Settings reset button returns to Photo Booth and says so', async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem('photoshoot.settings', JSON.stringify({ theme: 'retro', autoTheme: false }))
+  );
+  await page.goto('/app/');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'retro');
+  await page.locator('#btnSettings').click();
+  await page.getByRole('button', { name: 'Reset to Photo Booth' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'booth');
+});
+
+test('light themes paint the tray band in their own chrome colour', async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem('photoshoot.settings', JSON.stringify({ theme: 'modern', autoTheme: false, countdownSeconds: 0 }))
+  );
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#shutter').click();
+  await expect(page.locator('#trayScroll img').first()).toBeVisible({ timeout: 60000 });
+  const band = await page.evaluate(() => getComputedStyle(document.getElementById('tray')!).backgroundColor);
+  expect(band).toBe('rgb(232, 232, 232)'); // Studio's --app-bg-2
+});
+
+test('effects paging keys leave form controls alone', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#btnEffects').click();
+  await page.locator('#btnSettings').click();
+  await page.locator('#settingsBody input[type="range"]').first().focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.page-dot').first()).toHaveClass(/active/);
+  await expect(page.locator('.page-dot').nth(1)).not.toHaveClass(/active/);
+});
+
+test('the Backgrounds button jumps to the backdrop page even while browsing effects', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#btnEffects').click();
+  await page.locator('#btnBackgrounds').click();
+  await expect(page.locator('[data-backdrop]').first()).toBeVisible();
+});
+
+test('the page ships with the Photo Booth theme before any script runs', async ({ page }) => {
+  const html = await (await page.request.get('/app/')).text();
+  expect(html).toContain('data-theme="booth"');
+  expect(html).toContain('data-platform="web"');
+});

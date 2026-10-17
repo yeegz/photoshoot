@@ -277,7 +277,7 @@ body.is-reviewing .effects-btn {
   grid-area: tray;
   height: var(--tray-h);
   padding: 0 19px 0 0;
-  background: var(--tray-bg);
+  background: var(--tray-band-bg, var(--app-bg-2)); /* opaque band in every theme */
   box-shadow: inset 0 1px 0 var(--tray-border);
   overflow: hidden;
 }

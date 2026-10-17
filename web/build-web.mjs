@@ -86,7 +86,7 @@ async function run() {
   // 3) App HTML, derived from the Electron renderer's index.html, rewired to the
   //    hashed asset names.
   let html = await readFile(path.join(root, 'src/renderer/index.html'), 'utf8');
-  html = html.replace('<html lang="en" data-theme="modern">', '<html lang="en" data-theme="modern" data-platform="web">');
+  html = html.replace('<html lang="en" data-theme="booth">', '<html lang="en" data-theme="booth" data-platform="web">');
   html = html.replace('<title>Photoshoot</title>', '<title>Photoshoot</title>\n    <link rel="icon" href="icon.png" />');
   for (const n of styleNames) html = html.replace(`styles/${n}.css`, `styles/${styleMap[n]}`);
   html = html.replace(
