@@ -274,6 +274,7 @@ body.is-reviewing .effects-btn {
 
 /* ---------- Photo tray: a 60px band of 3:2 thumbnails, newest on the right ---------- */
 .tray {
+  grid-area: tray;
   height: var(--tray-h);
   padding: 0 19px 0 0;
   background: var(--tray-bg);
@@ -547,8 +548,8 @@ body.is-reviewing .effects-btn {
 /* ---------- Effects view (full-bleed 3x3 grid that replaces the viewfinder) ---------- */
 .effects-view {
   position: fixed;
-  top: 40px;
-  bottom: 54px;
+  top: var(--titlebar-h);
+  bottom: var(--toolbar-h);
   left: 0;
   right: 0;
   z-index: 30;
@@ -613,7 +614,8 @@ body.is-reviewing .effects-btn {
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
 }
 .effect-tile.is-active {
-  box-shadow: inset 0 0 0 3px var(--accent);
+  outline: 3px solid var(--accent); /* outlines paint above the tile's canvas */
+  outline-offset: -3px;
 }
 .effect-tile:focus-visible {
   outline: 2px solid var(--focus-ring);

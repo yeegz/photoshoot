@@ -114,3 +114,15 @@ test('the bridge exposes a full-screen toggle', async ({ page }) => {
   );
   expect(kind).toBe('function');
 });
+
+test('with no captures the toolbar sits on the bottom edge and the effects browser spans titlebar to toolbar', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  const vp = page.viewportSize()!;
+  const tb = (await page.locator('#toolbar').boundingBox())!;
+  expect(Math.round(tb.y + tb.height)).toBe(vp.height);
+  await page.locator('#btnEffects').click();
+  const fx = (await page.locator('#effectsPanel').boundingBox())!;
+  expect(Math.round(fx.y)).toBe(28);
+  expect(Math.round(fx.y + fx.height)).toBe(vp.height - 58);
+});
