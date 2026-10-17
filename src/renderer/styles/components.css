@@ -494,7 +494,9 @@ body.is-reviewing .effects-btn {
   top: 0;
   right: 0;
   height: 100vh;
+  height: 100dvh;
   width: min(430px, 96vw);
+  padding-bottom: var(--safe-bottom);
   background: var(--app-bg);
   transform: translateX(100%);
   transition: transform var(--dur-slow) var(--ease);
@@ -548,8 +550,8 @@ body.is-reviewing .effects-btn {
 /* ---------- Effects view (full-bleed 3x3 grid that replaces the viewfinder) ---------- */
 .effects-view {
   position: fixed;
-  top: var(--titlebar-h);
-  bottom: var(--toolbar-h);
+  top: calc(var(--titlebar-h) + var(--safe-top));
+  bottom: calc(var(--toolbar-h) + var(--safe-bottom));
   left: 0;
   right: 0;
   z-index: 30;
@@ -1210,4 +1212,13 @@ input[type="range"] {
 }
 .toast.toast-success .toast-ico {
   color: #5ee08f;
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 600px) {
+  .effect-tile .effect-name {
+    font-size: 13px;
+    padding: 0 4px;
+    text-align: center;
+  }
 }

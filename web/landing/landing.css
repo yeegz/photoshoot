@@ -40,6 +40,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body { padding-bottom: env(safe-area-inset-bottom, 0px); }
 body {
   font-family: var(--font);
   font-size: 17px;
@@ -451,6 +452,8 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing:
   body { font-size: 16px; }
   .pb { border-radius: 8px; }
   .pb-status { display: none; }
+  .pb-view { aspect-ratio: 4 / 3; } /* more camera, less letterbox on a phone */
+  .pb-tile span { font-size: 12px; }
   .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .frame { flex-basis: 240px; }
   .get-row { flex-wrap: wrap; }

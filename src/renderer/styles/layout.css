@@ -5,10 +5,13 @@
 .app {
   position: relative;
   display: grid;
-  grid-template-rows: var(--titlebar-h) minmax(0, 1fr) auto var(--toolbar-h);
+  grid-template-rows:
+    calc(var(--titlebar-h) + var(--safe-top)) minmax(0, 1fr) auto
+    calc(var(--toolbar-h) + var(--safe-bottom));
   grid-template-areas: "titlebar" "stage" "tray" "toolbar";
   height: 100vh;
-  width: 100vw;
+  height: 100dvh; /* iOS: the visible area, not the layout viewport */
+  width: 100%;
   background: var(--app-bg-texture, none), var(--app-bg);
   background-size: cover;
 }
@@ -20,14 +23,14 @@
   display: flex;
   align-items: center;
   gap: 17px;
-  height: var(--titlebar-h);
-  padding: 0 16px 0 13px;
+  height: calc(var(--titlebar-h) + var(--safe-top));
+  padding: var(--safe-top) calc(16px + var(--safe-right)) 0 calc(13px + var(--safe-left));
   background: var(--app-bg-2);
   border-bottom: 1px solid var(--titlebar-border, var(--panel-border));
   -webkit-app-region: drag;
 }
 html[data-platform="web"] .titlebar {
-  padding-left: 16px;
+  padding-left: calc(16px + var(--safe-left));
 }
 .titlebar button,
 .traffic {
@@ -182,8 +185,10 @@ html[data-platform="web"] .titlebar {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: var(--space);
-  height: var(--toolbar-h);
-  padding: 0 15px; /* symmetric so the shutter sits dead centre */
+  height: calc(var(--toolbar-h) + var(--safe-bottom));
+  /* symmetric so the shutter sits dead centre; the bottom inset clears the
+     home indicator / browser bar on phones */
+  padding: 0 calc(15px + max(var(--safe-left), var(--safe-right))) var(--safe-bottom);
   background: var(--toolbar-bg);
   border-top: 1px solid var(--toolbar-border, var(--panel-border));
   overflow: visible;
@@ -224,4 +229,14 @@ html[data-platform="web"] .titlebar {
 }
 .toolbar.is-effects .bar-pages {
   display: flex;
+}
+
+/* ---- Phones ---- */
+@media (max-width: 600px) {
+  .titlebar-status {
+    display: none;
+  }
+  .toolbar {
+    gap: 8px;
+  }
 }

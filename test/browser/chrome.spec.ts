@@ -176,3 +176,22 @@ test('the page ships with the Photo Booth theme before any script runs', async (
   expect(html).toContain('data-theme="booth"');
   expect(html).toContain('data-platform="web"');
 });
+
+test('on a phone the window fits the visible screen, not the iOS layout viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 664 });
+  await page.goto('/app/');
+  const meta = await page.locator('meta[name="viewport"]').getAttribute('content');
+  expect(meta).toContain('viewport-fit=cover');
+  // iOS Safari's 100vh is taller than the visible area, which hides the
+  // toolbar under the browser bar; the shell must size to the dynamic viewport.
+  const usesDvh = await page.evaluate(() =>
+    Array.from(document.styleSheets).some((sheet) =>
+      Array.from(sheet.cssRules).some(
+        (r) => r instanceof CSSStyleRule && r.selectorText === '.app' && r.style.height.includes('dvh')
+      )
+    )
+  );
+  expect(usesDvh).toBe(true);
+  const tb = (await page.locator('#toolbar').boundingBox())!;
+  expect(Math.round(tb.y + tb.height)).toBe(664);
+});

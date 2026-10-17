@@ -60,6 +60,12 @@
   --pill-h: 28px;
   --pill-radius: 9px;
 
+  /* notch / home-indicator insets (0 on desktop) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
   /* ---- Liquid Glass pills: translucent fill + specular edge ---- */
   --glass-fill: rgba(255, 255, 255, 0.1);
   --glass-fill-hover: rgba(255, 255, 255, 0.15);
