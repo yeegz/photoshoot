@@ -4,7 +4,7 @@
 
 **A photobooth for the browser and desktop.**
 
-Open your camera, choose an effect and capture a single photo, a four-shot strip or a short video. Photoshoot combines a live WebGL2 viewfinder, on-device face effects, five visual themes and a local gallery.
+Open your camera, choose an effect and capture a single photo, four quick pictures or a short video. Photoshoot combines a live WebGL2 viewfinder, on-device face effects, six visual themes and a local gallery.
 
 [Open the web app](https://photoshoot-yeegz.web.app/app/) · [Product site](https://photoshoot-yeegz.web.app) · [Case study](https://yousofselim.com/work/photoshoot/) · [Build locally](#getting-started)
 
@@ -17,7 +17,7 @@ Camera processing and captures stay on the device. The app was designed and buil
 - 🎥 **Live viewfinder** rendered through a real WebGL2 pipeline (not a raw video tag)
 - ✨ **17 real‑time GLSL effects** — Sepia, B&W, Plastic Camera, Comic Book, Color Pencil, Glow, Thermal, X‑Ray, Bulge, Dent, Twirl, Squeeze, Mirror, Light Tunnel, Fish Eye, Stretch, Pop Art (distortions have a **draggable center**)
 - 🙂 **8 face‑tracked “fun” effects** — Bug Out, Chipmunk, Frog, Dizzy, Blockhead, Nose Twirl, Lovestruck, Space Alien — powered by an **on‑device** MediaPipe face mesh (nothing uploaded)
-- 📸 **Single photo**, **4‑shot vertical strip** (composited with borders, paper texture & footer), and **video** capture
+- 📸 **Single photo**, **four quick pictures** (one countdown, four shots, a 2×2 sheet) and **video** capture; Option‑click skips the countdown, Shift‑click skips the flash, as in Photo Booth
 - 🪄 **Classic background replacement** with six original procedural backdrops
 - 🎨 **Six built‑in themes** — Photo Booth (the default: dark unified chrome, Liquid Glass pills and a glossy red shutter, measured from the real thing), Studio, Studio Dark, Classic Metal, Retro Film, and Darkroom
 - 🔌 **Secure community theme + filter import** — zero‑trust; filters are clamped numeric grades + an optional validated LUT, never code
@@ -117,7 +117,7 @@ All captures are written to:
 
 (`Pictures/Photoshoot`). Files are named like
 `Photoshoot_single_2026-06-13_22-04-31.png`. Photos are PNG or JPG (your choice
-in Settings); strips are a single composited image; videos are `.webm`.
+in Settings); four quick pictures are one 2×2 image; videos are `.webm`.
 
 The in‑app gallery stores small thumbnails and metadata in the app's user‑data
 folder. The full‑resolution files live only in `Pictures/Photoshoot`.
@@ -372,7 +372,7 @@ esbuild.mjs    Build pipeline (bundles all three targets)
   with a still background and even lighting. A future ML/segmentation backend
   could remove that requirement.
 - Video is saved as WebM (capped at 60s) without audio.
-- Strip layout is a single vertical 4‑frame design; configurable layouts could
+- Four quick pictures are a fixed 2×2 sheet; configurable layouts could
   follow.
 - Effect "amount" is fixed per effect today; per‑effect sliders would be a nice
   addition.

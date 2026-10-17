@@ -200,31 +200,21 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing:
 }
 .pb-btn:hover { background: var(--accent-2); }
 
-/* countdown numerals in the viewfinder */
-.pb-count {
+/* countdown: the toolbar lights 3, 2, 1, then the camera, like Photo Booth */
+.pb-toolbar { position: relative; }
+.pb-countbar {
   position: absolute;
   inset: 0;
-  z-index: 4;
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.25), transparent 65%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
 }
-.pb-count span {
-  font-family: var(--font-display);
-  font-size: clamp(90px, 22vw, 200px);
-  font-weight: 700;
-  line-height: 1;
-  color: #fff;
-  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-}
-.pb-count span.tick { animation: countTick 0.7s var(--ease) forwards; }
-@keyframes countTick {
-  0% { transform: scale(0.5); opacity: 0; }
-  20% { transform: scale(1.08); opacity: 1; }
-  72% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(0.9); opacity: 0; }
-}
+.pb-toolbar.is-counting > :not(.pb-countbar) { opacity: 0; pointer-events: none; }
+.pb-toolbar.is-counting .pb-countbar { display: flex; }
+.pb-cd { font-family: var(--font-display); font-size: 26px; font-weight: 600; line-height: 1; color: var(--faint); transition: color 0.12s, transform 0.12s var(--ease); }
+.pb-cd-cam { width: 24px; height: 24px; }
+.pb-cd.active { color: var(--red-top); transform: scale(1.12); }
 .pb-strip-progress { position: absolute; top: 10px; left: 0; right: 0; z-index: 4; display: flex; justify-content: center; gap: 8px; pointer-events: none; }
 .pb-strip-progress i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.35); }
 .pb-strip-progress i.done { background: #fff; }
@@ -333,7 +323,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing:
 /* the slot under the window, where a strip prints out */
 .pb-slot { width: min(300px, 60%); height: 6px; margin-top: 12px; border-radius: 999px; background: #000; box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.08); }
 .strip-out { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: -4px; }
-.strip-out img { width: 128px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 30px -14px rgba(0, 0, 0, 0.8); transform: rotate(-1.5deg); animation: stripDrop 1.1s var(--ease) both; }
+.strip-out img { width: 220px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 30px -14px rgba(0, 0, 0, 0.8); transform: rotate(-1.5deg); animation: stripDrop 1.1s var(--ease) both; }
 @keyframes stripDrop {
   from { clip-path: inset(0 0 100% 0); transform: translateY(-40px) rotate(0); }
   to { clip-path: inset(0); transform: rotate(-1.5deg); }
@@ -438,7 +428,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing:
 .foot-links a:hover { color: var(--text); }
 
 @media (prefers-reduced-motion: reduce) {
-  .pb-grid, .pb-count span, .strip-out img, .pb-thumb { transition: none; animation: none; }
+  .pb-grid, .pb-cd, .strip-out img, .pb-thumb { transition: none; animation: none; }
   .pb-grid { transform: none; }
 }
 

@@ -205,6 +205,57 @@ html[data-platform="web"] .titlebar {
   justify-self: end;
 }
 
+/* Countdown: the toolbar's controls give way to a row of numerals that light
+   up one by one, then the camera glyph. */
+.bar-countdown {
+  position: absolute;
+  inset: 0 0 var(--safe-bottom);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 34px;
+  z-index: 4;
+}
+.toolbar.is-counting .toolbar-zone {
+  opacity: 0;
+  pointer-events: none;
+}
+.toolbar.is-counting .bar-countdown {
+  display: flex;
+}
+.cd-nums {
+  display: flex;
+  align-items: center;
+  gap: 34px;
+}
+.cd-num {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-faint);
+  transition: color 0.12s var(--ease), transform 0.12s var(--ease);
+}
+.cd-num.active {
+  color: var(--shutter-top, var(--shutter));
+  transform: scale(1.12);
+}
+.cd-cam {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--text-faint);
+  transition: color 0.12s var(--ease);
+}
+.cd-cam svg {
+  width: 26px;
+  height: 26px;
+}
+.cd-cam.active {
+  color: var(--shutter-top, var(--shutter));
+}
+
 /* Effects-browsing state: page dots replace the mode control + shutter */
 .toolbar.is-effects .toolbar-zone.left,
 .toolbar.is-effects .toolbar-zone.center {

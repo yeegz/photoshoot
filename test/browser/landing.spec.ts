@@ -68,12 +68,14 @@ test('effects, a photo and a strip all work in the hero window', async ({ page }
   const filter = await page.locator('#pbVideo').evaluate((v) => getComputedStyle(v).filter);
   expect(filter).toContain('sepia');
   await page.locator('#pbShutter').click();
-  await expect(page.locator('#pbCount')).toBeVisible();
+  await expect(page.locator('#pbToolbar')).toHaveClass(/is-counting/);
   await expect(page.locator('.pb-thumb')).toHaveCount(1, { timeout: 15000 });
   await page.locator('[data-mode="strip"]').click();
   await page.locator('#pbShutter').click();
   await expect(page.locator('#pbStripImg')).toBeVisible({ timeout: 30000 });
   await expect(page.locator('#pbStripImg')).toHaveAttribute('src', /^blob:|^data:/);
+  const ratio = await page.locator('#pbStripImg').evaluate((i: HTMLImageElement) => i.naturalWidth / i.naturalHeight);
+  expect(ratio).toBeGreaterThan(1); // four quick pictures as a 2x2 sheet
   await expect(page.locator('.pb-thumb')).toHaveCount(2);
 });
 
@@ -83,7 +85,7 @@ test('the shutter while browsing effects closes the grid first', async ({ page }
   await expect(page.locator('#pbGrid')).toBeVisible();
   await page.locator('#pbShutter').click();
   await expect(page.locator('#pbGrid')).toBeHidden();
-  await expect(page.locator('#pbCount')).toBeVisible();
+  await expect(page.locator('#pbToolbar')).toHaveClass(/is-counting/);
 });
 
 test('the window works without Web Audio', async ({ page }) => {

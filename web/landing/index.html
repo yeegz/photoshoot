@@ -6,12 +6,12 @@
     <title>Photoshoot — a photobooth for your webcam</title>
     <meta
       name="description"
-      content="Photoshoot is a free photobooth for your webcam: live effects, face effects, four-shot strips, backdrops and six themes, in the browser or on Windows. Everything stays on your device."
+      content="Photoshoot is a free photobooth for your webcam: live effects, face effects, four quick pictures, backdrops and six themes, in the browser or on Windows. Everything stays on your device."
     />
     <meta name="theme-color" content="#0f0f11" />
     <link rel="icon" href="assets/icon.png" />
     <meta property="og:title" content="Photoshoot — a photobooth for your webcam" />
-    <meta property="og:description" content="Live effects, face effects, four-shot strips and six themes. In your browser or on Windows. Everything stays on your device." />
+    <meta property="og:description" content="Live effects, face effects, four quick pictures and six themes. In your browser or on Windows. Everything stays on your device." />
     <meta property="og:image" content="assets/icon.png" />
     <link rel="stylesheet" href="landing.css" />
   </head>
@@ -48,7 +48,6 @@
               </div>
             </div>
 
-            <div class="pb-count" id="pbCount" hidden aria-hidden="true"><span id="pbCountNum">3</span></div>
             <div class="pb-strip-progress" id="pbStripProgress" hidden aria-hidden="true"></div>
             <div class="pb-grid" id="pbGrid" hidden role="group" aria-label="Effects"></div>
           </div>
@@ -57,7 +56,7 @@
             <div class="pb-tray-scroll" id="pbTrayScroll"></div>
           </div>
 
-          <div class="pb-toolbar">
+          <div class="pb-toolbar" id="pbToolbar">
             <div class="pb-mode glass" id="pbMode" role="radiogroup" aria-label="Capture mode">
               <button type="button" role="radio" aria-checked="false" data-mode="strip" aria-label="Four-shot strip" title="4-shot strip">
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8.2" height="8.2" rx="2"/><rect x="12.8" y="3" width="8.2" height="8.2" rx="2"/><rect x="3" y="12.8" width="8.2" height="8.2" rx="2"/><rect x="12.8" y="12.8" width="8.2" height="8.2" rx="2"/></svg>
@@ -75,6 +74,11 @@
             </button>
 
             <button class="pb-effects glass" id="pbEffects" type="button" disabled>Effects</button>
+
+            <div class="pb-countbar" aria-hidden="true">
+              <span class="pb-cd" data-n="3">3</span><span class="pb-cd" data-n="2">2</span><span class="pb-cd" data-n="1">1</span>
+              <svg class="pb-cd pb-cd-cam" data-n="0" viewBox="0 0 28 28"><path fill="currentColor" fill-rule="evenodd" d="M9.6 5.4 8.4 7H5A2.2 2.2 0 0 0 2.8 9.2V19.4A2.2 2.2 0 0 0 5 21.6H23A2.2 2.2 0 0 0 25.2 19.4V9.2A2.2 2.2 0 0 0 23 7H19.6L18.4 5.4Z M14 9.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2Z M14 11.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z"/></svg>
+            </div>
           </div>
 
           <div class="pb-flash" id="pbFlash" aria-hidden="true"></div>
@@ -83,8 +87,8 @@
         <div class="pb-slot" aria-hidden="true"></div>
 
         <div class="strip-out" id="pbStrip" hidden>
-          <img id="pbStripImg" alt="Your four-shot photo strip" />
-          <a class="pill pill-glass pill-sm" id="pbStripSave" download="photoshoot-strip.png">Save strip</a>
+          <img id="pbStripImg" alt="Your four quick pictures" />
+          <a class="pill pill-glass pill-sm" id="pbStripSave" download="photoshoot-4-up.png">Save photos</a>
         </div>
 
         <p class="stage-line">A photobooth for your webcam. Everything stays on your device.</p>
@@ -115,8 +119,8 @@
             <li class="frame"><canvas data-backdrop="stage" data-filter="xray" width="300" height="200"></canvas><span>Effect · X‑Ray</span></li>
             <li class="frame frame-note">
               <b>4</b>
-              <strong>Shots per strip</strong>
-              <small>Countdown, flash, four poses, one strip with a date stamp. Or a single photo, or a video clip.</small>
+              <strong>Quick pictures</strong>
+              <small>One countdown, four quick shots with a flash each, saved as a 2×2 sheet. Or a single photo, or a video clip. Option-click skips the countdown, Shift-click the flash.</small>
             </li>
             <li class="frame"><canvas data-backdrop="clouds" width="300" height="200"></canvas><span>Backdrop · Dreamy Clouds</span></li>
             <li class="frame"><canvas data-backdrop="sunset" data-filter="popart" width="300" height="200"></canvas><span>Effect · Pop Art</span></li>

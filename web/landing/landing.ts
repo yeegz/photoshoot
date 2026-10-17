@@ -397,8 +397,8 @@ function soundShutter(): void {
 // Capture: countdown in the viewfinder, window flash, thumbnails, strips
 // ---------------------------------------------------------------------------
 
-const count = $('pbCount');
-const countNum = $('pbCountNum');
+const toolbar = $('pbToolbar');
+const cds = Array.from(document.querySelectorAll<HTMLElement | SVGElement>('.pb-cd'));
 const flash = $('pbFlash');
 const tray = $('pbTray');
 const trayScroll = $('pbTrayScroll');
@@ -409,21 +409,24 @@ const progress = $('pbStripProgress');
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-async function countdown(seconds: number): Promise<void> {
-  count.hidden = false;
-  for (let n = seconds; n >= 1; n--) {
-    countNum.textContent = String(n);
-    countNum.classList.remove('tick');
-    void countNum.offsetWidth;
-    countNum.classList.add('tick');
+async function countdown(): Promise<void> {
+  toolbar.classList.add('is-counting');
+  for (const n of ['3', '2', '1']) {
+    cds.forEach((c) => c.classList.toggle('active', c.getAttribute('data-n') === n));
     soundTick();
     await wait(700);
   }
-  countNum.classList.remove('tick');
-  count.hidden = true;
+  cds.forEach((c) => c.classList.toggle('active', c.getAttribute('data-n') === '0'));
+  await wait(120);
+  cds.forEach((c) => c.classList.remove('active'));
+  toolbar.classList.remove('is-counting');
 }
 
-function fireFlash(): void {
+function fireFlash(skip = false): void {
+  if (skip) {
+    soundShutter();
+    return;
+  }
   flash.classList.remove('fire');
   void flash.offsetWidth;
   flash.classList.add('fire');
@@ -457,28 +460,19 @@ function addThumb(source: HTMLCanvasElement): void {
   trayScroll.scrollLeft = trayScroll.scrollWidth;
 }
 
-/** Four frames down a strip with a paper border and a footer, like the app. */
+/** Four quick pictures as a 2×2 sheet with a thin white border, like Photo Booth. */
 function composeStrip(frames: HTMLCanvasElement[]): HTMLCanvasElement {
-  const width = 360;
-  const height = Math.round((width * frames[0].height) / frames[0].width);
-  const pad = 22;
-  const gap = 14;
-  const foot = 74;
-  const strip = document.createElement('canvas');
-  strip.width = width + pad * 2;
-  strip.height = pad + frames.length * height + (frames.length - 1) * gap + foot;
-  const ctx = strip.getContext('2d')!;
-  ctx.fillStyle = '#fbf8f1';
-  ctx.fillRect(0, 0, strip.width, strip.height);
-  frames.forEach((f, i) => ctx.drawImage(f, pad, pad + i * (height + gap), width, height));
-  ctx.fillStyle = '#16130f';
-  ctx.textAlign = 'center';
-  ctx.font = '600 20px -apple-system, "SF Pro Display", "Segoe UI", system-ui, sans-serif';
-  ctx.fillText('PHOTOSHOOT', strip.width / 2, strip.height - foot / 2 + 2);
-  ctx.fillStyle = '#7a7266';
-  ctx.font = '400 14px -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif';
-  ctx.fillText(new Date().toLocaleDateString(undefined, { dateStyle: 'medium' }), strip.width / 2, strip.height - foot / 2 + 24);
-  return strip;
+  const fw = frames[0].width;
+  const fh = frames[0].height;
+  const gap = 8;
+  const sheet = document.createElement('canvas');
+  sheet.width = fw * 2 + gap * 3;
+  sheet.height = fh * 2 + gap * 3;
+  const ctx = sheet.getContext('2d')!;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, sheet.width, sheet.height);
+  frames.forEach((f, i) => ctx.drawImage(f, gap + (i % 2) * (fw + gap), gap + Math.floor(i / 2) * (fh + gap)));
+  return sheet;
 }
 
 function setBusy(on: boolean): void {
@@ -490,37 +484,38 @@ function setBusy(on: boolean): void {
   modeButtons.forEach((b) => (b.disabled = on || b.dataset.mode === 'video'));
 }
 
-async function shoot(): Promise<void> {
+async function shoot(opts: { skipCountdown?: boolean; skipFlash?: boolean } = {}): Promise<void> {
   if (busy || !isLive()) return;
   closeGrid();
   setBusy(true);
+  if (!opts.skipCountdown) await countdown();
   if (pb.dataset.mode === 'strip') {
+    // One countdown, then four quick pictures, each with its own flash.
     progress.hidden = false;
     progress.replaceChildren(...Array.from({ length: 4 }, () => document.createElement('i')));
     const frames: HTMLCanvasElement[] = [];
     for (let i = 0; i < 4; i++) {
-      await countdown(i === 0 ? 3 : 2);
-      fireFlash();
+      fireFlash(opts.skipFlash);
       frames.push(grab());
       progress.children[i]?.classList.add('done');
-      await wait(450);
+      if (i < 3) await wait(560);
     }
     progress.hidden = true;
-    const strip = composeStrip(frames);
-    const url = strip.toDataURL('image/png');
+    const sheet = composeStrip(frames);
+    const url = sheet.toDataURL('image/png');
     stripImg.src = url;
     stripSave.href = url;
     stripOut.hidden = false;
-    addThumb(strip);
+    addThumb(sheet);
   } else {
-    await countdown(3);
-    fireFlash();
+    fireFlash(opts.skipFlash);
     addThumb(grab());
   }
   setBusy(false);
 }
 
-shutter.addEventListener('click', () => void shoot());
+// Option-click: no countdown. Shift-click: no flash. (Photo Booth's modifiers.)
+shutter.addEventListener('click', (e) => void shoot({ skipCountdown: e.altKey, skipFlash: e.shiftKey }));
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeGrid();

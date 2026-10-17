@@ -28,29 +28,53 @@ function setBusy(busy: boolean): void {
   });
 }
 
-// Photo Booth-style countdown: big numerals in the middle of the live preview,
-// one per second, each with a tick. The toolbar is untouched.
+// Photo Booth-style countdown: the toolbar becomes a row of numerals that
+// light up 3, 2, 1, then the camera glyph, each with a tick.
 async function runCountdown(seconds: number): Promise<void> {
   if (seconds <= 0) return;
-  const overlay = byId('countdown');
-  const number = byId('countdownNumber');
-  overlay.classList.remove('hidden');
+  const toolbar = byId('toolbar');
+  const nums = byId('cdNums');
+  clear(nums);
+  const spans: HTMLElement[] = [];
   for (let n = seconds; n >= 1; n--) {
-    number.textContent = String(n);
-    number.classList.remove('tick');
-    void number.offsetWidth; // restart the animation
-    number.classList.add('tick');
+    const span = document.createElement('span');
+    span.className = 'cd-num';
+    span.textContent = String(n);
+    nums.appendChild(span);
+    spans.push(span);
+  }
+  const cam = byId('cdCam');
+  cam.classList.remove('active');
+  toolbar.classList.add('is-counting');
+  for (let i = 0; i < seconds; i++) {
+    spans.forEach((s, idx) => s.classList.toggle('active', idx === i));
     sound.play('tick');
     await wait(1000);
+    if (!toolbar.classList.contains('is-counting')) return; // cancelled
   }
-  number.classList.remove('tick');
-  overlay.classList.add('hidden');
+  spans.forEach((s) => s.classList.remove('active'));
+  cam.classList.add('active');
+  await wait(120);
+  toolbar.classList.remove('is-counting');
+  cam.classList.remove('active');
+  clear(nums);
 }
 
-function fireFlash(): void {
-  // The screen flash lights the whole window (Settings → Screen flash); the
-  // shutter sound plays either way.
-  if (app.settings.screenFlash !== false) {
+/** Cancel a running countdown (graphics reset, camera loss). */
+export function cancelCountdown(): void {
+  byId('toolbar').classList.remove('is-counting');
+}
+
+/** Option-click skips the countdown, Shift-click skips the flash (as in Photo Booth). */
+export interface ShotOptions {
+  skipCountdown?: boolean;
+  skipFlash?: boolean;
+}
+
+function fireFlash(skip = false): void {
+  // The screen flash lights the whole window (Settings → Screen flash,
+  // Shift-click); the shutter sound plays either way.
+  if (!skip && app.settings.screenFlash !== false) {
     const flash = byId('flash');
     flash.classList.remove('fire');
     void flash.offsetWidth;
@@ -173,15 +197,15 @@ async function saveCanvas(canvas: HTMLCanvasElement, kind: CaptureKind): Promise
 // Single photo
 // ---------------------------------------------------------------------------
 
-export async function captureSingle(): Promise<void> {
+export async function captureSingle(opts: ShotOptions = {}): Promise<void> {
   const source = app.video.srcObject;
   if (app.busy || !captureReady(source)) return;
   sound.unlock();
   setBusy(true);
   try {
-    await runCountdown(app.settings.countdownSeconds);
+    if (!opts.skipCountdown) await runCountdown(app.settings.countdownSeconds);
     if (!captureReady(source)) return; // a reset mid-countdown cancels the shot, flash and all
-    fireFlash();
+    fireFlash(opts.skipFlash);
     await wait(40); // let the flash hit its peak before we grab
     if (!captureReady(source)) return;
     const frame = grabFrame();
@@ -212,53 +236,26 @@ function markDot(i: number): void {
   dot?.classList.add('done');
 }
 
+/** Four quick pictures as a 2×2 sheet with a thin white border, like Photo Booth. */
 function composeStrip(frames: HTMLCanvasElement[]): HTMLCanvasElement {
   const fw = frames[0].width;
   const fh = frames[0].height;
-  const pad = Math.round(fw * 0.04);
-  const footer = Math.round(fw * 0.13);
-  const stripW = fw + pad * 2;
-  const stripH = pad + (fh + pad) * frames.length + footer;
+  const gap = Math.max(4, Math.round(fw * 0.012));
   const canvas = document.createElement('canvas');
-  canvas.width = stripW;
-  canvas.height = stripH;
+  canvas.width = fw * 2 + gap * 3;
+  canvas.height = fh * 2 + gap * 3;
   const ctx = canvas.getContext('2d')!;
-
-  // Warm paper base with a subtle vertical sheen.
-  const paper = ctx.createLinearGradient(0, 0, 0, stripH);
-  paper.addColorStop(0, '#fdfcf8');
-  paper.addColorStop(0.5, '#f6f4ec');
-  paper.addColorStop(1, '#fbf9f3');
-  ctx.fillStyle = paper;
-  ctx.fillRect(0, 0, stripW, stripH);
-  // Faint paper grain.
-  ctx.globalAlpha = 0.04;
-  for (let i = 0; i < stripW * stripH * 0.0008; i++) {
-    ctx.fillStyle = Math.random() > 0.5 ? '#000' : '#fff';
-    ctx.fillRect(Math.random() * stripW, Math.random() * stripH, 1, 1);
-  }
-  ctx.globalAlpha = 1;
-
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   frames.forEach((f, i) => {
-    const y = pad + (fh + pad) * i;
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.16)';
-    ctx.shadowBlur = pad * 0.4;
-    ctx.drawImage(f, pad, y, fw, fh);
-    ctx.restore();
+    const x = gap + (i % 2) * (fw + gap);
+    const y = gap + Math.floor(i / 2) * (fh + gap);
+    ctx.drawImage(f, x, y, fw, fh);
   });
-
-  // Tasteful footer wordmark.
-  ctx.fillStyle = '#3a3a40';
-  ctx.font = `600 ${Math.round(footer * 0.34)}px "Segoe UI", system-ui, sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('Photoshoot', stripW / 2, stripH - footer * 0.5);
-
   return canvas;
 }
 
-export async function captureStrip(): Promise<void> {
+export async function captureStrip(opts: ShotOptions = {}): Promise<void> {
   const source = app.video.srcObject;
   if (app.busy || !captureReady(source)) return;
   sound.unlock();
@@ -266,16 +263,16 @@ export async function captureStrip(): Promise<void> {
   stripDots(4);
   const frames: HTMLCanvasElement[] = [];
   try {
+    // One countdown, then four quick pictures, each with its own flash.
+    if (!opts.skipCountdown) await runCountdown(Math.max(1, app.settings.countdownSeconds));
     for (let i = 0; i < 4; i++) {
-      const cd = i === 0 ? Math.max(1, app.settings.countdownSeconds) : 2;
-      await runCountdown(cd);
       if (!captureReady(source)) return;
-      fireFlash();
+      fireFlash(opts.skipFlash);
       await wait(40);
       if (!captureReady(source)) return;
       frames.push(grabFrame());
       markDot(i);
-      if (i < 3) await wait(650);
+      if (i < 3) await wait(560);
     }
     const strip = composeStrip(frames);
     if (await saveCanvas(strip, 'strip')) sound.play('stripComplete');
@@ -430,7 +427,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 export const videoRecorder = new VideoRecorder();
 
 /** Dispatch the shutter action based on the active mode. */
-export async function triggerShutter(): Promise<void> {
+export async function triggerShutter(opts: ShotOptions = {}): Promise<void> {
   if (videoRecorder.recording) {
     videoRecorder.stop();
     return;
@@ -442,7 +439,7 @@ export async function triggerShutter(): Promise<void> {
     exitReview();
     return;
   }
-  if (app.mode === 'single') return captureSingle();
-  if (app.mode === 'strip') return captureStrip();
+  if (app.mode === 'single') return captureSingle(opts);
+  if (app.mode === 'strip') return captureStrip(opts);
   if (app.mode === 'video') return videoRecorder.toggle();
 }

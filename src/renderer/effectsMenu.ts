@@ -212,7 +212,18 @@ function applyEffect(id: string): void {
 
 /** Pick an effect from a tile: apply it and exit the effects view. "Normal"
  *  also turns any backdrop off, like Photo Booth. */
+/** Zoom the grid into the chosen tile as it closes, like Photo Booth. */
+function zoomInto(tile: Element | null): void {
+  const grid = byId('effectsGrid');
+  if (!tile) return;
+  const g = grid.getBoundingClientRect();
+  const t = tile.getBoundingClientRect();
+  grid.style.transformOrigin = `${t.left - g.left + t.width / 2}px ${t.top - g.top + t.height / 2}px`;
+  grid.classList.add('is-zooming');
+}
+
 function pick(id: string): void {
+  zoomInto(byId('effectsGrid').querySelector(`.effect-tile[data-id="${CSS.escape(id)}"]`));
   applyEffect(id);
   if (id === 'normal') void pickBackground('none');
   sound.play('button');
@@ -221,6 +232,7 @@ function pick(id: string): void {
 
 /** Pick a backdrop from a tile: start background replacement and exit. */
 function pickBackdrop(id: string): void {
+  zoomInto(byId('effectsGrid').querySelector(`.effect-tile[data-backdrop="${CSS.escape(id)}"]`));
   void pickBackground(id);
   markActive();
   sound.play('button');
@@ -240,6 +252,9 @@ export function openEffects(page = 0): void {
     return;
   }
   running = true;
+  const grid = byId('effectsGrid');
+  grid.classList.remove('is-zooming');
+  grid.style.transformOrigin = '';
   renderPage(page);
   byId('effectsPanel').classList.add('is-open');
   byId('toolbar').classList.add('is-effects');
@@ -273,17 +288,15 @@ function onKey(e: KeyboardEvent): void {
   if (target?.closest('input, select, textarea, [contenteditable="true"]') || isAnyOpen()) return;
   switch (e.key) {
     case 'ArrowLeft':
-      renderPage(currentPage - 1);
-      break;
     case 'ArrowRight':
-      renderPage(currentPage + 1);
-      break;
     case 'Home':
-      renderPage(0);
+    case 'End': {
+      const target =
+        e.key === 'ArrowLeft' ? currentPage - 1 : e.key === 'ArrowRight' ? currentPage + 1 : e.key === 'Home' ? 0 : pages.length - 1;
+      const clamped = Math.min(Math.max(0, target), pages.length - 1);
+      if (clamped !== currentPage) renderPage(clamped); // no rebuild at either end
       break;
-    case 'End':
-      renderPage(pages.length - 1);
-      break;
+    }
     default:
       return;
   }

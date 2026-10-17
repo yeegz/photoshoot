@@ -52,13 +52,14 @@ test('the tray is a 60px band of 90x60 thumbnails flush right, hidden when empty
   expect((await page.locator('.stage').boundingBox())!.height).toBeLessThan(stageBefore.height);
 });
 
-test('countdown numerals sit in the viewfinder and the flash covers the window', async ({ page }) => {
+test('the countdown runs 3-2-1 in the toolbar, like Photo Booth, and the flash covers the window', async ({ page }) => {
   await page.goto('/app/');
   await expectLive(page);
   await page.locator('#shutter').click();
-  await expect(page.locator('#countdown')).toBeVisible();
-  await expect(page.locator('#countdownNumber')).toHaveText('3');
-  await expect(page.locator('#toolbar')).not.toHaveClass(/is-counting/);
+  await expect(page.locator('#toolbar')).toHaveClass(/is-counting/);
+  await expect(page.locator('#cdNums .cd-num')).toHaveCount(3);
+  await expect(page.locator('#cdNums .cd-num.active')).toHaveText('3');
+  await expect(page.locator('#countdown')).toBeHidden();
   const flash = (await page.locator('#flash').boundingBox())!;
   const vp = page.viewportSize()!;
   expect([Math.round(flash.width), Math.round(flash.height)]).toEqual([vp.width, vp.height]);
@@ -216,7 +217,7 @@ test('no flash when the graphics reset during the countdown', async ({ page }) =
   await page.goto('/app/');
   await expectLive(page);
   await page.locator('#shutter').click();
-  await expect(page.locator('#countdown')).toBeVisible();
+  await expect(page.locator('#toolbar')).toHaveClass(/is-counting/);
   await page.locator('#glCanvas').evaluate((c: HTMLCanvasElement) =>
     c.getContext('webgl2')!.getExtension('WEBGL_lose_context')!.loseContext()
   );
@@ -238,4 +239,58 @@ test('restarting the camera clears the selected backdrop', async ({ page }) => {
   await page.keyboard.press('End');
   await expect(page.locator('[data-backdrop="space"]')).not.toHaveClass(/is-active/);
   await expect(page.locator('#btnBackgrounds')).not.toHaveClass(/is-on/);
+});
+
+// ---- Photo Booth interaction accuracy ----
+
+test('four quick pictures: one countdown, four shots, saved as a 2x2 grid', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('photoshoot.settings', JSON.stringify({ countdownSeconds: 1 })));
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('[data-mode="strip"]').click();
+  let countdowns = 0;
+  await page.exposeFunction('countedDown', () => countdowns++);
+  await page.evaluate(() => {
+    new MutationObserver((m) => {
+      for (const r of m) if ((r.target as HTMLElement).classList.contains('is-counting') && !(r.oldValue ?? '').includes('is-counting'))
+        (window as unknown as { countedDown: () => void }).countedDown();
+    }).observe(document.getElementById('toolbar')!, { attributes: true, attributeFilter: ['class'], attributeOldValue: true });
+  });
+  await page.locator('#shutter').click();
+  const img = page.locator('#trayScroll img').first();
+  await expect(img).toBeVisible({ timeout: 60000 });
+  expect(countdowns).toBe(1);
+  const ratio = await img.evaluate((i: HTMLImageElement) => i.naturalWidth / i.naturalHeight);
+  expect(ratio).toBeGreaterThan(1); // 2x2 of landscape frames, not a tall strip
+});
+
+test('option-click skips the countdown and shift-click skips the flash', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('photoshoot.settings', JSON.stringify({ countdownSeconds: 3 })));
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#shutter').click({ modifiers: ['Alt'] });
+  await expect(page.locator('#trayScroll img')).toHaveCount(1, { timeout: 2500 });
+  await expect(page.locator('#toolbar')).not.toHaveClass(/is-counting/);
+  await page.evaluate(() => document.getElementById('flash')!.classList.remove('fire'));
+  await page.locator('#shutter').click({ modifiers: ['Alt', 'Shift'] });
+  await expect(page.locator('#trayScroll img')).toHaveCount(2, { timeout: 5000 });
+  await expect(page.locator('#flash')).not.toHaveClass(/fire/);
+});
+
+test('picking an effect zooms into its tile', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#btnEffects').click();
+  await page.locator('.effect-tile', { hasText: 'Thermal' }).click();
+  const origin = await page.locator('#effectsGrid').evaluate((g) => g.style.transformOrigin);
+  expect(origin).toMatch(/px/);
+});
+
+test('pressing past the first page does not rebuild the grid', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#btnEffects').click();
+  await page.locator('.effect-tile').first().evaluate((t) => t.setAttribute('data-probe', '1'));
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('[data-probe="1"]')).toHaveCount(1);
 });

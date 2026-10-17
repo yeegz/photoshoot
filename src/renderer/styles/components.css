@@ -582,6 +582,10 @@ body.is-reviewing .effects-btn {
 .effects-view.is-open .effects-grid {
   transform: scale(1);
 }
+/* Picking a tile zooms into it as the browser closes */
+.effects-view:not(.is-open) .effects-grid.is-zooming {
+  transform: scale(3);
+}
 .effect-tile {
   position: relative;
   overflow: hidden;

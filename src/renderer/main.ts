@@ -18,7 +18,7 @@ import { initBackgroundsMenu, pickBackground, currentBackground } from './backgr
 import { BackgroundReplacer } from './backgroundReplace';
 import { initSettings, openSettings } from './settings';
 import { setPerfOverlay } from './perf';
-import { triggerShutter, videoRecorder } from './capture';
+import { triggerShutter, videoRecorder, cancelCountdown } from './capture';
 import { closeOverlay, closeTop, isAnyOpen } from './overlays';
 import { effectLabel, isDraggable } from './gl/effects';
 import type { CameraErrorKind } from './camera';
@@ -191,7 +191,10 @@ function wireControls(): void {
     b.addEventListener('click', () => setMode((b.dataset.mode as CaptureKind) ?? 'single'))
   );
 
-  byId('shutter').addEventListener('click', () => void triggerShutter());
+  // Option-click: no countdown. Shift-click: no flash. (Photo Booth's modifiers.)
+  byId('shutter').addEventListener('click', (e) =>
+    void triggerShutter({ skipCountdown: e.altKey, skipFlash: e.shiftKey })
+  );
 
   byId('btnEffects').addEventListener('click', () => toggleEffects());
   byId('btnBackgrounds').addEventListener('click', () => openEffects(backdropPageStart()));
@@ -295,6 +298,7 @@ async function bootstrap(): Promise<void> {
   };
   renderer.onContextLost = () => {
     videoRecorder.stop();
+    cancelCountdown();
     byId<HTMLButtonElement>('shutter').disabled = true;
     showMessage('⚠', 'Graphics reset', 'The graphics context was lost. It should recover shortly…', null);
   };
