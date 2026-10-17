@@ -2,6 +2,8 @@
 // (real camera, effects, strip printing) and the filmstrip is drawn by the
 // app's own backdrops. Bundled by web/build-web.mjs with a content hash.
 
+import { BACKGROUND_BY_ID } from '../../src/renderer/backgrounds';
+
 document.documentElement.dataset.landing = 'ready';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
@@ -525,5 +527,41 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'Space' && e.target === document.body && isLive()) {
     e.preventDefault();
     void shoot();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Filmstrip: every backdrop frame is drawn by the app's own backdrop code;
+// drag (mouse) or swipe (touch) to move along the strip.
+// ---------------------------------------------------------------------------
+
+for (const canvas of document.querySelectorAll<HTMLCanvasElement>('.frame canvas[data-backdrop]')) {
+  const def = BACKGROUND_BY_ID.get(canvas.dataset.backdrop ?? '');
+  const ctx = canvas.getContext('2d');
+  if (def && ctx) def.draw(ctx, canvas.width, canvas.height);
+}
+
+const film = $('film');
+let drag: { x: number; left: number } | null = null;
+film.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse') return; // touch scrolls natively
+  drag = { x: e.clientX, left: film.scrollLeft };
+  film.style.scrollSnapType = 'none';
+  film.setPointerCapture(e.pointerId);
+});
+film.addEventListener('pointermove', (e) => {
+  if (drag) film.scrollLeft = drag.left - (e.clientX - drag.x);
+});
+const endDrag = () => {
+  if (!drag) return;
+  drag = null;
+  film.style.scrollSnapType = '';
+};
+film.addEventListener('pointerup', endDrag);
+film.addEventListener('pointercancel', endDrag);
+film.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    e.preventDefault();
+    film.scrollBy({ left: (e.key === 'ArrowRight' ? 1 : -1) * 308, behavior: 'smooth' });
   }
 });

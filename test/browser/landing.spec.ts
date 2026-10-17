@@ -4,6 +4,7 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { hasRealPixels } from './live';
 
 const version = (JSON.parse(readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8')) as { version: string })
   .version;
@@ -94,4 +95,17 @@ test('the window works without Web Audio', async ({ page }) => {
   await cameraOn(page);
   await page.locator('#pbShutter').click();
   await expect(page.locator('.pb-thumb')).toHaveCount(1, { timeout: 15000 });
+});
+
+test('the filmstrip is built from the product', async ({ page }) => {
+  await page.goto('/');
+  expect(await page.locator('.frame').count()).toBeGreaterThanOrEqual(12);
+  const canvases = page.locator('.frame canvas[data-backdrop]');
+  const n = await canvases.count();
+  expect(n).toBeGreaterThan(0);
+  for (let i = 0; i < n; i++) expect(await canvases.nth(i).evaluate(hasRealPixels)).toBe(true);
+  await expect(page.locator('#themes .chip')).toHaveCount(6);
+  await expect(page.locator('#themes .chip').first()).toContainText('Photo Booth');
+  await expect(page.locator('#themes .chip').first()).toContainText('Default');
+  await expect(page.locator('#getWin')).toContainText('installer');
 });
