@@ -17,6 +17,6 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "test/unit/**/*.ts"],
+  "include": ["src/**/*.ts", "test/unit/**/*.ts", "web/landing/**/*.ts"],
   "exclude": ["node_modules", "dist", "release"]
 }

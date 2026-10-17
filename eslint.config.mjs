@@ -14,7 +14,7 @@ export default tseslint.config(
       'test-results/',
       'playwright-report/',
       'build/',
-      'web/',
+      'web/*.mjs',
       'examples/',
     ],
   },
