@@ -50,6 +50,10 @@ html[data-theme="booth"] {
   --focus-ring: #1b7bf3;
   --danger: #ff453a;
   --success: #30d158;
+  --titlebar-border: transparent;
+  --toolbar-border: rgba(255, 255, 255, 0.06);
+  --shutter-shadow: 0 3px 8px rgba(0, 0, 0, 0.55);
+  --shutter-disabled: #4a4a4c;
 }
 html[data-theme="booth"] .stage {
   background: #000;

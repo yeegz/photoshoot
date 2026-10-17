@@ -13,3 +13,24 @@ test('Photo Booth is the default theme and sets the chrome tokens', async ({ pag
   });
   expect(tokens).toEqual(['28px', '58px', '60px', '50px', '#1d1d1f']);
 });
+
+test('toolbar and titlebar match the reference geometry', async ({ page }) => {
+  await page.setViewportSize({ width: 600, height: 520 });
+  await page.goto('/app/');
+  const box = async (sel: string) => (await page.locator(sel).boundingBox())!;
+  const title = await box('.titlebar');
+  const tb = await box('#toolbar');
+  expect(Math.round(title.height)).toBe(28);
+  expect(Math.round(tb.height)).toBe(58);
+  const shutter = await box('#shutter');
+  const mode = await box('#modeSwitch');
+  const fx = await box('#btnEffects');
+  expect(Math.round(shutter.width)).toBe(50);
+  expect(Math.round(mode.height)).toBe(28);
+  expect(Math.round(mode.x)).toBe(15);
+  expect(Math.round(600 - (fx.x + fx.width))).toBe(17);
+  expect(Math.abs(shutter.x + shutter.width / 2 - 300)).toBeLessThan(1);
+  expect(mode.x + mode.width).toBeLessThan(shutter.x);
+  expect(fx.x).toBeGreaterThan(shutter.x + shutter.width);
+  await expect(page.locator('.titlebar-title')).toHaveCSS('font-size', '15px');
+});
