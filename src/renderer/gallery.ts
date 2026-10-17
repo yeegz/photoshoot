@@ -114,6 +114,7 @@ async function enterReview(item: GalleryItem): Promise<void> {
   reviewId = item.id;
   app.renderer?.stop(); // pause the live camera while viewing
   review.classList.remove('hidden');
+  document.body.classList.add('is-reviewing');
   // Grey the shutter, but keep it clickable — clicking it returns to the camera.
   byId('shutter').classList.add('greyed');
   markSelected();
@@ -127,10 +128,24 @@ export function exitReview(): void {
   if (reviewId === null) return;
   reviewId = null;
   byId('review').classList.add('hidden');
+  document.body.classList.remove('is-reviewing');
   byId<HTMLImageElement>('reviewImage').removeAttribute('src');
   byId('shutter').classList.remove('greyed');
   if (app.renderer?.available) app.renderer.start();
   markSelected();
+}
+
+/** Wire the toolbar's Share / Delete pills to the photo under review. */
+export function initReviewActions(): void {
+  const current = () => items.find((i) => i.id === reviewId);
+  byId('btnShare').addEventListener('click', () => {
+    const item = current();
+    if (item) void exportItem(item);
+  });
+  byId('btnDelete').addEventListener('click', () => {
+    const item = current();
+    if (item) void deleteItem(item);
+  });
 }
 
 // ---- delete / export ----

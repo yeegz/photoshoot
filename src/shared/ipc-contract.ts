@@ -25,6 +25,7 @@ export const IPC = {
   windowMinimize: 'window:minimize',
   windowMaximize: 'window:maximize',
   windowClose: 'window:close',
+  windowFullscreen: 'window:fullscreen',
 } as const;
 
 export type CaptureFormat = 'png' | 'jpg';
@@ -176,5 +177,6 @@ export interface PhotoshootBridge {
   removeCustomFilter(id: string): Promise<{ ok: boolean }>;
   minimizeWindow(): void;
   toggleMaximizeWindow(): void;
+  toggleFullscreen(): void;
   closeWindow(): void;
 }

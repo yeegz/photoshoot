@@ -447,6 +447,10 @@ const bridge: PhotoshootBridge = {
 
   minimizeWindow: () => undefined,
   toggleMaximizeWindow: () => undefined,
+  toggleFullscreen: () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen().catch(() => undefined);
+  },
   closeWindow: () => undefined,
 };
 

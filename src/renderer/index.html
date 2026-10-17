@@ -114,6 +114,11 @@
 
         <div class="toolbar-zone right">
           <button class="effects-btn glass-pill" id="btnEffects" type="button" aria-label="Effects">Effects</button>
+          <!-- Shown instead of Effects while a captured photo is being reviewed -->
+          <div class="review-actions" id="reviewActions">
+            <button class="review-pill glass-pill" id="btnShare" type="button">Share</button>
+            <button class="review-pill glass-pill is-danger" id="btnDelete" type="button">Delete</button>
+          </div>
         </div>
 
         <!-- Page dots shown while browsing effects -->

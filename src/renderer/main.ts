@@ -12,7 +12,7 @@ import { byId, qsa } from './dom';
 import { toast } from './toast';
 import { loadImportedThemes, applyResolvedTheme, watchDeviceTheme } from './themes';
 import { loadCustomFilters, registerFilterSink } from './customFilters';
-import { refreshGallery, exitReview } from './gallery';
+import { refreshGallery, exitReview, initReviewActions } from './gallery';
 import { buildEffectsMenu, toggleEffects, closeEffects, isEffectsOpen, openEffects, backdropPageStart } from './effectsMenu';
 import { initBackgroundsMenu } from './backgroundsMenu';
 import { BackgroundReplacer } from './backgroundReplace';
@@ -198,11 +198,12 @@ function wireControls(): void {
 
   // Click the reviewed photo to return to the live camera.
   byId('review').addEventListener('click', () => exitReview());
+  initReviewActions();
 
   // Frameless window controls.
   byId('tlClose').addEventListener('click', () => api.closeWindow());
   byId('tlMin').addEventListener('click', () => api.minimizeWindow());
-  byId('tlZoom').addEventListener('click', () => api.toggleMaximizeWindow());
+  byId('tlZoom').addEventListener('click', () => api.toggleFullscreen());
 
   qsa<HTMLButtonElement>('[data-close]').forEach((b) =>
     b.addEventListener('click', () => closeOverlay(b.dataset.close ?? ''))
@@ -242,6 +243,12 @@ function wireDistortionDrag(): void {
 
 function wireKeyboard(): void {
   document.addEventListener('keydown', (e) => {
+    // Full screen: F11 anywhere, ⌃⌘F like a Mac window.
+    if (e.key === 'F11' || (e.key.toLowerCase() === 'f' && e.ctrlKey && e.metaKey)) {
+      e.preventDefault();
+      api.toggleFullscreen();
+      return;
+    }
     if (e.key === 'Escape') {
       if (isEffectsOpen()) {
         closeEffects();

@@ -89,3 +89,28 @@ test('screen flash can be turned off and photos still save', async ({ page }) =>
   await expect(page.locator('#trayScroll img').first()).toBeVisible({ timeout: 60000 });
   await expect(page.locator('#flash')).not.toHaveClass(/fire/);
 });
+
+test('selecting a photo shows Share and Delete; deleting it restores the toolbar', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('photoshoot.settings', JSON.stringify({ countdownSeconds: 0 })));
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#shutter').click();
+  const thumb = page.locator('.thumb').first();
+  await expect(thumb).toBeVisible({ timeout: 60000 });
+  await thumb.click();
+  await expect(page.locator('#btnShare')).toBeVisible();
+  await expect(page.locator('#btnEffects')).toBeHidden();
+  await expect(page.locator('#shutter')).toHaveClass(/greyed/);
+  await page.locator('#btnDelete').click();
+  await expect(page.locator('#btnEffects')).toBeVisible();
+  await expect(page.locator('#shutter')).not.toHaveClass(/greyed/);
+  await expect(page.locator('.thumb')).toHaveCount(0);
+});
+
+test('the bridge exposes a full-screen toggle', async ({ page }) => {
+  await page.goto('/app/');
+  const kind = await page.evaluate(
+    () => typeof (window as unknown as { photoshoot: { toggleFullscreen?: unknown } }).photoshoot.toggleFullscreen
+  );
+  expect(kind).toBe('function');
+});

@@ -123,5 +123,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     if (win.isMaximized()) win.unmaximize();
     else win.maximize();
   });
+  ipcMain.on(IPC.windowFullscreen, () => {
+    const win = getWindow();
+    if (win) win.setFullScreen(!win.isFullScreen());
+  });
   ipcMain.on(IPC.windowClose, () => getWindow()?.close());
 }

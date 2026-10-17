@@ -246,6 +246,27 @@
   font-weight: 500;
   letter-spacing: -0.01em;
 }
+/* Review actions (Share / Delete) replace Effects while a photo is selected */
+.review-actions {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+body.is-reviewing .review-actions {
+  display: flex;
+}
+body.is-reviewing .effects-btn {
+  display: none;
+}
+.review-pill {
+  padding: 0 16px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.review-pill.is-danger:hover {
+  color: var(--danger);
+}
 .effects-btn.is-on {
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);

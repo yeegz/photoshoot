@@ -32,6 +32,7 @@ const bridge: PhotoshootBridge = {
   removeCustomFilter: (id: string) => ipcRenderer.invoke(IPC.filterRemove, id),
   minimizeWindow: () => ipcRenderer.send(IPC.windowMinimize),
   toggleMaximizeWindow: () => ipcRenderer.send(IPC.windowMaximize),
+  toggleFullscreen: () => ipcRenderer.send(IPC.windowFullscreen),
   closeWindow: () => ipcRenderer.send(IPC.windowClose),
 };
 
