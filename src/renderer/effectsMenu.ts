@@ -163,12 +163,29 @@ function normalTile(): HTMLElement {
   return tileEl;
 }
 
+function chevron(d: string): SVGElement {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 16 16');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('d', d);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', 'currentColor');
+  path.setAttribute('stroke-width', '1.8');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  svg.appendChild(path);
+  return svg;
+}
+
 function renderPageDots(): void {
   const bar = byId('barPages');
   clear(bar);
   if (pages.length <= 1) return;
 
-  const prev = el('button', { className: 'page-arrow', type: 'button', ariaLabel: 'Previous page', text: '◀' });
+  const prev = el('button', { className: 'page-arrow', type: 'button', ariaLabel: 'Previous page' });
+  prev.appendChild(chevron('M10 3.5 5.5 8l4.5 4.5'));
   (prev as HTMLButtonElement).disabled = currentPage === 0;
   prev.addEventListener('click', () => renderPage(currentPage - 1));
   bar.appendChild(prev);
@@ -178,7 +195,8 @@ function renderPageDots(): void {
     bar.appendChild(dot);
   }
 
-  const next = el('button', { className: 'page-arrow', type: 'button', ariaLabel: 'Next page', text: '▶' });
+  const next = el('button', { className: 'page-arrow', type: 'button', ariaLabel: 'Next page' });
+  next.appendChild(chevron('M6 3.5 10.5 8 6 12.5'));
   (next as HTMLButtonElement).disabled = currentPage === pages.length - 1;
   next.addEventListener('click', () => renderPage(currentPage + 1));
   bar.appendChild(next);

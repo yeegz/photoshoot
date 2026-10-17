@@ -142,9 +142,15 @@ export function initReviewActions(): void {
     const item = current();
     if (item) void exportItem(item);
   });
-  byId('btnDelete').addEventListener('click', () => {
+  // Delete / Backspace removes the photo under review, as in Photo Booth.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('input, select, textarea')) return;
     const item = current();
-    if (item) void deleteItem(item);
+    if (!item) return;
+    e.preventDefault();
+    void deleteItem(item);
   });
 }
 

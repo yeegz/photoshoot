@@ -259,13 +259,14 @@ body.is-reviewing .effects-btn {
   display: none;
 }
 .review-pill {
-  padding: 0 16px;
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  padding: 0;
 }
-.review-pill.is-danger:hover {
-  color: var(--danger);
+.review-pill svg {
+  width: 18px;
+  height: 18px;
 }
 .effects-btn.is-on {
   color: var(--accent);

@@ -91,7 +91,7 @@ test('screen flash can be turned off and photos still save', async ({ page }) =>
   await expect(page.locator('#flash')).not.toHaveClass(/fire/);
 });
 
-test('selecting a photo shows Share and Delete; deleting it restores the toolbar', async ({ page }) => {
+test('selecting a photo shows the Share icon; the Delete key removes it and restores the toolbar', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('photoshoot.settings', JSON.stringify({ countdownSeconds: 0 })));
   await page.goto('/app/');
   await expectLive(page);
@@ -99,10 +99,15 @@ test('selecting a photo shows Share and Delete; deleting it restores the toolbar
   const thumb = page.locator('.thumb').first();
   await expect(thumb).toBeVisible({ timeout: 60000 });
   await thumb.click();
-  await expect(page.locator('#btnShare')).toBeVisible();
+  const share = page.locator('#btnShare');
+  await expect(share).toBeVisible();
+  await expect(share).toHaveAttribute('aria-label', 'Share');
+  await expect(share.locator('svg')).toHaveCount(1);
+  expect((await share.innerText()).trim()).toBe(''); // an icon, not a word
+  await expect(page.locator('#btnDelete')).toHaveCount(0);
   await expect(page.locator('#btnEffects')).toBeHidden();
   await expect(page.locator('#shutter')).toHaveClass(/greyed/);
-  await page.locator('#btnDelete').click();
+  await page.keyboard.press('Delete');
   await expect(page.locator('#btnEffects')).toBeVisible();
   await expect(page.locator('#shutter')).not.toHaveClass(/greyed/);
   await expect(page.locator('.thumb')).toHaveCount(0);
@@ -293,4 +298,16 @@ test('pressing past the first page does not rebuild the grid', async ({ page }) 
   await page.locator('.effect-tile').first().evaluate((t) => t.setAttribute('data-probe', '1'));
   await page.keyboard.press('ArrowLeft');
   await expect(page.locator('[data-probe="1"]')).toHaveCount(1);
+});
+
+test('the effects pager uses drawn chevrons, not text arrows', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#btnEffects').click();
+  const arrows = page.locator('.page-arrow');
+  await expect(arrows).toHaveCount(2);
+  for (const a of await arrows.all()) {
+    await expect(a.locator('svg')).toHaveCount(1);
+    expect((await a.innerText()).trim()).toBe('');
+  }
 });
