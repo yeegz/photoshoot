@@ -5,7 +5,7 @@
 .app {
   position: relative;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: var(--titlebar-h) minmax(0, 1fr) auto var(--toolbar-h);
   height: 100vh;
   width: 100vw;
   background: var(--app-bg-texture, none), var(--app-bg);

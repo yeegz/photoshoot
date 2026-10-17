@@ -1,6 +1,7 @@
 // Photo Booth parity: the window's anatomy, sizing and chrome, pinned to the
 // measurements in docs/superpowers/specs/2026-10-17-photo-booth-parity-design.md.
 import { expect, test } from '@playwright/test';
+import { expectLive } from './live';
 
 test('Photo Booth is the default theme and sets the chrome tokens', async ({ page }) => {
   await page.goto('/app/');
@@ -33,4 +34,20 @@ test('toolbar and titlebar match the reference geometry', async ({ page }) => {
   expect(mode.x + mode.width).toBeLessThan(shutter.x);
   expect(fx.x).toBeGreaterThan(shutter.x + shutter.width);
   await expect(page.locator('.titlebar-title')).toHaveCSS('font-size', '15px');
+});
+
+test('the tray is a 60px band of 90x60 thumbnails flush right, hidden when empty', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  await expect(page.locator('#tray')).toBeHidden();
+  const stageBefore = (await page.locator('.stage').boundingBox())!;
+  await page.locator('#shutter').click();
+  await expect(page.locator('#trayScroll img').first()).toBeVisible({ timeout: 60000 });
+  const tray = (await page.locator('#tray').boundingBox())!;
+  const thumb = (await page.locator('.thumb').first().boundingBox())!;
+  const vw = page.viewportSize()!.width;
+  expect(Math.round(tray.height)).toBe(60);
+  expect([Math.round(thumb.width), Math.round(thumb.height)]).toEqual([90, 60]);
+  expect(Math.round(vw - (thumb.x + thumb.width))).toBe(19);
+  expect((await page.locator('.stage').boundingBox())!.height).toBeLessThan(stageBefore.height);
 });

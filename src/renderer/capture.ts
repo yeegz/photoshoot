@@ -98,11 +98,12 @@ function flyToTray(thumbnail: string, onLand: () => Promise<void> | void): Promi
       return;
     }
 
-    // Target slot: the right edge of the tray (where the newest photo lands).
+    // Target slot: the right edge of the tray (where the newest photo lands),
+    // a 90×60 cell in the band.
     const trayRect = byId('trayScroll').getBoundingClientRect();
-    const size = 70;
-    const targetX = trayRect.right - size - 5;
-    const targetY = trayRect.top + (trayRect.height - size) / 2;
+    const size = 90;
+    const targetX = trayRect.right - size;
+    const targetY = trayRect.top + (trayRect.height - 60) / 2;
 
     const overlay = document.createElement('img');
     overlay.className = 'print-fly';
@@ -120,7 +121,7 @@ function flyToTray(thumbnail: string, onLand: () => Promise<void> | void): Promi
         { transform: 'translate(0px, 0px) scale(1)', borderRadius: '5px', offset: 0.28 },
         {
           transform: `translate(${targetX - vf.left}px, ${targetY - vf.top}px) scale(${scale})`,
-          borderRadius: `${5 / scale}px`,
+          borderRadius: '0px',
           offset: 1,
         },
       ],
