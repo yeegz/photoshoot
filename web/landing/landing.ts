@@ -235,3 +235,295 @@ for (const b of modeButtons) {
 }
 
 onAction = turnOn;
+
+// ---------------------------------------------------------------------------
+// Effects: a 3×3 grid of live tiles, each the camera under a CSS look
+// ---------------------------------------------------------------------------
+
+const LOOKS: { id: string; label: string }[] = [
+  { id: 'sepia', label: 'Sepia' },
+  { id: 'bw', label: 'Black & White' },
+  { id: 'glow', label: 'Glow' },
+  { id: 'noir', label: 'Noir' },
+  { id: 'normal', label: 'Normal' },
+  { id: 'thermal', label: 'Thermal' },
+  { id: 'xray', label: 'X‑Ray' },
+  { id: 'popart', label: 'Pop Art' },
+  { id: 'cool', label: 'Cool' },
+];
+
+const grid = $('pbGrid');
+const tileVideos: HTMLVideoElement[] = [];
+let look = 'normal';
+let gridOpen = false;
+let busy = false;
+
+function buildGrid(): void {
+  if (grid.childElementCount) return;
+  for (const def of LOOKS) {
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'pb-tile';
+    tile.dataset.look = def.id;
+    tile.setAttribute('aria-label', def.label);
+    const v = document.createElement('video');
+    v.muted = true;
+    v.playsInline = true;
+    v.autoplay = true;
+    v.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span');
+    label.textContent = def.label;
+    tile.append(v, label);
+    tile.addEventListener('click', () => pickLook(def.id));
+    grid.appendChild(tile);
+    tileVideos.push(v);
+  }
+}
+
+function markLook(): void {
+  grid.querySelectorAll<HTMLElement>('.pb-tile').forEach((t) => t.classList.toggle('is-active', t.dataset.look === look));
+}
+
+function openGrid(): void {
+  if (!isLive() || busy || gridOpen) return;
+  buildGrid();
+  tileVideos.forEach((v) => {
+    v.srcObject = stream;
+    void v.play().catch(() => undefined);
+  });
+  markLook();
+  grid.hidden = false;
+  requestAnimationFrame(() => grid.classList.add('is-open'));
+  gridOpen = true;
+  effectsBtn.setAttribute('aria-expanded', 'true');
+}
+
+function closeGrid(): void {
+  if (!gridOpen) return;
+  gridOpen = false;
+  grid.classList.remove('is-open');
+  effectsBtn.setAttribute('aria-expanded', 'false');
+  setTimeout(() => {
+    if (gridOpen) return;
+    grid.hidden = true;
+    tileVideos.forEach((v) => (v.srcObject = null));
+  }, 320);
+}
+
+function pickLook(id: string): void {
+  look = id;
+  if (id === 'normal') delete pb.dataset.look;
+  else pb.dataset.look = id;
+  effectsBtn.classList.toggle('is-on', id !== 'normal');
+  markLook();
+  closeGrid();
+}
+
+effectsBtn.addEventListener('click', () => (gridOpen ? closeGrid() : openGrid()));
+
+// ---------------------------------------------------------------------------
+// Sounds: synthesized with Web Audio, unlocked by the first click, optional
+// ---------------------------------------------------------------------------
+
+let audio: AudioContext | null | undefined;
+
+function audioCtx(): AudioContext | null {
+  if (audio === undefined) {
+    try {
+      const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      audio = AC ? new AC() : null;
+    } catch {
+      audio = null;
+    }
+  }
+  if (audio && audio.state === 'suspended') void audio.resume().catch(() => undefined);
+  return audio;
+}
+
+function soundTick(): void {
+  try {
+    const ac = audioCtx();
+    if (!ac) return;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.2, ac.currentTime + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.07);
+    osc.connect(gain).connect(ac.destination);
+    osc.start();
+    osc.stop(ac.currentTime + 0.08);
+  } catch {
+    /* sound is optional */
+  }
+}
+
+function soundShutter(): void {
+  try {
+    const ac = audioCtx();
+    if (!ac) return;
+    const length = Math.floor(ac.sampleRate * 0.09);
+    const buffer = ac.createBuffer(1, length, ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length) ** 2;
+    const noise = ac.createBufferSource();
+    noise.buffer = buffer;
+    const band = ac.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.value = 3200;
+    band.Q.value = 0.8;
+    const gain = ac.createGain();
+    gain.gain.value = 0.35;
+    noise.connect(band).connect(gain).connect(ac.destination);
+    noise.start();
+    const thump = ac.createOscillator();
+    const tg = ac.createGain();
+    thump.frequency.setValueAtTime(220, ac.currentTime);
+    thump.frequency.exponentialRampToValueAtTime(90, ac.currentTime + 0.06);
+    tg.gain.setValueAtTime(0.25, ac.currentTime);
+    tg.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.07);
+    thump.connect(tg).connect(ac.destination);
+    thump.start();
+    thump.stop(ac.currentTime + 0.08);
+  } catch {
+    /* sound is optional */
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Capture: countdown in the viewfinder, window flash, thumbnails, strips
+// ---------------------------------------------------------------------------
+
+const count = $('pbCount');
+const countNum = $('pbCountNum');
+const flash = $('pbFlash');
+const tray = $('pbTray');
+const trayScroll = $('pbTrayScroll');
+const stripOut = $('pbStrip');
+const stripImg = $<HTMLImageElement>('pbStripImg');
+const stripSave = $<HTMLAnchorElement>('pbStripSave');
+const progress = $('pbStripProgress');
+
+const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+async function countdown(seconds: number): Promise<void> {
+  count.hidden = false;
+  for (let n = seconds; n >= 1; n--) {
+    countNum.textContent = String(n);
+    countNum.classList.remove('tick');
+    void countNum.offsetWidth;
+    countNum.classList.add('tick');
+    soundTick();
+    await wait(700);
+  }
+  countNum.classList.remove('tick');
+  count.hidden = true;
+}
+
+function fireFlash(): void {
+  flash.classList.remove('fire');
+  void flash.offsetWidth;
+  flash.classList.add('fire');
+  soundShutter();
+}
+
+/** The current frame, mirrored and under the current look, like the preview. */
+function grab(width = 640): HTMLCanvasElement {
+  const vw = video.videoWidth || 16;
+  const vh = video.videoHeight || 9;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = Math.round((width * vh) / vw);
+  const ctx = canvas.getContext('2d')!;
+  const filter = getComputedStyle(video).filter;
+  if (filter && filter !== 'none') ctx.filter = filter;
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+function addThumb(source: HTMLCanvasElement): void {
+  const img = new Image();
+  img.className = 'pb-thumb is-new';
+  img.alt = 'Captured photo';
+  img.src = source.toDataURL('image/jpeg', 0.8);
+  trayScroll.appendChild(img);
+  while (trayScroll.childElementCount > 8) trayScroll.firstElementChild?.remove();
+  tray.hidden = false;
+  trayScroll.scrollLeft = trayScroll.scrollWidth;
+}
+
+/** Four frames down a strip with a paper border and a footer, like the app. */
+function composeStrip(frames: HTMLCanvasElement[]): HTMLCanvasElement {
+  const width = 360;
+  const height = Math.round((width * frames[0].height) / frames[0].width);
+  const pad = 22;
+  const gap = 14;
+  const foot = 74;
+  const strip = document.createElement('canvas');
+  strip.width = width + pad * 2;
+  strip.height = pad + frames.length * height + (frames.length - 1) * gap + foot;
+  const ctx = strip.getContext('2d')!;
+  ctx.fillStyle = '#fbf8f1';
+  ctx.fillRect(0, 0, strip.width, strip.height);
+  frames.forEach((f, i) => ctx.drawImage(f, pad, pad + i * (height + gap), width, height));
+  ctx.fillStyle = '#16130f';
+  ctx.textAlign = 'center';
+  ctx.font = '600 20px -apple-system, "SF Pro Display", "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('PHOTOSHOOT', strip.width / 2, strip.height - foot / 2 + 2);
+  ctx.fillStyle = '#7a7266';
+  ctx.font = '400 14px -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif';
+  ctx.fillText(new Date().toLocaleDateString(undefined, { dateStyle: 'medium' }), strip.width / 2, strip.height - foot / 2 + 24);
+  return strip;
+}
+
+function setBusy(on: boolean): void {
+  busy = on;
+  if (on) pb.dataset.busy = 'true';
+  else delete pb.dataset.busy;
+  shutter.disabled = on || !isLive();
+  effectsBtn.disabled = on || !isLive();
+  modeButtons.forEach((b) => (b.disabled = on || b.dataset.mode === 'video'));
+}
+
+async function shoot(): Promise<void> {
+  if (busy || !isLive()) return;
+  closeGrid();
+  setBusy(true);
+  if (pb.dataset.mode === 'strip') {
+    progress.hidden = false;
+    progress.replaceChildren(...Array.from({ length: 4 }, () => document.createElement('i')));
+    const frames: HTMLCanvasElement[] = [];
+    for (let i = 0; i < 4; i++) {
+      await countdown(i === 0 ? 3 : 2);
+      fireFlash();
+      frames.push(grab());
+      progress.children[i]?.classList.add('done');
+      await wait(450);
+    }
+    progress.hidden = true;
+    const strip = composeStrip(frames);
+    const url = strip.toDataURL('image/png');
+    stripImg.src = url;
+    stripSave.href = url;
+    stripOut.hidden = false;
+    addThumb(strip);
+  } else {
+    await countdown(3);
+    fireFlash();
+    addThumb(grab());
+  }
+  setBusy(false);
+}
+
+shutter.addEventListener('click', () => void shoot());
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeGrid();
+  if (e.code === 'Space' && e.target === document.body && isLive()) {
+    e.preventDefault();
+    void shoot();
+  }
+});

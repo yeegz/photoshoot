@@ -50,3 +50,48 @@ test('phone layout keeps the toolbar apart', async ({ page }) => {
   expect(mode.x + mode.width).toBeLessThan(shutter.x);
   expect(fx.x).toBeGreaterThan(shutter.x + shutter.width);
 });
+
+async function cameraOn(page: import('@playwright/test').Page) {
+  await page.goto('/');
+  await page.locator('#pbMessageAction').click();
+  await expect(page.locator('#pbShutter')).toBeEnabled({ timeout: 30000 });
+}
+
+test('effects, a photo and a strip all work in the hero window', async ({ page }) => {
+  await cameraOn(page);
+  await page.locator('#pbEffects').click();
+  await expect(page.locator('.pb-tile')).toHaveCount(9);
+  await expect(page.locator('.pb-tile').nth(4)).toHaveText('Normal');
+  await page.locator('.pb-tile', { hasText: 'Sepia' }).click();
+  await expect(page.locator('#pbGrid')).toBeHidden();
+  const filter = await page.locator('#pbVideo').evaluate((v) => getComputedStyle(v).filter);
+  expect(filter).toContain('sepia');
+  await page.locator('#pbShutter').click();
+  await expect(page.locator('#pbCount')).toBeVisible();
+  await expect(page.locator('.pb-thumb')).toHaveCount(1, { timeout: 15000 });
+  await page.locator('[data-mode="strip"]').click();
+  await page.locator('#pbShutter').click();
+  await expect(page.locator('#pbStripImg')).toBeVisible({ timeout: 30000 });
+  await expect(page.locator('#pbStripImg')).toHaveAttribute('src', /^blob:|^data:/);
+  await expect(page.locator('.pb-thumb')).toHaveCount(2);
+});
+
+test('the shutter while browsing effects closes the grid first', async ({ page }) => {
+  await cameraOn(page);
+  await page.locator('#pbEffects').click();
+  await expect(page.locator('#pbGrid')).toBeVisible();
+  await page.locator('#pbShutter').click();
+  await expect(page.locator('#pbGrid')).toBeHidden();
+  await expect(page.locator('#pbCount')).toBeVisible();
+});
+
+test('the window works without Web Audio', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as Record<string, unknown>;
+    delete w.AudioContext;
+    delete w.webkitAudioContext;
+  });
+  await cameraOn(page);
+  await page.locator('#pbShutter').click();
+  await expect(page.locator('.pb-thumb')).toHaveCount(1, { timeout: 15000 });
+});
