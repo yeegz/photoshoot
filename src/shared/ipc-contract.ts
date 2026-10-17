@@ -53,6 +53,7 @@ export interface Settings {
   bgTolerance: number; // 0..1 (background replacement sensitivity)
   perfOverlay: boolean;
   reducedMotion: boolean;
+  screenFlash: boolean; // light up the whole window when a photo is taken
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -67,6 +68,7 @@ export const DEFAULT_SETTINGS: Settings = {
   bgTolerance: 0.28,
   perfOverlay: false,
   reducedMotion: false,
+  screenFlash: true,
 };
 
 export interface SaveRequest {

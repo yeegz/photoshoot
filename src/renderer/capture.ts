@@ -48,12 +48,16 @@ async function runCountdown(seconds: number): Promise<void> {
 }
 
 function fireFlash(): void {
-  const flash = byId('flash');
-  flash.classList.remove('fire');
-  void flash.offsetWidth;
-  flash.classList.add('fire');
+  // The screen flash lights the whole window (Settings → Screen flash); the
+  // shutter sound plays either way.
+  if (app.settings.screenFlash !== false) {
+    const flash = byId('flash');
+    flash.classList.remove('fire');
+    void flash.offsetWidth;
+    flash.classList.add('fire');
+    sound.play('flash');
+  }
   sound.play('shutter');
-  sound.play('flash');
 }
 
 /** Render a fresh processed frame and copy it into a detached canvas. */

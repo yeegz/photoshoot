@@ -78,3 +78,14 @@ test('effects browser has black 2px gutters, arrow-key paging and backdrop pages
   await expect(page.locator('[data-backdrop]').first()).toBeVisible();
   await expect(page.locator('.effect-tile', { hasText: 'Normal' })).toBeVisible();
 });
+
+test('screen flash can be turned off and photos still save', async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem('photoshoot.settings', JSON.stringify({ screenFlash: false, countdownSeconds: 0 }))
+  );
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#shutter').click();
+  await expect(page.locator('#trayScroll img').first()).toBeVisible({ timeout: 60000 });
+  await expect(page.locator('#flash')).not.toHaveClass(/fire/);
+});

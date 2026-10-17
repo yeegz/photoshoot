@@ -327,6 +327,11 @@ export function render(): void {
         )
       ),
       row(
+        'Screen flash',
+        'Light up the window when a photo is taken.',
+        toggle(s.screenFlash, (v) => void app.updateSettings({ screenFlash: v }))
+      ),
+      row(
         'Photo format',
         'PNG is lossless; JPG is smaller.',
         select(

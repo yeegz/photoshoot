@@ -108,6 +108,7 @@ function coerceSettings(raw: unknown): Settings {
     bgTolerance: clampNum(o.bgTolerance, 0.05, 0.8, DEFAULT_SETTINGS.bgTolerance),
     perfOverlay: typeof o.perfOverlay === 'boolean' ? o.perfOverlay : DEFAULT_SETTINGS.perfOverlay,
     reducedMotion: typeof o.reducedMotion === 'boolean' ? o.reducedMotion : DEFAULT_SETTINGS.reducedMotion,
+    screenFlash: typeof o.screenFlash === 'boolean' ? o.screenFlash : DEFAULT_SETTINGS.screenFlash,
   };
 }
 

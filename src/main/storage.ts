@@ -44,6 +44,7 @@ function coerceSettings(raw: unknown): Settings {
     perfOverlay: typeof obj.perfOverlay === 'boolean' ? obj.perfOverlay : DEFAULT_SETTINGS.perfOverlay,
     reducedMotion:
       typeof obj.reducedMotion === 'boolean' ? obj.reducedMotion : DEFAULT_SETTINGS.reducedMotion,
+    screenFlash: typeof obj.screenFlash === 'boolean' ? obj.screenFlash : DEFAULT_SETTINGS.screenFlash,
   };
 }
 
