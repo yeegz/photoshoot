@@ -19,7 +19,7 @@ Camera processing and captures stay on the device. The app was designed and buil
 - 🙂 **8 face‑tracked “fun” effects** — Bug Out, Chipmunk, Frog, Dizzy, Blockhead, Nose Twirl, Lovestruck, Space Alien — powered by an **on‑device** MediaPipe face mesh (nothing uploaded)
 - 📸 **Single photo**, **4‑shot vertical strip** (composited with borders, paper texture & footer), and **video** capture
 - 🪄 **Classic background replacement** with six original procedural backdrops
-- 🎨 **Five polished built‑in themes** — Studio (Photo Booth‑style light), Studio Dark, Classic Metal, Retro Film, and Darkroom (warm paper · safelight red)
+- 🎨 **Six built‑in themes** — Photo Booth (the default: dark unified chrome, Liquid Glass pills and a glossy red shutter, measured from the real thing), Studio, Studio Dark, Classic Metal, Retro Film, and Darkroom
 - 🔌 **Secure community theme + filter import** — zero‑trust; filters are clamped numeric grades + an optional validated LUT, never code
 - 🔊 **Original sound design** synthesized at runtime (no audio files at all)
 - 🖼 **Local gallery** with preview, open file, show in folder, delete
@@ -163,7 +163,8 @@ active effect, and the processing backend.
 
 ## Background replacement
 
-Choose **Backgrounds**, pick an original backdrop, then follow the prompts: step
+Open **Effects** and flip to the last pages (←/→ or the arrows; the Backgrounds
+button in the titlebar jumps straight there), pick an original backdrop, then follow the prompts: step
 out of frame so Photoshoot can capture a reference, then step back in. Each frame
 is compared against the reference at low resolution (the one intentional CPU
 pixel loop) to build a soft matte; the GPU composites you over the chosen
@@ -176,9 +177,10 @@ Stage Lights) are all drawn procedurally with Canvas2D — no copyrighted images
 
 ## Themes
 
-Five built‑in themes ship with the app and are switchable in Settings:
+Six built‑in themes ship with the app and are switchable in Settings:
 
-- **Studio** — bright, neutral, Photo Booth‑style light (the default on first launch)
+- **Photo Booth** — the default: dark unified titlebar, a 60 px photo tray, Liquid Glass mode and Effects pills, and the glossy red shutter, all sized from a reference Photo Booth window
+- **Studio** — bright, neutral light look
 - **Studio Dark** — clean macOS‑style dark mode
 - **Classic Metal** — brushed‑aluminium hardware nostalgia
 - **Retro Film** — warm vintage photo‑print palette
@@ -341,6 +343,10 @@ running in a VM or over remote desktop, hardware acceleration may be disabled.
 
 **No sound.** Check the Volume slider and Mute toggle in Settings. Audio unlocks
 on your first interaction with the window (per browser autoplay policy).
+
+**Screen flash.** The whole window flashes white when a photo is taken, like
+Photo Booth; turn it off under Settings → Capture → Screen flash. Full screen
+is the green window button, F11, or ⌃⌘F.
 
 ---
 
