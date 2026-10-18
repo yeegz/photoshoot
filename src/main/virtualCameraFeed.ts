@@ -129,7 +129,7 @@ export class VirtualCameraFeed {
         if (error) reject(error); else resolve();
       };
       const abort = () => finish(new Error('Virtual camera setup cancelled.'));
-      const timer = setTimeout(() => finish(new Error('OBS Browser source did not load. Install the standard OBS Studio build with Browser Source support, then retry.')), timeoutMs);
+      const timer = setTimeout(() => finish(new Error('OBS did not open the Photoshoot browser source in time. Make sure OBS is running and not busy, then press Start again. If it keeps happening, check that OBS is the standard build with Browser Source.')), timeoutMs);
       this.consumerWaiters.add(finish);
       signal?.addEventListener('abort', abort, { once: true });
     });

@@ -2,6 +2,7 @@
 // never in settings, localStorage, URLs or the public loopback feed.
 import { api } from './bridge';
 import { app } from './app';
+import { encodeFrame } from './virtualCameraEncode';
 import { el } from './dom';
 import {
   VIRTUAL_CAMERA_MAX_WIDTH, VIRTUAL_CAMERA_MAX_HEIGHT,
@@ -113,12 +114,15 @@ async function start(): Promise<void> {
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(source, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+      const blob = await encodeFrame(canvas, VIRTUAL_CAMERA_MAX_FRAME_BYTES);
       if (token !== generation) return;
-      if (!blob || blob.size > VIRTUAL_CAMERA_MAX_FRAME_BYTES) throw new Error('Frame encoding failed.');
-      const bytes = new Uint8Array(await blob.arrayBuffer());
-      if (token !== generation) return;
-      await api.sendVirtualCameraFrame(bytes);
+      // An oversized frame is dropped, not fatal; the feed watchdog in the main
+      // process still stops the session if frames stop arriving altogether.
+      if (blob) {
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        if (token !== generation) return;
+        await api.sendVirtualCameraFrame(bytes);
+      }
       // Exactly one encode + IPC send is in flight. Slow OBS drops rate, not memory.
       if (token === generation) timer = setTimeout(() => void pump(), 1000 / VIRTUAL_CAMERA_MAX_FPS);
     } catch {

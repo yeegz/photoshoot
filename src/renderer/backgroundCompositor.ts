@@ -25,15 +25,27 @@ export class BackgroundCompositor {
   private maskPixels: ImageData | null = null;
   private previous: Float32Array | null = null;
 
-  draw(frame: CanvasImageSource, mask: PersonMask, width: number, height: number,
+  /** Whether a mask has been built yet (needed before drawing without one). */
+  get hasMask(): boolean {
+    return this.previous !== null && this.maskFull.width > 0;
+  }
+
+  /**
+   * Composite a frame. Pass a new mask when the model returns one; pass null
+   * to reuse the latest mask, so every camera frame is shown even while the
+   * model is still working on the next mask.
+   */
+  draw(frame: CanvasImageSource, mask: PersonMask | null, width: number, height: number,
     background: CanvasImageSource | null, blur: number): void {
+    const resized = this.canvas.width !== width || this.canvas.height !== height;
     for (const c of [this.canvas, this.foreground, this.maskFull, this.backdrop]) {
       if (c.width !== width || c.height !== height) {
         c.width = width;
         c.height = height;
       }
     }
-    this.buildMask(mask, width, height);
+    if (mask) this.buildMask(mask, width, height);
+    else if (resized || !this.previous) return; // nothing to reuse yet
 
     // Foreground: the frame cut out by the feathered mask.
     const fctx = this.foreground.getContext('2d')!;

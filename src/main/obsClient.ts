@@ -66,7 +66,7 @@ export class ObsClient {
             const secret = createHash('sha256').update(password + auth.salt).digest('base64');
             const authentication = createHash('sha256').update(secret + auth.challenge).digest('base64');
             password = '';
-            socket.send(JSON.stringify({ op: 1, d: { rpcVersion: 1, authentication, eventSubscriptions: 69 } }));
+            socket.send(JSON.stringify({ op: 1, d: { rpcVersion: 1, authentication, eventSubscriptions: 71 /* General | Config | Scenes | Outputs */ } }));
           } else if (message.op === 2 && helloReceived && !settled) {
             if (data.negotiatedRpcVersion !== 1) throw new Error('OBS WebSocket protocol version is unsupported. Update OBS Studio.');
             finish();

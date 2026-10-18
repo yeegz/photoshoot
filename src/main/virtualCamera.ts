@@ -141,7 +141,7 @@ export class VirtualCameraService {
     session.switched = true;
     await client.request('SetCurrentProgramScene', { sceneName: session.scene });
     this.check(session);
-    await session.feed.waitForConsumer(this.options.feedConnectTimeoutMs ?? 8000, abort.signal);
+    await session.feed.waitForConsumer(this.options.feedConnectTimeoutMs ?? 20000, abort.signal);
     await this.assertOutputsIdle(session);
     session.startUncertain = true;
     try { await client.request('StartVirtualCam'); }

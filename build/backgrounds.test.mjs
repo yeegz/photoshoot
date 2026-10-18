@@ -160,6 +160,22 @@ test('blur keeps the subject out of the blurred background (no dark halo)', { ti
   } finally { await page.close(); }
 });
 
+test('new camera frames composite with the latest mask between model results', { timeout: 30000 }, async () => {
+  const page = await pageForTest();
+  try {
+    const pixel = await page.evaluate(async () => {
+      const { BackgroundCompositor } = await import('/harness.js');
+      const solid = (color) => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); x.fillStyle = color; x.fillRect(0, 0, 64, 64); return c; };
+      const confidence = new Float32Array(64 * 64).fill(1);
+      const compositor = new BackgroundCompositor();
+      compositor.draw(solid('#ff0000'), { width: 64, height: 64, confidence }, 64, 64, solid('#00ff00'), 18);
+      compositor.draw(solid('#0000ff'), null, 64, 64, solid('#00ff00'), 18); // no new mask yet
+      return Array.from(compositor.canvas.getContext('2d').getImageData(32, 32, 1, 1).data);
+    });
+    assert.deepEqual(pixel, [0, 0, 255, 255]);
+  } finally { await page.close(); }
+});
+
 test('replacement activation, cancellation, reselection and custom photo recovery', { timeout: 30000 }, async () => {
   const page = await pageForTest();
   try {

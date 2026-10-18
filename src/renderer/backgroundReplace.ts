@@ -17,6 +17,8 @@ export class BackgroundReplacer {
   private generation = 0;
   private lastFrame = -1;
   private lastSubmit = 0;
+  private size = { width: 0, height: 0 };
+  private lastShown = -1;
 
   isActive(): boolean { return this.active; }
 
@@ -61,6 +63,8 @@ export class BackgroundReplacer {
     this.segmenter.stop();
     this.lastFrame = -1;
     this.lastSubmit = 0;
+    this.size = { width: 0, height: 0 };
+    this.lastShown = -1;
     app.renderer.setFrameHook(null);
     app.renderer.setSource(app.video);
     this.compositor.clear();
@@ -78,9 +82,22 @@ export class BackgroundReplacer {
   private composite(result: SegmentedFrame): void {
     const width = result.frame.width;
     const height = result.frame.height;
-    const background = this.backgroundId === 'blur' ? null : getBackgroundCanvas(this.backgroundId!, width, height);
-    if (this.backgroundId !== 'blur' && !background) throw new Error('This background could not be loaded.');
-    this.compositor.draw(result.frame, result.mask, width, height, background, app.settings.backgroundBlur);
+    this.size = { width, height };
+    this.compositor.draw(result.frame, result.mask, width, height, this.background(width, height), app.settings.backgroundBlur);
+  }
+
+  /** Show the current camera frame with the latest mask (between model results). */
+  private compositeLive(): void {
+    const { width, height } = this.size;
+    if (!width || !height || !this.compositor.hasMask) return;
+    this.compositor.draw(app.video, null, width, height, this.background(width, height), app.settings.backgroundBlur);
+  }
+
+  private background(width: number, height: number): CanvasImageSource | null {
+    if (this.backgroundId === 'blur') return null;
+    const background = getBackgroundCanvas(this.backgroundId!, width, height);
+    if (!background) throw new Error('This background could not be loaded.');
+    return background;
   }
 
   private update(): void {
@@ -88,11 +105,17 @@ export class BackgroundReplacer {
     const video = app.video;
     if (video.readyState < 2 || !video.videoWidth || video.ended) {
       this.stop();
+      this.onError?.('The background was turned off because the camera paused. Choose it again to continue.');
       return;
     }
-    if (this.segmenter.busy) return;
+    // Every new camera frame is shown at once with the latest mask.
+    if (this.lastShown !== video.currentTime) {
+      this.lastShown = video.currentTime;
+      this.compositeLive();
+    }
+    if (this.segmenter.busy || this.lastFrame === video.currentTime) return;
     const now = performance.now();
-    if (this.lastFrame === video.currentTime || now - this.lastSubmit < 40) return;
+    if (now - this.lastSubmit < 40) return;
     this.lastFrame = video.currentTime;
     this.lastSubmit = now;
     const generation = this.generation;
