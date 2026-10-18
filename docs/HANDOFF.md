@@ -43,17 +43,33 @@ See the bottom of this file for the final status; it is updated when each releas
 
 ### Status log
 
-- 18 Oct: checkpoint of the uncommitted continuation work committed (`18bef78`); full verify green except a stale test (fixed) and a one-off Electron timeout that did not reproduce; update check added with unit, browser and Electron tests; visual check done (update notice moved under panels, duplicate web copy removed). Independent review running; release 1.3.0 pending.
-- **Not verified on real hardware:** an end-to-end OBS virtual-camera run. OBS is installed on the owner's Mac, but the feature is Windows-only and needs the owner's OBS WebSocket password, so it was not exercised with real OBS. The OBS protocol, feed and cleanup are covered by unit tests against a real local WebSocket server.
+- **18 Oct, release 1.3.0** (`ab5ff10` + CI fix `ac3203f`, tag `v1.3.0`): segmentation backgrounds, OBS virtual camera, update notices, landing showcase. Web deployed. Full `npm run verify` green before release: 339 unit, 44 node camera/filter/lifecycle, 6 real-model background (`npm run test:backgrounds`), 58 browser incl. Electron. Release workflow, main CI and live Windows probe results: see the GitHub Actions runs for `v1.3.0` / `main` on 18 Oct.
+- Rework of the continuation work (owner asked to polish anything weak): background blur no longer halos (person cut out, hole filled from the room, half-res), feathered and temporally smoothed mask, tighter confidence band, every camera frame composited with the latest mask (preview at camera rate, not model rate), stall toast, custom-photo tile glyph clear of its label, content-hashed web worker, virtual camera degrades JPEG quality instead of ending the session, OBS browser-source wait 20 s with an honest message, OBS Config events subscribed.
+- Independent review (fresh agent) found 0 critical, 4 important — all fixed with tests (Electron app:// + packaged app.asar segmentation test, hashed worker test, encoder unit tests, longer OBS wait).
+
+### Known limitations (real, not unfinished work)
+
+- **Not verified with real OBS.** The OBS path (WebSocket v5 control, loopback MJPEG feed, browser source, virtual camera start/stop) is unit-tested against a real local WebSocket server but has never run against a real OBS on Windows. First thing to check on a Windows PC: Settings → Virtual camera → Start with OBS 28+ open and its WebSocket server enabled, then pick "OBS Virtual Camera" in Discord.
+- Close people: the selfie model reads the shadow between two heads as person, so a thin strip of the real background can show in replacement mode.
+- Deferred minors from the review: `createImageBitmap` decodes a custom photo before the 32 MP check (a decompression-bomb image could exhaust renderer memory); stop/quit can take up to ~8.5 s if OBS hangs; `update:check` and older IPC handlers lack the `requireMainFrame` sender gate the virtual-camera handlers use; iOS Safari versions without `CanvasRenderingContext2D.filter` show an unblurred background in blur mode; whether a minimised window keeps the camera `<video>` advancing during a virtual-camera session is untested.
+- Windows builds are unsigned; video is WebM without audio, capped at 60 s.
+
+### Next steps for whoever continues
+
+1. Run the real OBS check above on Windows and fix whatever it finds.
+2. Decide on the deferred minors (the custom-photo decode limit is the most worth doing: read dimensions from the file header first).
+3. Optional: a better segmentation model (MediaPipe multiclass selfie) for hair and close pairs, if size allows.
 
 ## Source map and instructions for future work
 
 - `web/landing/index.html`, `landing.css`, `landing.ts`: current landing page. Treat this implementation and the latest direction above as authoritative.
 - `web/landing/assets/`: sample photo and creation provenance.
 - `web/build-web.mjs`: hashed JS/CSS/image assets and package-version injection.
+- `build/backgrounds.test.mjs` (`npm run test:backgrounds`): real model, compositor halo/mask/live-frame, replacer lifecycle.
+- `test/unit/update-check.test.ts`, `virtual-camera-encode.test.ts`, `obs-client.test.ts`, `virtual-camera*.test.ts`: update logic, frame encoding, OBS protocol and feed.
 - `test/browser/landing.spec.ts`: real pixels, deterministic grayscale, camera lifecycle, shader failures, sample loading, reduced motion and responsive bounds.
 - `test/browser/chrome.spec.ts`: app anatomy and Photo Booth interaction regressions.
-- `test/browser/camera.spec.ts`, `viewfinder.spec.ts`, `electron.spec.ts`: camera recovery, rendered-pixel and desktop coverage.
+- `test/browser/camera.spec.ts`, `viewfinder.spec.ts`, `electron.spec.ts`: camera recovery, rendered-pixel and desktop coverage. `PHOTOSHOOT_EXE=<packaged exe>` runs the Electron tests against a packaged build (CI does this with `release/win-unpacked/Photoshoot.exe`).
 - `src/renderer/gl/effects.ts`, `shaders.ts`, `glcore.ts`: effect registry, production GLSL and GPU helpers shared with the landing.
 - `src/renderer/backgrounds.ts`: six original procedural backdrops. The landing's art changes do not change the app's backdrops.
 - `docs/superpowers/specs/2026-10-17-photo-booth-parity-design.md`: reference-window measurements. Its original center-countdown proposal was corrected to toolbar countdown in 1.2.0.
@@ -82,3 +98,11 @@ PHOTOSHOOT_BASE_URL=https://photoshoot-yeegz.web.app npx playwright test test/br
 ```
 
 The `win-d3d11` project exists only on Windows. Its fake camera and WARP adapter verify rendering without a physical webcam. They do not claim to test every physical device. Windows executables remain unsigned; video is WebM without audio, capped at 60 seconds. These are existing documented product limitations, not unfinished work from this continuation.
+
+## Release recipe
+
+1. `npm run verify` green.
+2. `npm version X.Y.Z --no-git-tag-version`; edit `.github/RELEASE_NOTES.md`; commit; `git push origin main`.
+3. `git tag -a vX.Y.Z -m "Photoshoot X.Y.Z" && git push origin vX.Y.Z` → `release.yml` builds, tests the packaged app on Windows and publishes the installer, portable exe and checksums.
+4. `npm run deploy` (web), then `gh workflow run 'Probe live site on Windows'`.
+5. Validate workflow YAML before pushing (`npx yaml@2.6.1 valid < file`): an unquoted `: ` inside a step name breaks the whole workflow.
