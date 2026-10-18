@@ -24,6 +24,7 @@ const common = {
   logLevel: 'info',
   define: {
     'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
+    __SEGMENTER_WORKER__: JSON.stringify('personSegmentation.worker.js'),
   },
 };
 

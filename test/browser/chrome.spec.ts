@@ -364,3 +364,15 @@ test('update checks can be turned off in Settings', async ({ page }) => {
   await expect(page.locator('#updateNotice')).toBeHidden();
   expect(await page.evaluate(() => (window as unknown as { __updateChecks: number }).__updateChecks)).toBe(0);
 });
+
+test('the segmentation worker is content-hashed, so a cached old worker cannot be reused', async ({ page }) => {
+  const workers: string[] = [];
+  page.on('request', (r) => { if (/personSegmentation\.worker/.test(r.url())) workers.push(r.url()); });
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#btnEffects').click();
+  await page.keyboard.press('End');
+  await page.locator('[data-backdrop="studio"]').click();
+  await expect.poll(() => workers.length, { timeout: 20000 }).toBeGreaterThan(0);
+  expect(workers[0]).toMatch(/personSegmentation\.worker-[A-Z0-9]{8}\.js$/);
+});

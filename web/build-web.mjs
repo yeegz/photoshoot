@@ -63,7 +63,11 @@ async function run() {
   const shimFile = await bundleHashed(path.join(root, 'src/web/shim.ts'), {
     __PHOTOSHOOT_VERSION__: JSON.stringify(pkg.version),
   });
+  // The person-segmentation worker is content-hashed like every other bundle
+  // (hosting caches .js for a year); the renderer learns its name at build time.
+  const workerFile = await bundleHashed(path.join(root, 'src/renderer/personSegmentation.worker.ts'));
   const rendererFile = await bundleHashed(path.join(root, 'src/renderer/main.ts'), {
+    __SEGMENTER_WORKER__: JSON.stringify(workerFile),
     'process.env.NODE_ENV': '"production"',
   });
 
@@ -86,11 +90,6 @@ async function run() {
   for (const file of ['selfie_segmenter.LICENSE', 'selfie_segmenter.README.md']) {
     await cp(path.join(root, 'build/mediapipe', file), path.join(appOut, 'mediapipe', file));
   }
-  await esbuild.build({
-    entryPoints: [path.join(root, 'src/renderer/personSegmentation.worker.ts')],
-    outfile: path.join(appOut, 'personSegmentation.worker.js'),
-    bundle: true, minify: true, format: 'iife', platform: 'browser', target: ['chrome120'],
-  });
   await cp(path.join(root, 'src/renderer/assets'), path.join(appOut, 'assets'), { recursive: true });
   await cp(path.join(root, 'src/renderer/assets'), path.join(out, 'assets'), { recursive: true });
 

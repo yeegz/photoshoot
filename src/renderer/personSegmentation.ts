@@ -1,5 +1,10 @@
 import type { SegmentedFrame, SegmenterRequest, SegmenterResponse } from './personSegmentationProtocol';
 
+// Set by the build: a content-hashed name on the web, a fixed name in Electron.
+declare const __SEGMENTER_WORKER__: string | undefined;
+const WORKER_FILE = typeof __SEGMENTER_WORKER__ === 'string' ? __SEGMENTER_WORKER__ : 'personSegmentation.worker.js';
+
+
 /** One worker, one transferable frame in flight, and no queued video frames. */
 export class PersonSegmenter {
   private worker: Worker | null = null;
@@ -23,7 +28,7 @@ export class PersonSegmenter {
     });
     const loading = this.loading;
     try {
-      this.worker = new Worker(new URL('personSegmentation.worker.js', document.baseURI));
+      this.worker = new Worker(new URL(WORKER_FILE, document.baseURI));
       this.worker.onmessage = ({ data }: MessageEvent<SegmenterResponse>) => {
         if (data.type === 'ready') {
           this.clearTimer();
