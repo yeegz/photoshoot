@@ -1,7 +1,7 @@
 {
   "name": "photoshoot",
-  "version": "1.2.0",
-  "description": "Photoshoot \u2014 a modern Windows photobooth app. Clean-room homage, all original code and assets.",
+  "version": "1.3.0",
+  "description": "Photoshoot — a modern Windows photobooth app. Clean-room homage, all original code and assets.",
   "author": "Photoshoot",
   "license": "MIT",
   "private": true,
