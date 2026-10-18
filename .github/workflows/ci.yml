@@ -49,8 +49,8 @@ jobs:
       - run: npm run build:win -- --publish never
       - name: Verify Electron camera startup on Windows
         run: npx playwright test test/browser/electron.spec.ts --project chromium
-      - name: Verify the viewfinder renders on Windows Direct3D 11 with GPU compositing
-        run: npx playwright test test/browser/viewfinder.spec.ts --project win-d3d11
+      - name: Verify the viewfinder and showcase on Windows Direct3D 11 with GPU compositing
+        run: npx playwright test test/browser/viewfinder.spec.ts test/browser/landing.spec.ts --project win-d3d11
       - uses: actions/upload-artifact@v4
         with:
           name: photoshoot-windows

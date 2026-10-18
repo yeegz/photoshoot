@@ -357,10 +357,15 @@ export class GLRenderer {
     this.renderWith(this.effect, this.amount, this.mirror);
   }
 
-  private tick = (now: number): void => {
-    if (!this.running) return;
+  /** Update the person composite and draw the final frame, including during virtual output. */
+  renderLiveFrame(): void {
     this.frameHook?.();
     this.renderFrame();
+  }
+
+  private tick = (now: number): void => {
+    if (!this.running) return;
+    this.renderLiveFrame();
     this.trackFps(now);
     this.schedule();
   };

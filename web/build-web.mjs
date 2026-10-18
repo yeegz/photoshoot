@@ -82,6 +82,17 @@ async function run() {
   const modelSrc = path.join(root, 'build/mediapipe/face_landmarker.task');
   await cp(wasmSrc, path.join(appOut, 'mediapipe/wasm'), { recursive: true });
   await cp(modelSrc, path.join(appOut, 'mediapipe/face_landmarker.task'));
+  await cp(path.join(root, 'build/mediapipe/selfie_segmenter.tflite'), path.join(appOut, 'mediapipe/selfie_segmenter.tflite'));
+  for (const file of ['selfie_segmenter.LICENSE', 'selfie_segmenter.README.md']) {
+    await cp(path.join(root, 'build/mediapipe', file), path.join(appOut, 'mediapipe', file));
+  }
+  await esbuild.build({
+    entryPoints: [path.join(root, 'src/renderer/personSegmentation.worker.ts')],
+    outfile: path.join(appOut, 'personSegmentation.worker.js'),
+    bundle: true, minify: true, format: 'iife', platform: 'browser', target: ['chrome120'],
+  });
+  await cp(path.join(root, 'src/renderer/assets'), path.join(appOut, 'assets'), { recursive: true });
+  await cp(path.join(root, 'src/renderer/assets'), path.join(out, 'assets'), { recursive: true });
 
   // 3) App HTML, derived from the Electron renderer's index.html, rewired to the
   //    hashed asset names.
@@ -95,12 +106,16 @@ async function run() {
   );
   await writeFile(path.join(appOut, 'index.html'), html);
 
-  // 4) Landing page: hashed CSS + its own hashed bundle (the hero window and
-  //    filmstrip), the package version injected, then assets.
+  // 4) Landing page: hashed CSS + its own hashed effects-showcase bundle,
+  //    the package version injected, then assets.
   const landingCss = await hashCss(path.join(__dirname, 'landing/landing.css'), out, 'landing');
   const landingJs = await bundleHashed(path.join(__dirname, 'landing/landing.ts'), undefined, out);
   let landing = await readFile(path.join(__dirname, 'landing/index.html'), 'utf8');
   landing = landing.replace('href="landing.css"', `href="${landingCss}"`);
+  const sample = await readFile(path.join(__dirname, 'landing/assets/photobooth-sample.jpg'));
+  const sampleName = `photobooth-sample-${hash8(sample)}.jpg`;
+  await writeFile(path.join(out, 'assets', sampleName), sample);
+  landing = landing.replace('assets/photobooth-sample.jpg', `assets/${sampleName}`);
   landing = landing.replaceAll('{{version}}', pkg.version);
   if (!landing.includes('</body>')) throw new Error('landing/index.html has no </body> to attach the bundle to');
   landing = landing.replace('</body>', `    <script defer src="${landingJs}"></script>\n  </body>`);

@@ -1,412 +1,143 @@
 # Photoshoot
 
-[![Verify Photoshoot](https://github.com/yeegz/photoshoot/actions/workflows/ci.yml/badge.svg)](https://github.com/yeegz/photoshoot/actions/workflows/ci.yml)
+**A little photo booth. A lot of personality.**
 
-**A photobooth for the browser and desktop.**
+Take photos, make a four-shot strip, record a short video, or give your webcam a new look. Photoshoot runs in your browser and on Windows, with live effects, person-aware backgrounds and a gallery that stays on your device.
 
-Open your camera, choose an effect and capture a single photo, four quick pictures or a short video. Photoshoot combines a live WebGL2 viewfinder, on-device face effects, six visual themes and a local gallery.
+[**Open Photoshoot**](https://photoshoot-yeegz.web.app/app/) · [**Download for Windows**](https://github.com/yeegz/photoshoot/releases/latest) · [Explore the effects](https://photoshoot-yeegz.web.app)
 
-[Open the web app](https://photoshoot-yeegz.web.app/app/) · [Product site](https://photoshoot-yeegz.web.app) · [Case study](https://yousofselim.com/work/photoshoot/) · [Build locally](#getting-started)
+[![Build and camera tests](https://github.com/yeegz/photoshoot/actions/workflows/ci.yml/badge.svg)](https://github.com/yeegz/photoshoot/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**The web app is live.** [Download the Windows installer or portable app](https://github.com/yeegz/photoshoot/releases/latest), or build from source using `npm run build:win`. Release notes include checksums and platform limitations. Windows packages are unsigned; no signed or notarised macOS release is provided.
+<!-- Product screenshot is generated from the real app; see docs/images/README.md. -->
 
-Camera processing and captures stay on the device. The app was designed and built by **Yousof Selim**, including the interface, Electron/WebGL2 implementation, effects and deployment.
+## What you can do
 
-## Highlights
+- **Find your look.** 17 live effects, from black & white and Plastic Camera to Comic Book and Fish Eye. Drag the center of distortion effects to move the warp.
+- **Have some fun.** Eight face-tracked effects, including Bug Out, Chipmunk and Space Alien.
+- **Keep the focus on you.** Blur the room behind you, pick a neutral studio or quiet interior, or use your own photo. Person segmentation follows your head and body without taking a reference photo.
+- **Capture the moment.** Single photos, four quick pictures saved as a 2×2 sheet, and videos up to 60 seconds. The saved image includes your effects, mirror setting and background.
+- **Make it yours.** Six themes, adjustable countdown and flash, synthesized shutter sounds, and importable community themes and color filters.
+- **Bring your look into calls.** The Windows app can send its processed viewfinder to a virtual camera. See [setup and platform support](#use-photoshoot-in-discord-zoom-or-teams).
 
-- 🎥 **Live viewfinder** rendered through a real WebGL2 pipeline (not a raw video tag)
-- ✨ **17 real‑time GLSL effects** — Sepia, B&W, Plastic Camera, Comic Book, Color Pencil, Glow, Thermal, X‑Ray, Bulge, Dent, Twirl, Squeeze, Mirror, Light Tunnel, Fish Eye, Stretch, Pop Art (distortions have a **draggable center**)
-- 🙂 **8 face‑tracked “fun” effects** — Bug Out, Chipmunk, Frog, Dizzy, Blockhead, Nose Twirl, Lovestruck, Space Alien — powered by an **on‑device** MediaPipe face mesh (nothing uploaded)
-- 📸 **Single photo**, **four quick pictures** (one countdown, four shots, a 2×2 sheet) and **video** capture; Option‑click skips the countdown, Shift‑click skips the flash, as in Photo Booth
-- 🪄 **Classic background replacement** with six original procedural backdrops
-- 🎨 **Six built‑in themes** — Photo Booth (the default: dark unified chrome, Liquid Glass pills and a glossy red shutter, measured from the real thing), Studio, Studio Dark, Classic Metal, Retro Film, and Darkroom
-- 🔌 **Secure community theme + filter import** — zero‑trust; filters are clamped numeric grades + an optional validated LUT, never code
-- 🔊 **Original sound design** synthesized at runtime (no audio files at all)
-- 🖼 **Local gallery** with preview, open file, show in folder, delete
-- 🛡 **Secure Electron architecture** — context isolation, sandbox, strict CSP, camera‑only permissions, local‑only processing
-- ⚡ **Performance‑minded** — a `requestAnimationFrame` render loop, reused GPU textures/programs, optional FPS/debug overlay
+Designed and built by [Yousof Selim](https://yousofselim.com/work/photoshoot/). No account needed. No analytics. Camera processing runs locally.
 
----
+## Get started
 
-## Requirements
+### In your browser
 
-- **Windows 10/11** (the target platform). Development also runs on macOS/Linux.
-- **Node.js 22+** and npm.
-- A webcam, and a browser or desktop environment that supports camera capture. **WebGL2** enables effects; basic photo and video capture also works without it.
+[Open the web app](https://photoshoot-yeegz.web.app/app/), allow camera access, then choose an effect or press the red shutter. Use a current browser with WebGL2 for the full effects experience. Basic capture and mirroring also work in the app's fallback mode when WebGL2 is unavailable.
 
----
+Captures stay in this browser's local storage until you export or delete them. Export anything you want to keep before clearing site data.
 
-## Getting started
+### On Windows
 
-```bash
-npm ci           # install the locked dependencies, including local MediaPipe assets
-npm run dev      # build once, then launch the app
+Download the installer or portable app from [Releases](https://github.com/yeegz/photoshoot/releases/latest). Both target **64-bit Windows 10 and Windows 11**. Release notes list the exact files and SHA-256 checksums.
+
+Windows packages are currently unsigned, so Windows may show an unknown-publisher warning. Download only from this repository's releases. macOS and Linux development builds are available from source; prebuilt releases target Windows.
+
+Desktop captures are saved in `%USERPROFILE%\Pictures\Photoshoot`. Photos use PNG or JPG; videos use WebM and do not include microphone audio.
+
+## Backgrounds that follow you
+
+Open **Backgrounds** in the titlebar, or go to the background pages in **Effects**:
+
+| Choice | What it does |
+| --- | --- |
+| Normal | Shows your camera without background processing. |
+| Background blur | Keeps the person sharp and blurs the scene behind them. Adjust the strength in Settings. |
+| Soft studio / Warm paper / Slate | Replaces the room with a restrained studio background. |
+| Quiet room | Uses a natural, softly lit interior. |
+| Your photo… | Uses a local JPG, PNG or WebP image, up to 10 MB and 32 megapixels. |
+
+The bundled MediaPipe model detects person pixels on your device. It does not identify who you are. You can stay in frame while choosing a background. Good lighting and a clear outline help with hair, hands and fast movement; segmentation is not perfect. Your custom background is kept in memory for the current session.
+
+## Use Photoshoot in Discord, Zoom or Teams
+
+Virtual camera output is a **Windows desktop feature**. A browser tab cannot install or expose a system camera device. Your effects and background are included; Photoshoot's controls and gallery review are not. Keep Photoshoot open during your call and select your microphone separately in the calling app.
+
+The OBS option works on Windows 10 and Windows 11 and **requires OBS Studio 28 or newer**. OBS supplies the virtual camera device. Photoshoot connects to OBS only on your own computer.
+
+1. [Install OBS Studio](https://obsproject.com/download) and open it.
+2. In OBS, open **Tools → WebSocket Server Settings**. Enable the server and authentication. Note the server port (usually `4455`) and password.
+3. In OBS Controls, open the gear beside **Start Virtual Camera** and select **Program (Default)** as its output. Turn Studio Mode off. Stop any existing OBS stream, recording or virtual camera before connecting.
+4. In Photoshoot, open **Settings → Virtual camera**. Enter the OBS port and password, then click **Start virtual camera**. Photoshoot creates a temporary scene with the processed camera feed and starts OBS Virtual Camera.
+5. Select **OBS Virtual Camera** in your calling app:
+
+| App | Camera setting |
+| --- | --- |
+| Discord | User Settings → Voice & Video → Camera |
+| Zoom | Settings → Video & effects → Camera |
+| Microsoft Teams | Settings → Devices → Camera |
+| Browser calling apps | The call's camera picker; allow camera permission when prompted. |
+
+Keep **both Photoshoot and OBS running**. Stop output in Photoshoot when finished. Output is up to **1280×720 at 15 fps**. OBS credentials are kept in memory, never saved in your settings. Photoshoot restores the previous OBS scene on stop when safe.
+
+If the device is missing, restart the calling app after installing OBS. If the wrong picture appears, check the OBS virtual camera output is **Program (Default)**. More detail: [OBS Virtual Camera guide](https://obsproject.com/kb/virtual-camera-guide).
+
+## Controls worth knowing
+
+| Action | Control |
+| --- | --- |
+| Take a photo / start video | Red shutter, or Space when no panel is open |
+| Skip the countdown | Alt-click on Windows; Option-click on macOS |
+| Skip the screen flash | Shift-click the shutter |
+| Return from photo review | Click the photo, click the shutter, or press Escape |
+| Delete the photo under review | Delete or Backspace |
+| Full screen | F11; Control-Command-F on macOS |
+| Move a distortion | Drag on the live preview |
+
+## Privacy and storage
+
+Camera frames, face landmarks and person masks are processed locally. Photoshoot does not upload your captures or use analytics. The web app loads its code and models from its hosting origin; it does not fetch remote camera-processing services.
+
+When you explicitly enable virtual camera output, Photoshoot shares processed frames with the selected local camera backend. **Your calling app controls what is transmitted to the people in your call.** This is separate from Photoshoot's local processing.
+
+The Electron renderer is sandboxed, with context isolation, a restricted IPC bridge and a Content Security Policy. Imported themes and filters are validated data, not executable code. See [customization and import formats](docs/CUSTOMIZATION.md).
+
+## Build and contribute
+
+Use **Node.js 22+** and npm. A webcam is useful for manual checks; automated tests use controlled camera fixtures.
+
+```sh
+npm ci
+npm run dev                 # build and open the desktop app
 ```
 
-Other scripts:
-
-```bash
-npm start            # launch the already‑built app (electron .)
-npm run build:app    # bundle main/preload/renderer into dist/ (no packaging)
-npm run watch        # rebuild on change (then run npm start in another terminal)
-npm run typecheck    # strict TypeScript type checking (no emit)
-npm run lint         # ESLint (typescript-eslint recommended rules)
-npm test             # Vitest unit tests, then the Node filter, camera and lifecycle tests
+```sh
+npm run web:dev             # browser app at http://localhost:4178/app/
+npx playwright install chromium
+npm run verify             # types, lint, unit/model tests, browser and Electron tests
+npm run build:win           # Windows installer + portable app; run on Windows
+npm run build:web           # static site and web app in web-dist/
 ```
 
----
+Production builds are generated in `dist/`; Windows packages in `release/`. The release workflow verifies the application before publishing installer, portable app and checksums. The web app is served from Firebase Hosting; `npm run deploy` deploys it when authenticated to the configured project.
 
-## Building a Windows app
-
-```bash
-npm run build        # production bundle + electron-builder (installer + portable)
-npm run build:win    # explicitly target Windows
-npm run build:dir    # unpacked build (fast, for smoke‑testing packaging)
+```text
+src/main/             Desktop window, storage, IPC and virtual camera services
+src/preload/          Restricted desktop bridge
+src/shared/           Contracts and import validation
+src/renderer/         Camera UI, person/face processing, capture and gallery
+src/renderer/gl/      WebGL renderer and effect shaders
+src/web/              Browser storage and bridge implementation
+web/landing/          Product site and live effect showcase
+test/                 Unit, browser and desktop regression tests
+build/                Build helpers, model assets and integration tests
 ```
 
-Output is written to `release/`:
-
-- `Photoshoot-<version>-x64.exe` — NSIS installer
-- `Photoshoot-<version>-portable.exe` — portable single‑file build
-
-> Build the Windows installer **on Windows** for a native, signed‑ready result.
-> Cross‑building Windows targets from macOS/Linux requires extra tooling (Wine)
-> and is not recommended.
-
-The app icon (`build/icon.png`) is generated, original art. You can regenerate it
-with `node build/make-icon.mjs`.
-
-> Version tags (`v` followed by the package version) run the release workflow.
-> It requires the browser/Electron verification suite and Windows camera smoke
-> test to pass, then publishes the installer, portable app and SHA-256 checksums.
-
----
-
-## Web app & website
-
-Photoshoot also runs **entirely in the browser** — the same renderer, with a
-small browser shim (`src/web/shim.ts`) replacing the Electron bridge: captures
-live in IndexedDB, settings/themes in `localStorage`, and "export" becomes a
-download. Camera processing stays on‑device; nothing is uploaded.
-
-```bash
-npm run build:web     # builds the landing page + web app into web-dist/
-npm run deploy        # builds web-dist/ and deploys to Firebase Hosting
-```
-
-`web-dist/` is a plain static site:
-
-- `web-dist/index.html` — the marketing landing page (`web/landing/`)
-- `web-dist/app/` — the web app (shim + renderer + styles)
-
-**Live:** the site is hosted on Firebase Hosting at
-**https://photoshoot-yeegz.web.app** (app at `/app/`). Hosting config is in
-`firebase.json` / `.firebaserc`; deploy with `firebase login && npm run deploy`.
-Because the web app uses `getUserMedia`, it must be served over HTTPS (Firebase
-Hosting, GitHub Pages, or `localhost` all qualify).
-
----
-
-## Where photos are saved
-
-All captures are written to:
-
-```
-%USERPROFILE%\Pictures\Photoshoot
-```
-
-(`Pictures/Photoshoot`). Files are named like
-`Photoshoot_single_2026-06-13_22-04-31.png`. Photos are PNG or JPG (your choice
-in Settings); four quick pictures are one 2×2 image; videos are `.webm`.
-
-The in‑app gallery stores small thumbnails and metadata in the app's user‑data
-folder. The full‑resolution files live only in `Pictures/Photoshoot`.
-
----
-
-## How the sounds were made
-
-There are **no audio files in this project**. Every sound — the shutter click,
-countdown ticks, capture flash shimmer, the 4‑shot completion chime, the
-photo‑drop "plip", button taps, theme switch, and error tone — is **synthesized
-at runtime with the Web Audio API** from oscillators and filtered noise (see
-[`src/renderer/sound.ts`](src/renderer/sound.ts)).
-
-This recreates the *feeling and timing* of a tactile photobooth while
-guaranteeing the audio is 100% original and contains nothing extracted or copied
-from Apple or anyone else. Volume and a global mute live in Settings and persist
-locally. If audio can't initialize, the app continues silently.
-
----
-
-## Effects & the rendering pipeline
-
-The live preview is a full WebGL2 pipeline (see [`src/renderer/gl`](src/renderer/gl)):
-
-1. The webcam stream feeds a hidden `<video>` element.
-2. A `requestAnimationFrame` loop uploads the current frame to a **reused** GPU
-   texture. The loop deliberately does not rely on `requestVideoFrameCallback`,
-   which can stop firing for the hidden camera element on some systems and
-   leave the preview blank.
-3. A per‑effect GLSL fragment shader renders the processed image to the canvas.
-4. Captures read the canvas directly, so the saved image exactly matches the
-   live preview (effect + mirror + background included).
-
-Resources (programs, textures, the quad VAO) are created once and reused; nothing
-is allocated per frame. The Effects menu shows **live** preview tiles via a second
-small renderer that uploads the frame once and draws every effect from it.
-
-Enable **Settings → Advanced → Performance overlay** to see FPS, resolution,
-active effect, and the processing backend.
-
----
-
-## Background replacement
-
-Open **Effects** and flip to the last pages (←/→ or the arrows; the Backgrounds
-button in the titlebar jumps straight there), pick an original backdrop, then follow the prompts: step
-out of frame so Photoshoot can capture a reference, then step back in. Each frame
-is compared against the reference at low resolution (the one intentional CPU
-pixel loop) to build a soft matte; the GPU composites you over the chosen
-backdrop, and effects still apply on top. Tune **edge tolerance** in Settings.
-
-Backdrops (Dreamy Clouds, Retro Dots, Space Horizon, Mountain Sunset, Underwater,
-Stage Lights) are all drawn procedurally with Canvas2D — no copyrighted images.
-
----
-
-## Themes
-
-Six built‑in themes ship with the app and are switchable in Settings:
-
-- **Photo Booth** — the default: dark unified titlebar, a 60 px photo tray, Liquid Glass mode and Effects pills, and the glossy red shutter, all sized from a reference Photo Booth window
-- **Studio** — bright, neutral light look
-- **Studio Dark** — clean macOS‑style dark mode
-- **Classic Metal** — brushed‑aluminium hardware nostalgia
-- **Retro Film** — warm vintage photo‑print palette
-- **Darkroom** — warm photo‑paper chrome with a deep safelight‑red shutter
-
-Your selected theme persists locally and is restored on restart. Themes are built
-on a shared vocabulary of design tokens (colors, spacing, radius, shadow, font,
-textures), so they restyle the entire UI — not just a color swap.
-
-### Importing community themes (and the security model)
-
-Photoshoot can import community‑made themes, and treats them as **fully
-untrusted** using a zero‑trust model.
-
-A theme "package" is a folder containing a `theme.json` manifest and optional
-image files beside it. In Settings → Appearance → **Import Theme…**, choose the
-`theme.json`. Example manifest:
-
-```json
-{
-  "schemaVersion": 1,
-  "name": "Sunset Booth",
-  "author": "Jane Doe",
-  "base": "modern",
-  "tokens": {
-    "--app-bg": "#1a1030",
-    "--accent": "#ff8a5b",
-    "--accent-2": "#ffd23f",
-    "--radius": "20px",
-    "--shadow": "0 18px 50px rgba(0,0,0,0.5)"
-  },
-  "textures": {
-    "--app-bg-texture": "backdrop.png"
-  }
-}
-```
-
-**Imported themes can only ever set validated design tokens.** They are parsed as
-data — never executed. The validator (shared by the main process and the
-renderer, run twice) enforces:
-
-- A strict **whitelist** of allowed token names and per‑token value types
-  (color / length / shadow / font / texture).
-- **Forbidden** anywhere: `javascript:`, `expression()`, `url()` to remote/file
-  resources, `@import`, HTML/`<script>`, `http(s)://`, `file:`, CSS escapes,
-  `;{}` injection, event handlers — rejected.
-- Image assets must be **plain leaf filenames** beside the manifest (no `..`, no
-  absolute paths, no traversal), within strict **size limits**, and are verified
-  by **magic bytes** (PNG/JPEG/WebP) — not by extension. Valid images are inlined
-  as `data:` URIs; the renderer never touches the file system.
-- Tokens are applied via the CSSOM (`element.style.setProperty`), so a strict
-  CSP with **no `unsafe-inline`** is preserved. Invalid tokens are skipped with a
-  warning; the rest still apply.
-
-Imported themes live in a controlled app‑data folder. Settings provides
-**Remove imported theme** and **Reset to Studio**.
-
-No software can honestly promise zero exploits, but this design eliminates the
-obvious paths: no code execution, no remote/network resources, no file access,
-no HTML injection, no CSP escape.
-
----
-
-## Effects & community filters
-
-Effects are organized in a Photo Booth‑style grid (Settings → **Effects**),
-paged with dots. **Distortion** effects (Bulge, Dent, Twirl, Squeeze, Fish Eye,
-Stretch, Light Tunnel) have a **draggable center** — click‑drag on the preview to
-move where the warp is anchored. The **fun‑face** effects use an on‑device
-MediaPipe face mesh (the model + WASM are bundled and served locally over a
-private `app://` origin in Electron; nothing is ever uploaded), and fall back to
-the plain image when no face is detected or the mesh can't load.
-
-### Custom community filters (and the security model)
-
-Beyond themes, Photoshoot can import community **filters** — and treats them, like
-themes, as **fully untrusted data, never code.** A filter is a `filter.json`
-manifest of clamped numeric color grades plus an **optional** LUT image. In
-Settings → **Custom Filters → Import Filter…**, choose the `filter.json` (select
-the LUT alongside it on the web). Example manifest:
-
-```json
-{
-  "schemaVersion": 1,
-  "name": "Golden Hour",
-  "author": "Jane Doe",
-  "params": {
-    "brightness": 0.05,
-    "contrast": 1.15,
-    "saturation": 1.25,
-    "temperature": 0.4,
-    "tint": -0.05,
-    "gamma": 1.0,
-    "fade": 0.15,
-    "vignette": 0.3,
-    "grain": 0.08,
-    "hue": 0,
-    "lutAmount": 1.0
-  },
-  "lut": "golden-hour.png"
-}
-```
-
-The imported filter appears as a tile in the Effects grid. The validator (shared
-by the main process, the web app, and the renderer) enforces:
-
-- **Every parameter is coerced to a finite number and hard‑clamped** to a fixed
-  range. Unknown keys are ignored; `NaN`/`Infinity` fall back to the default.
-  The full, fixed vocabulary is the eleven grades above — nothing else is read.
-- The optional **LUT must be a real PNG of exactly 512×512** (a 64‑level cube),
-  checked by **magic bytes _and_ the PNG `IHDR` dimensions** — not the extension.
-  Its reference must be a **plain leaf filename** beside the manifest (no `..`, no
-  absolute paths). Valid LUTs are inlined as a `data:` URI.
-- Filters are applied by **one fixed, audited GLSL shader** that only reads those
-  numbers and (optionally) samples the LUT texture. **No part of a manifest ever
-  becomes shader source, JavaScript, CSS, or HTML.** The worst a malicious filter
-  can do is make an ugly picture.
-
-A documented example manifest lives in [`examples/filters/`](examples/filters/).
-Imported filters live in a controlled app‑data folder; Settings provides
-**Remove** per filter.
-
----
-
-## Privacy
-
-Photoshoot is built to keep everything on your device:
-
-- **Camera frames never leave your computer.** There is no upload, no cloud, no
-  network calls of any kind. The Electron session even cancels unexpected network
-  requests.
-- **No analytics, tracking, or telemetry.**
-- Captures are saved only to `Pictures/Photoshoot`.
-- Settings, gallery metadata, and imported themes are stored locally in the app's
-  user‑data folder.
-
-Security architecture: `contextIsolation` on, `nodeIntegration` off, sandboxed
-renderer, a tiny audited preload bridge (the only IPC surface), strict
-Content‑Security‑Policy, camera‑only permission handler, window‑open and
-navigation guards, and all file system access funneled through the main process
-with path‑traversal and save‑folder containment checks.
-
----
+The tests check rendered pixels, failure recovery, local model inference and output transport. They do not establish compatibility with every webcam or calling application. For task history and release evidence, see [the handoff record](docs/HANDOFF.md).
 
 ## Troubleshooting
 
-**Camera permission (Windows).** If you see "Camera access blocked", open
-**Settings → Privacy & security → Camera**, ensure camera access is on and that
-desktop apps are allowed, then click **Try Again** in Photoshoot.
+- **Camera access blocked:** allow access in the browser and Windows camera privacy settings. Desktop apps also need **Let desktop apps access your camera** enabled. Then retry.
+- **Camera busy or missing:** close other apps using your physical webcam, check its privacy shutter, and select another camera in Settings.
+- **Effects unavailable:** update GPU drivers and enable browser hardware acceleration. Basic capture may still work without WebGL2.
+- **Background loading fails:** select Normal, then retry. On the web, reload so the locally served model can finish loading.
+- **No sound:** check mute and volume in Settings. Sounds become available after your first interaction.
 
-**"No camera found" / "Camera in use".** Connect a webcam, or close other apps
-(Teams, Zoom, etc.) that may be holding the camera, then retry.
+If a problem persists, [open an issue](https://github.com/yeegz/photoshoot/issues) with your OS, app/browser version, camera model and steps to reproduce. Avoid attaching private captures or OBS passwords.
 
-**macOS during development.** The first launch triggers the system camera prompt;
-allow it. If denied, re‑enable under System Settings → Privacy & Security →
-Camera.
+## License and credits
 
-**WebGL unavailable.** Photoshoot needs WebGL2. Update your GPU drivers. If
-running in a VM or over remote desktop, hardware acceleration may be disabled.
-
-**No sound.** Check the Volume slider and Mute toggle in Settings. Audio unlocks
-on your first interaction with the window (per browser autoplay policy).
-
-**Screen flash.** The whole window flashes white when a photo is taken, like
-Photo Booth; turn it off under Settings → Capture → Screen flash. Full screen
-is the green window button, F11, or ⌃⌘F.
-
----
-
-## Project structure
-
-```
-src/
-  main/        Electron main process (window, IPC, storage, theme import, paths)
-  preload/     The single context-bridge API surface
-  shared/      IPC contract + the theme validation schema (no Node/DOM)
-  renderer/    UI, camera, sound, capture, gallery, settings, themes
-    gl/        WebGL core, shaders, effect registry, renderer
-    styles/    base / layout / components / themes CSS
-build/         App icon + generator
-esbuild.mjs    Build pipeline (bundles all three targets)
-```
-
----
-
-## Limitations & future ideas
-
-- Background replacement is the classic reference‑frame technique; it works best
-  with a still background and even lighting. A future ML/segmentation backend
-  could remove that requirement.
-- Video is saved as WebM (capped at 60s) without audio.
-- Four quick pictures are a fixed 2×2 sheet; configurable layouts could
-  follow.
-- Effect "amount" is fixed per effect today; per‑effect sliders would be a nice
-  addition.
-
----
-
-## License
-
-MIT. All bundled assets, art, and sounds are original to Photoshoot.
-
-**No Apple branding, logos, icons, graphics, layouts, code, or sounds are used.**
-
-## Camera troubleshooting and verification
-
-Allow camera access both in the browser and in the operating system. If the
-camera still cannot open, close other camera apps and choose another device in
-Settings. Photoshoot retries basic capture settings and recovers stale device
-IDs automatically. Playback failures show a retry action instead of claiming
-that a blank preview is live. On systems without WebGL2, basic camera mode
-supports capture and mirroring; GPU effects are disabled.
-
-On macOS, allow the packaged Photoshoot app under System Settings → Privacy &
-Security → Camera. Development Electron and the packaged app have separate
-permission identities. Windows desktop camera permission must also be enabled.
-
-```bash
-npm run web:dev           # local browser app at http://localhost:4178/app/
-npx playwright install chromium
-npm run verify           # types, lint, unit tests, camera lifecycle, web and Electron camera tests
-npm run build:win        # Windows installer and portable app, run on Windows
-```
-
-The browser and desktop tests use a synthetic camera, check rendered pixels,
-and exercise failure recovery. They do not prove compatibility with every
-physical camera or driver. Test an affected real computer before declaring its
-hardware-specific failure resolved. Windows CI builds upload installable
-artifacts; a published, signed release remains a separate release step.
+Photoshoot's code is [MIT licensed](LICENSE). Sound effects are synthesized in the app. The sample photographs were generated for this project; their provenance is recorded beside the assets. MediaPipe and its bundled models retain their upstream licenses: see [`build/mediapipe/`](build/mediapipe/).

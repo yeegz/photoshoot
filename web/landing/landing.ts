@@ -1,562 +1,400 @@
-// Landing page script: the hero is a working replica of the Photoshoot window
-// (real camera, effects, strip printing) and the filmstrip is drawn by the
-// app's own backdrops. Bundled by web/build-web.mjs with a content hash.
+// Landing page: the app's own GLSL effects render an original sample portrait,
+// or the visitor's camera when they opt in. Procedural backdrops are shown
+// separately, using the same drawing code as the app.
+// Only import-free modules are used, so MediaPipe is never bundled here.
 
-import { BACKGROUND_BY_ID } from '../../src/renderer/backgrounds';
-
-document.documentElement.dataset.landing = 'ready';
+import { BACKGROUNDS, BACKGROUND_BY_ID, drawBackgroundPreview } from '../../src/renderer/backgrounds';
+import { EFFECTS } from '../../src/renderer/gl/effects';
+import { VERTEX_SRC, FRAGMENTS } from '../../src/renderer/gl/shaders';
+import { linkProgram, createQuad, createVideoTexture, type CompiledProgram } from '../../src/renderer/gl/glcore';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
+type Source = HTMLCanvasElement | HTMLVideoElement;
+let samplePhoto: HTMLImageElement | null = null;
+let initialized = false;
 
-const pb = $('pb');
-const video = $<HTMLVideoElement>('pbVideo');
-const message = $('pbMessage');
-const messageIcon = $('pbMessageIcon');
-const messageTitle = $('pbMessageTitle');
-const messageText = $('pbMessageText');
-const messageAction = $<HTMLButtonElement>('pbMessageAction');
-const status = $('pbStatus');
-const shutter = $<HTMLButtonElement>('pbShutter');
-const effectsBtn = $<HTMLButtonElement>('pbEffects');
+// ---------------------------------------------------------------------------
+// A tiny effect renderer: one WebGL2 context, one texture, one program per
+// effect, the same uniforms the app sets. Renders into an offscreen canvas
+// that callers copy from.
+// ---------------------------------------------------------------------------
 
+class EffectRenderer {
+  readonly canvas = document.createElement('canvas');
+  private gl: WebGL2RenderingContext | null = null;
+  private vao: WebGLVertexArrayObject | null = null;
+  private tex: WebGLTexture | null = null;
+  private programs = new Map<string, CompiledProgram | null>();
+  private start = performance.now();
+
+  constructor() {
+    this.init();
+    this.canvas.addEventListener('webglcontextrestored', () => this.init());
+  }
+
+  private init(): void {
+    this.programs.clear();
+    try {
+      this.gl = this.canvas.getContext('webgl2', { preserveDrawingBuffer: true, premultipliedAlpha: false });
+      if (this.gl) {
+        this.vao = createQuad(this.gl);
+        this.tex = createVideoTexture(this.gl);
+      }
+    } catch {
+      this.gl = null;
+    }
+  }
+
+  get available(): boolean {
+    return this.gl !== null && !this.gl.isContextLost();
+  }
+
+  private program(id: string): CompiledProgram | null {
+    if (!this.gl) return null;
+    if (!this.programs.has(id)) {
+      try {
+        this.programs.set(id, linkProgram(this.gl, VERTEX_SRC, FRAGMENTS[id] ?? FRAGMENTS.normal));
+      } catch {
+        this.programs.set(id, null);
+      }
+    }
+    return this.programs.get(id) ?? null;
+  }
+
+  /** Upload a source frame once; then draw any number of effects from it. */
+  upload(source: Source, w: number, h: number): boolean {
+    const gl = this.gl;
+    if (!gl || !this.available) return false;
+    if (this.canvas.width !== w || this.canvas.height !== h) {
+      this.canvas.width = w;
+      this.canvas.height = h;
+    }
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    try {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    } catch {
+      return false;
+    }
+    return true;
+  }
+
+  draw(effectId: string, amount: number, mirror: boolean): boolean {
+    const gl = this.gl;
+    const prog = this.program(effectId);
+    if (!gl || !prog || !this.available) return false;
+    const { width: w, height: h } = this.canvas;
+    gl.viewport(0, 0, w, h);
+    gl.useProgram(prog.program);
+    const u = prog.uniforms;
+    gl.uniform1i(u.u_tex, 0);
+    gl.uniform2f(u.u_res, w, h);
+    gl.uniform1f(u.u_time, (performance.now() - this.start) / 1000);
+    gl.uniform1f(u.u_amount, amount);
+    gl.uniform1f(u.u_mirror, mirror ? 1 : 0);
+    gl.uniform2f(u.u_center, 0.5, 0.5);
+    gl.uniform1f(u.u_faceFound, 0);
+    gl.uniform1f(u.u_faceR, 0.16);
+    gl.bindVertexArray(this.vao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.bindVertexArray(null);
+    return true;
+  }
+}
+
+const fx = new EffectRenderer();
+
+/** Draw a backdrop into a fresh canvas. */
+function backdrop(id: string, w: number, h: number): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  BACKGROUND_BY_ID.get(id)?.draw(c.getContext('2d')!, w, h);
+  return c;
+}
+
+/** Crop the same portrait for every effect so their differences are visible. */
+function sample(w: number, h: number): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  if (!samplePhoto) return backdrop('studio', w, h);
+  const scale = Math.max(w / samplePhoto.naturalWidth, h / samplePhoto.naturalHeight);
+  const sw = samplePhoto.naturalWidth * scale;
+  const sh = samplePhoto.naturalHeight * scale;
+  c.getContext('2d')!.drawImage(samplePhoto, (w - sw) / 2, (h - sh) / 2, sw, sh);
+  return c;
+}
+
+/** One effect applied to one source, copied into a 2D context at (x, y, w, h). */
+function paint(
+  ctx: CanvasRenderingContext2D,
+  source: Source,
+  effect: string,
+  amount: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  mirror = false
+): boolean {
+  if (fx.available && fx.upload(source, w, h) && fx.draw(effect, amount, mirror)) {
+    ctx.drawImage(fx.canvas, x, y, w, h);
+    return true;
+  } else {
+    ctx.drawImage(source, x, y, w, h); // no WebGL2: show the plain picture
+    return false;
+  }
+}
+
+const amountOf = (id: string) => EFFECTS.find((e) => e.id === id)?.amount ?? 1;
+
+// ---------------------------------------------------------------------------
+// Hero prints: a 2×2 sheet (four quick pictures) and a single photo behind it.
+// ---------------------------------------------------------------------------
+
+function drawHero(): void {
+  const sheet = $<HTMLCanvasElement>('heroSheet');
+  const ctx = sheet.getContext('2d')!;
+  const gap = 8;
+  const fw = Math.round((sheet.width - gap * 3) / 2);
+  const fh = Math.round((sheet.height - gap * 3) / 2);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, sheet.width, sheet.height);
+  const source = sample(fw, fh);
+  ['normal', 'bw', 'sepia', 'plasticcamera'].forEach((effect, i) => {
+    paint(ctx, source, effect, amountOf(effect), gap + (i % 2) * (fw + gap), gap + Math.floor(i / 2) * (fh + gap), fw, fh);
+  });
+
+  const single = $<HTMLCanvasElement>('heroSingle');
+  const sctx = single.getContext('2d')!;
+  sctx.fillStyle = '#fff';
+  sctx.fillRect(0, 0, single.width, single.height);
+  const pad = 10;
+  const sw = single.width - pad * 2;
+  const sh = single.height - pad * 2;
+  paint(sctx, sample(sw, sh), 'normal', 0, pad, pad, sw, sh);
+}
+
+// ---------------------------------------------------------------------------
+// Effects wall: all 17 effects, on the sample or on the visitor's camera.
+// ---------------------------------------------------------------------------
+
+const WALL_EFFECTS = EFFECTS.filter((e) => !e.face && e.id !== 'normal');
+const TILE_W = 320;
+const TILE_H = 200;
+const wall = $('wall');
+const tiles: { id: string; label: string; caption: HTMLElement; amount: number; ctx: CanvasRenderingContext2D; bg: HTMLCanvasElement }[] = [];
+
+function buildWall(): void {
+  const bg = sample(TILE_W, TILE_H);
+  WALL_EFFECTS.forEach((def) => {
+    const fig = document.createElement('figure');
+    fig.className = 'wall-tile';
+    const canvas = document.createElement('canvas');
+    canvas.width = TILE_W;
+    canvas.height = TILE_H;
+    const cap = document.createElement('figcaption');
+    cap.textContent = def.label;
+    fig.append(canvas, cap);
+    wall.appendChild(fig);
+    tiles.push({ id: def.id, label: def.label, caption: cap, amount: def.amount, ctx: canvas.getContext('2d')!, bg });
+  });
+}
+
+function paintWallFromSample(): void {
+  for (const t of tiles) {
+    const rendered = paint(t.ctx, t.bg, t.id, t.amount, 0, 0, TILE_W, TILE_H);
+    t.caption.textContent = rendered || !fx.available ? t.label : `${t.label} (unavailable)`;
+  }
+}
+
+// ---- opt-in camera ----
+
+const camBtn = $<HTMLButtonElement>('wallCamera');
+const camLabel = $('wallCameraLabel');
+const note = $('wallNote');
+const video = document.createElement('video');
+video.muted = true;
+video.playsInline = true;
 let stream: MediaStream | null = null;
-let onAction: (() => void) | null = null;
+let raf = 0;
+let cursor = 0;
+let cameraAttempt = 0;
+const frame = document.createElement('canvas');
+frame.width = TILE_W;
+frame.height = TILE_H;
+const frameCtx = frame.getContext('2d')!;
 
-// ---------------------------------------------------------------------------
-// The app's own message card and status label
-// ---------------------------------------------------------------------------
-
-function showMessage(icon: string, title: string, text: string, action: { label: string; run: () => void } | null): void {
-  messageIcon.textContent = icon;
-  messageTitle.textContent = title;
-  messageText.textContent = text;
-  onAction = action?.run ?? null;
-  messageAction.textContent = action?.label ?? '';
-  messageAction.hidden = !action;
-  messageAction.disabled = false;
-  message.hidden = false;
+function liveLoop(): void {
+  if (!stream) return;
+  if (video.readyState >= 2 && video.videoWidth > 0) {
+    // Crop to the contact sheet's aspect ratio without stretching faces.
+    const scale = Math.max(TILE_W / video.videoWidth, TILE_H / video.videoHeight);
+    const w = video.videoWidth * scale;
+    const h = video.videoHeight * scale;
+    frameCtx.drawImage(video, (TILE_W - w) / 2, (TILE_H - h) / 2, w, h);
+  }
+  if (video.readyState >= 2) {
+    if (!fx.available || !fx.upload(frame, TILE_W, TILE_H)) {
+      cameraOff();
+      note.textContent = 'Live effects stopped. Try your camera again or open the full app.';
+      return;
+    }
+    // Upload once per frame, draw a few tiles from it (round-robin keeps it light).
+    for (let k = 0; k < 4; k++) {
+      const t = tiles[cursor++ % tiles.length];
+      if (fx.draw(t.id, t.amount, true)) {
+        t.ctx.drawImage(fx.canvas, 0, 0, TILE_W, TILE_H);
+        t.caption.textContent = t.label;
+      } else {
+        t.ctx.save();
+        t.ctx.translate(TILE_W, 0);
+        t.ctx.scale(-1, 1);
+        t.ctx.drawImage(frame, 0, 0);
+        t.ctx.restore();
+        t.caption.textContent = `${t.label} (unavailable)`;
+      }
+    }
+  }
+  raf = requestAnimationFrame(liveLoop);
 }
-
-function hideMessage(): void {
-  message.hidden = true;
-}
-
-function setStatus(text: string, kind: '' | 'live' | 'error'): void {
-  status.textContent = text;
-  status.classList.toggle('is-live', kind === 'live');
-  status.classList.toggle('is-error', kind === 'error');
-}
-
-messageAction.addEventListener('click', () => onAction?.());
-
-const isWindows = /Windows/i.test(navigator.userAgent);
-
-function deniedHelp(): string {
-  return (
-    'Allow camera access for this site in your browser (the camera icon near the address bar), then try again.' +
-    (isWindows ? ' On Windows, also turn on Settings → Privacy & security → Camera → "Camera access".' : '')
-  );
-}
-
-function busyHelp(): string {
-  return isWindows
-    ? 'Close other apps that use the camera (Teams, Zoom, Camera, other browser tabs), check the camera shutter or camera key on your laptop, and check Settings → Privacy & security → Camera.'
-    : 'Close other apps that use the camera, check any camera shutter, and check your system camera permissions.';
-}
-
-// ---------------------------------------------------------------------------
-// Camera: try each capture setting, then every other camera, before giving up.
-// Windows Hello IR and depth sensors are used only when nothing else works.
-// ---------------------------------------------------------------------------
-
-const SENSOR = /\b(ir|infrared|depth)\b|hello/i;
 
 function errName(err: unknown): string {
-  return err && typeof err === 'object' && 'name' in err ? String((err as { name: unknown }).name) : '';
+  return (err as { name?: string } | null)?.name ?? '';
 }
 
-function release(s: MediaStream | null): void {
-  s?.getTracks().forEach((t) => t.stop());
-}
-
-function frameArrives(ms: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const start = Date.now();
-    const check = () => {
-      if (video.readyState >= 2 && video.videoWidth > 0) return resolve(true);
-      if (Date.now() - start > ms) return resolve(false);
-      setTimeout(check, 80);
-    };
-    check();
-  });
-}
-
-type Attempt = { stream?: MediaStream; sensor?: string; error?: unknown };
-
-async function tryCamera(id: string | null, skipSensor: boolean): Promise<Attempt> {
-  const ladder: (MediaTrackConstraints | true)[] = id
-    ? [{ deviceId: { exact: id }, width: { ideal: 1280 }, height: { ideal: 720 } }, { deviceId: { exact: id } }]
-    : [{ facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, true];
-  let lastErr: unknown = null;
-  for (const constraints of ladder) {
-    let s: MediaStream;
+async function cameraOn(): Promise<void> {
+  if (!initialized || !fx.available) return;
+  if (!navigator.mediaDevices?.getUserMedia) {
+    note.textContent = 'This browser cannot open a camera here. The app may still work.';
+    return;
+  }
+  camBtn.disabled = true;
+  note.textContent = 'Asking for your camera…';
+  const attempt = ++cameraAttempt;
+  const current = () => attempt === cameraAttempt && !document.hidden;
+  try {
+    let acquired: MediaStream;
     try {
-      s = await navigator.mediaDevices.getUserMedia({ video: constraints, audio: false });
+      acquired = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 } }, audio: false });
     } catch (err) {
-      const name = errName(err);
-      if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') throw err;
-      lastErr = err;
-      continue;
+      if (!current() || ['NotAllowedError', 'PermissionDeniedError', 'SecurityError'].includes(errName(err))) throw err;
+      acquired = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     }
-    const track = s.getVideoTracks()[0];
-    if (skipSensor && track && SENSOR.test(track.label)) {
-      release(s);
-      return { sensor: track.getSettings().deviceId };
+    if (!current()) {
+      acquired.getTracks().forEach((track) => track.stop());
+      return;
     }
-    video.srcObject = s;
-    try {
-      await video.play();
-      if (await frameArrives(10000)) return { stream: s };
-    } catch {
-      /* try the next setting */
+    stream = acquired;
+    const track = stream.getVideoTracks()[0];
+    if (!track || track.readyState !== 'live') throw new DOMException('No video track', 'NotReadableError');
+    track.addEventListener('ended', () => {
+      if (stream !== acquired) return;
+      cameraOff();
+      note.textContent = 'The camera disconnected. Reconnect it and try again.';
+    }, { once: true });
+    video.srcObject = stream;
+    let playError: unknown;
+    void video.play().catch((err: unknown) => { playError = err; });
+    const started = performance.now();
+    while (current() && (video.readyState < 2 || !video.videoWidth)) {
+      if (playError) throw playError;
+      if (performance.now() - started > 10000) throw new DOMException('No camera frame', 'NotReadableError');
+      await new Promise((resolve) => setTimeout(resolve, 80));
     }
-    video.srcObject = null;
-    release(s);
-    lastErr = { name: 'NotReadableError' };
-  }
-  return { error: lastErr };
-}
-
-async function acquire(): Promise<MediaStream> {
-  const first = await tryCamera(null, true);
-  if (first.stream) return first.stream;
-  let lastErr = first.error;
-  let sensor = first.sensor ?? null;
-  const devices = (await navigator.mediaDevices.enumerateDevices())
-    .filter((d) => d.kind === 'videoinput' && d.deviceId)
-    .sort((a, b) => Number(SENSOR.test(a.label)) - Number(SENSOR.test(b.label)));
-  for (const device of devices) {
-    if (device.deviceId === sensor) continue;
-    const r = await tryCamera(device.deviceId, true);
-    if (r.stream) return r.stream;
-    if (r.sensor && !sensor) sensor = r.sensor;
-    if (r.error && (!lastErr || errName(r.error) === 'NotReadableError')) lastErr = r.error;
-  }
-  if (sensor) {
-    const last = await tryCamera(sensor, false);
-    if (last.stream) return last.stream;
-  }
-  throw lastErr ?? { name: 'NotFoundError' };
-}
-
-function cameraFailed(err: unknown): void {
-  setStatus('Camera unavailable', 'error');
-  const retry = { label: 'Try Again', run: turnOn };
-  switch (errName(err)) {
-    case 'NotAllowedError':
-    case 'PermissionDeniedError':
-    case 'SecurityError':
-      showMessage('🔒', 'Camera access blocked', deniedHelp(), retry);
-      break;
-    case 'NotFoundError':
-    case 'DevicesNotFoundError':
-      showMessage('📷', 'No camera found', 'Connect a webcam, then try again.', retry);
-      break;
-    case 'NotReadableError':
-    case 'TrackStartError':
-    case 'AbortError':
-      showMessage('⏳', 'Camera in use', `The camera could not be read. ${busyHelp()}`, retry);
-      break;
-    default:
-      showMessage('⚠', 'Camera could not start', 'Something went wrong starting the camera.', retry);
-  }
-}
-
-export async function turnOn(): Promise<void> {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showMessage('🔒', 'A secure connection is required', 'Open this page over HTTPS to use the camera.', {
-      label: 'Try Again',
-      run: turnOn,
-    });
-    return;
-  }
-  showMessage('◌', 'Just a moment', 'Waking up your webcam…', null);
-  setStatus('Starting camera…', '');
-  try {
-    stream = await acquire();
+    if (!current()) return;
+    wall.dataset.source = 'camera';
+    camBtn.setAttribute('aria-pressed', 'true');
+    camLabel.textContent = 'Stop camera';
+    note.textContent = 'Live. Your camera stays on this page; nothing is recorded or sent.';
+    liveLoop();
   } catch (err) {
-    cameraFailed(err);
-    return;
+    if (!current()) return;
+    stopStream();
+    const name = errName(err);
+    note.textContent =
+      name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError'
+        ? 'Camera access was blocked. Allow it for this site (the camera icon by the address bar) to try the effects on yourself.'
+        : name === 'NotFoundError'
+          ? 'No camera found. Connect one and try again.'
+          : 'The camera is busy or switched off. Close other apps using it and try again.';
+  } finally {
+    if (attempt === cameraAttempt) camBtn.disabled = !initialized || !fx.available;
   }
-  hideMessage();
-  setStatus('Camera live', 'live');
-  pb.dataset.live = 'true';
-  shutter.disabled = false;
-  effectsBtn.disabled = false;
 }
 
-function turnOff(): void {
-  release(stream);
+function stopStream(): void {
+  cancelAnimationFrame(raf);
+  stream?.getTracks().forEach((t) => t.stop());
   stream = null;
+  video.pause();
   video.srcObject = null;
-  delete pb.dataset.live;
-  shutter.disabled = true;
-  effectsBtn.disabled = true;
-  setStatus('Camera off', '');
-  showMessage('◌', 'Camera is off', 'Turn it on to try Photoshoot right here. Nothing leaves your device.', {
-    label: 'Turn on camera',
-    run: turnOn,
-  });
 }
 
-export function isLive(): boolean {
-  return stream !== null;
+function cameraOff(): void {
+  cameraAttempt++;
+  stopStream();
+  wall.dataset.source = samplePhoto ? 'sample' : 'backdrops';
+  camBtn.setAttribute('aria-pressed', 'false');
+  camLabel.textContent = 'Use my camera';
+  camBtn.disabled = !initialized || !fx.available;
+  note.textContent = fx.available
+    ? 'Your camera stays on this page. Nothing is recorded or sent.'
+    : 'Live effects are unavailable in this browser. Showing the original picture.';
+  paintWallFromSample();
 }
 
-// Leave the camera off when the tab is hidden; the visitor turns it on again.
+camBtn.addEventListener('click', () => void (stream ? cameraOff() : cameraOn()));
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && stream && !pb.dataset.busy) turnOff();
+  if (document.hidden) cameraOff();
+});
+window.addEventListener('pagehide', cameraOff);
+fx.canvas.addEventListener('webglcontextlost', (event) => {
+  event.preventDefault();
+  cameraOff();
+  drawHero();
+});
+fx.canvas.addEventListener('webglcontextrestored', () => {
+  cameraOff();
+  drawHero();
 });
 
 // ---------------------------------------------------------------------------
-// Mode pill: single photo or 4-shot strip (video is in the app)
+// Backdrops grid
 // ---------------------------------------------------------------------------
 
-const modeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('#pbMode [data-mode]'));
-for (const b of modeButtons) {
-  b.addEventListener('click', () => {
-    const mode = b.dataset.mode ?? 'single';
-    pb.dataset.mode = mode;
-    modeButtons.forEach((o) => {
-      const active = o === b;
-      o.classList.toggle('is-active', active);
-      o.setAttribute('aria-checked', String(active));
-    });
-    shutter.setAttribute('aria-label', mode === 'strip' ? 'Take 4-shot strip' : 'Take photo');
-  });
-}
-
-onAction = turnOn;
-
-// ---------------------------------------------------------------------------
-// Effects: a 3×3 grid of live tiles, each the camera under a CSS look
-// ---------------------------------------------------------------------------
-
-const LOOKS: { id: string; label: string }[] = [
-  { id: 'sepia', label: 'Sepia' },
-  { id: 'bw', label: 'Black & White' },
-  { id: 'glow', label: 'Glow' },
-  { id: 'noir', label: 'Noir' },
-  { id: 'normal', label: 'Normal' },
-  { id: 'thermal', label: 'Thermal' },
-  { id: 'xray', label: 'X‑Ray' },
-  { id: 'popart', label: 'Pop Art' },
-  { id: 'cool', label: 'Cool' },
-];
-
-const grid = $('pbGrid');
-const tileVideos: HTMLVideoElement[] = [];
-let look = 'normal';
-let gridOpen = false;
-let busy = false;
-
-function buildGrid(): void {
-  if (grid.childElementCount) return;
-  for (const def of LOOKS) {
-    const tile = document.createElement('button');
-    tile.type = 'button';
-    tile.className = 'pb-tile';
-    tile.dataset.look = def.id;
-    tile.setAttribute('aria-label', def.label);
-    const v = document.createElement('video');
-    v.muted = true;
-    v.playsInline = true;
-    v.autoplay = true;
-    v.setAttribute('aria-hidden', 'true');
-    const label = document.createElement('span');
-    label.textContent = def.label;
-    tile.append(v, label);
-    tile.addEventListener('click', () => pickLook(def.id));
-    grid.appendChild(tile);
-    tileVideos.push(v);
+function buildBackdrops(): void {
+  const grid = $('backdropGrid');
+  for (const def of BACKGROUNDS) {
+    const fig = document.createElement('figure');
+    fig.className = 'backdrop';
+    const c = document.createElement('canvas');
+    c.width = 480;
+    c.height = 300;
+    drawBackgroundPreview(c, def.id);
+    const cap = document.createElement('figcaption');
+    cap.textContent = def.label;
+    fig.append(c, cap);
+    grid.appendChild(fig);
   }
 }
 
-function markLook(): void {
-  grid.querySelectorAll<HTMLElement>('.pb-tile').forEach((t) => t.classList.toggle('is-active', t.dataset.look === look));
-}
-
-function openGrid(): void {
-  if (!isLive() || busy || gridOpen) return;
-  buildGrid();
-  tileVideos.forEach((v) => {
-    v.srcObject = stream;
-    void v.play().catch(() => undefined);
-  });
-  markLook();
-  grid.hidden = false;
-  requestAnimationFrame(() => grid.classList.add('is-open'));
-  gridOpen = true;
-  effectsBtn.setAttribute('aria-expanded', 'true');
-}
-
-function closeGrid(): void {
-  if (!gridOpen) return;
-  gridOpen = false;
-  grid.classList.remove('is-open');
-  effectsBtn.setAttribute('aria-expanded', 'false');
-  setTimeout(() => {
-    if (gridOpen) return;
-    grid.hidden = true;
-    tileVideos.forEach((v) => (v.srcObject = null));
-  }, 320);
-}
-
-function pickLook(id: string): void {
-  look = id;
-  if (id === 'normal') delete pb.dataset.look;
-  else pb.dataset.look = id;
-  effectsBtn.classList.toggle('is-on', id !== 'normal');
-  markLook();
-  closeGrid();
-}
-
-effectsBtn.addEventListener('click', () => (gridOpen ? closeGrid() : openGrid()));
-
-// ---------------------------------------------------------------------------
-// Sounds: synthesized with Web Audio, unlocked by the first click, optional
-// ---------------------------------------------------------------------------
-
-let audio: AudioContext | null | undefined;
-
-function audioCtx(): AudioContext | null {
-  if (audio === undefined) {
-    try {
-      const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      audio = AC ? new AC() : null;
-    } catch {
-      audio = null;
-    }
-  }
-  if (audio && audio.state === 'suspended') void audio.resume().catch(() => undefined);
-  return audio;
-}
-
-function soundTick(): void {
+async function init(): Promise<void> {
+  const image = new Image();
+  image.src = $<HTMLLinkElement>('samplePhoto').href;
   try {
-    const ac = audioCtx();
-    if (!ac) return;
-    const osc = ac.createOscillator();
-    const gain = ac.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.0001, ac.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.2, ac.currentTime + 0.005);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.07);
-    osc.connect(gain).connect(ac.destination);
-    osc.start();
-    osc.stop(ac.currentTime + 0.08);
+    await image.decode();
+    samplePhoto = image;
   } catch {
-    /* sound is optional */
+    // A missing sample must not prevent the camera or app links from working.
   }
+  drawHero();
+  buildWall();
+  initialized = true;
+  cameraOff();
+  buildBackdrops();
+  document.documentElement.dataset.landing = 'ready';
 }
-
-function soundShutter(): void {
-  try {
-    const ac = audioCtx();
-    if (!ac) return;
-    const length = Math.floor(ac.sampleRate * 0.09);
-    const buffer = ac.createBuffer(1, length, ac.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length) ** 2;
-    const noise = ac.createBufferSource();
-    noise.buffer = buffer;
-    const band = ac.createBiquadFilter();
-    band.type = 'bandpass';
-    band.frequency.value = 3200;
-    band.Q.value = 0.8;
-    const gain = ac.createGain();
-    gain.gain.value = 0.35;
-    noise.connect(band).connect(gain).connect(ac.destination);
-    noise.start();
-    const thump = ac.createOscillator();
-    const tg = ac.createGain();
-    thump.frequency.setValueAtTime(220, ac.currentTime);
-    thump.frequency.exponentialRampToValueAtTime(90, ac.currentTime + 0.06);
-    tg.gain.setValueAtTime(0.25, ac.currentTime);
-    tg.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.07);
-    thump.connect(tg).connect(ac.destination);
-    thump.start();
-    thump.stop(ac.currentTime + 0.08);
-  } catch {
-    /* sound is optional */
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Capture: countdown in the viewfinder, window flash, thumbnails, strips
-// ---------------------------------------------------------------------------
-
-const toolbar = $('pbToolbar');
-const cds = Array.from(document.querySelectorAll<HTMLElement | SVGElement>('.pb-cd'));
-const flash = $('pbFlash');
-const tray = $('pbTray');
-const trayScroll = $('pbTrayScroll');
-const stripOut = $('pbStrip');
-const stripImg = $<HTMLImageElement>('pbStripImg');
-const stripSave = $<HTMLAnchorElement>('pbStripSave');
-const progress = $('pbStripProgress');
-
-const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-
-async function countdown(): Promise<void> {
-  toolbar.classList.add('is-counting');
-  for (const n of ['3', '2', '1']) {
-    cds.forEach((c) => c.classList.toggle('active', c.getAttribute('data-n') === n));
-    soundTick();
-    await wait(700);
-  }
-  cds.forEach((c) => c.classList.toggle('active', c.getAttribute('data-n') === '0'));
-  await wait(120);
-  cds.forEach((c) => c.classList.remove('active'));
-  toolbar.classList.remove('is-counting');
-}
-
-function fireFlash(skip = false): void {
-  if (skip) {
-    soundShutter();
-    return;
-  }
-  flash.classList.remove('fire');
-  void flash.offsetWidth;
-  flash.classList.add('fire');
-  soundShutter();
-}
-
-/** The current frame, mirrored and under the current look, like the preview. */
-function grab(width = 640): HTMLCanvasElement {
-  const vw = video.videoWidth || 16;
-  const vh = video.videoHeight || 9;
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = Math.round((width * vh) / vw);
-  const ctx = canvas.getContext('2d')!;
-  const filter = getComputedStyle(video).filter;
-  if (filter && filter !== 'none') ctx.filter = filter;
-  ctx.translate(canvas.width, 0);
-  ctx.scale(-1, 1);
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  return canvas;
-}
-
-function addThumb(source: HTMLCanvasElement): void {
-  const img = new Image();
-  img.className = 'pb-thumb is-new';
-  img.alt = 'Captured photo';
-  img.src = source.toDataURL('image/jpeg', 0.8);
-  trayScroll.appendChild(img);
-  while (trayScroll.childElementCount > 8) trayScroll.firstElementChild?.remove();
-  tray.hidden = false;
-  trayScroll.scrollLeft = trayScroll.scrollWidth;
-}
-
-/** Four quick pictures as a 2×2 sheet with a thin white border, like Photo Booth. */
-function composeStrip(frames: HTMLCanvasElement[]): HTMLCanvasElement {
-  const fw = frames[0].width;
-  const fh = frames[0].height;
-  const gap = 8;
-  const sheet = document.createElement('canvas');
-  sheet.width = fw * 2 + gap * 3;
-  sheet.height = fh * 2 + gap * 3;
-  const ctx = sheet.getContext('2d')!;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, sheet.width, sheet.height);
-  frames.forEach((f, i) => ctx.drawImage(f, gap + (i % 2) * (fw + gap), gap + Math.floor(i / 2) * (fh + gap)));
-  return sheet;
-}
-
-function setBusy(on: boolean): void {
-  busy = on;
-  if (on) pb.dataset.busy = 'true';
-  else delete pb.dataset.busy;
-  shutter.disabled = on || !isLive();
-  effectsBtn.disabled = on || !isLive();
-  modeButtons.forEach((b) => (b.disabled = on || b.dataset.mode === 'video'));
-}
-
-async function shoot(opts: { skipCountdown?: boolean; skipFlash?: boolean } = {}): Promise<void> {
-  if (busy || !isLive()) return;
-  closeGrid();
-  setBusy(true);
-  if (!opts.skipCountdown) await countdown();
-  if (pb.dataset.mode === 'strip') {
-    // One countdown, then four quick pictures, each with its own flash.
-    progress.hidden = false;
-    progress.replaceChildren(...Array.from({ length: 4 }, () => document.createElement('i')));
-    const frames: HTMLCanvasElement[] = [];
-    for (let i = 0; i < 4; i++) {
-      fireFlash(opts.skipFlash);
-      frames.push(grab());
-      progress.children[i]?.classList.add('done');
-      if (i < 3) await wait(560);
-    }
-    progress.hidden = true;
-    const sheet = composeStrip(frames);
-    const url = sheet.toDataURL('image/png');
-    stripImg.src = url;
-    stripSave.href = url;
-    stripOut.hidden = false;
-    addThumb(sheet);
-  } else {
-    fireFlash(opts.skipFlash);
-    addThumb(grab());
-  }
-  setBusy(false);
-}
-
-// Option-click: no countdown. Shift-click: no flash. (Photo Booth's modifiers.)
-shutter.addEventListener('click', (e) => void shoot({ skipCountdown: e.altKey, skipFlash: e.shiftKey }));
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeGrid();
-  if (e.code === 'Space' && e.target === document.body && isLive()) {
-    e.preventDefault();
-    void shoot();
-  }
-});
-
-// ---------------------------------------------------------------------------
-// Filmstrip: every backdrop frame is drawn by the app's own backdrop code;
-// drag (mouse) or swipe (touch) to move along the strip.
-// ---------------------------------------------------------------------------
-
-for (const canvas of document.querySelectorAll<HTMLCanvasElement>('.frame canvas[data-backdrop]')) {
-  const def = BACKGROUND_BY_ID.get(canvas.dataset.backdrop ?? '');
-  const ctx = canvas.getContext('2d');
-  if (def && ctx) def.draw(ctx, canvas.width, canvas.height);
-}
-
-const film = $('film');
-let drag: { x: number; left: number } | null = null;
-film.addEventListener('pointerdown', (e) => {
-  if (e.pointerType !== 'mouse') return; // touch scrolls natively
-  drag = { x: e.clientX, left: film.scrollLeft };
-  film.style.scrollSnapType = 'none';
-  film.setPointerCapture(e.pointerId);
-});
-film.addEventListener('pointermove', (e) => {
-  if (drag) film.scrollLeft = drag.left - (e.clientX - drag.x);
-});
-const endDrag = () => {
-  if (!drag) return;
-  drag = null;
-  film.style.scrollSnapType = '';
-};
-film.addEventListener('pointerup', endDrag);
-film.addEventListener('pointercancel', endDrag);
-film.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-    e.preventDefault();
-    film.scrollBy({ left: (e.key === 'ArrowRight' ? 1 : -1) * 308, behavior: 'smooth' });
-  }
-});
+void init();

@@ -2,8 +2,10 @@
 // reach. Each handler validates its own input and returns plain serializable
 // data — no Node objects, handles, or paths-as-capabilities leak out.
 
-import { app, ipcMain, dialog, shell, BrowserWindow } from 'electron';
+import { app, ipcMain, dialog, shell, BrowserWindow, type IpcMainInvokeEvent } from 'electron';
 import { IPC, AppInfo, SaveRequest, Settings } from '../shared/ipc-contract';
+import type { VirtualCameraService } from './virtualCamera';
+import type { VirtualCameraConfig } from '../shared/virtual-camera';
 import { saveDir, themesDir, isInside } from './paths';
 import {
   readSettings,
@@ -22,7 +24,29 @@ function asString(x: unknown): string {
   return typeof x === 'string' ? x : '';
 }
 
-export function registerIpc(getWindow: () => BrowserWindow | null): void {
+export function registerIpc(getWindow: () => BrowserWindow | null, virtualCamera: VirtualCameraService): void {
+  const requireMainFrame = (event: IpcMainInvokeEvent) => {
+    const contents = getWindow()?.webContents;
+    if (!contents || event.sender !== contents || event.senderFrame !== contents.mainFrame) {
+      throw new Error('Unknown virtual camera sender.');
+    }
+  };
+  ipcMain.handle(IPC.virtualCameraStatus, (event) => {
+    requireMainFrame(event);
+    return virtualCamera.getStatus();
+  });
+  ipcMain.handle(IPC.virtualCameraStart, (event, config: VirtualCameraConfig) => {
+    requireMainFrame(event);
+    return virtualCamera.start(config);
+  });
+  ipcMain.handle(IPC.virtualCameraStop, (event) => {
+    requireMainFrame(event);
+    return virtualCamera.stop();
+  });
+  ipcMain.handle(IPC.virtualCameraFrame, (event, frame: Uint8Array) => {
+    requireMainFrame(event);
+    return virtualCamera.pushFrame(frame);
+  });
   ipcMain.handle(IPC.appInfo, (): AppInfo => ({
     name: 'Photoshoot',
     version: app.getVersion(),

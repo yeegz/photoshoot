@@ -7,6 +7,7 @@
 import { app, BrowserWindow, net, protocol, session, shell, systemPreferences } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { VirtualCameraService } from './virtualCamera';
 import { registerIpc } from './ipc';
 import { resolveAppRequestPath } from './pathSafety';
 
@@ -33,6 +34,24 @@ const CSP = [
 ].join('; ');
 
 let mainWindow: BrowserWindow | null = null;
+const virtualCamera = new VirtualCameraService({
+  onStatus(status) {
+    const contents = mainWindow?.webContents;
+    if (contents && !contents.isDestroyed()) {
+      // Keep processed frames flowing when the user switches to Discord or minimizes Photoshoot.
+      contents.setBackgroundThrottling(status.state !== 'live' && status.state !== 'connecting');
+    }
+  },
+});
+let cameraShutdownComplete = false;
+app.on('before-quit', (event) => {
+  if (cameraShutdownComplete) return;
+  event.preventDefault();
+  void virtualCamera.dispose().finally(() => {
+    cameraShutdownComplete = true;
+    app.quit();
+  });
+});
 
 // Must run before app `ready`. Marks app:// as a standard, secure origin that
 // supports fetch — so 'self' in the CSP resolves to it and WASM can load.
@@ -97,11 +116,14 @@ function createWindow(): void {
 
   mainWindow.webContents.on('will-attach-webview', (event) => event.preventDefault());
 
+  mainWindow.webContents.on('render-process-gone', () => void virtualCamera.stop());
+  mainWindow.webContents.on('did-start-loading', () => void virtualCamera.stop());
   mainWindow.loadURL(`${APP_ORIGIN}/index.html`);
 
   if (isDev) mainWindow.webContents.openDevTools({ mode: 'detach' });
 
   mainWindow.on('closed', () => {
+    void virtualCamera.stop();
     mainWindow = null;
   });
 }
@@ -160,7 +182,7 @@ if (!gotLock) {
   app.whenReady().then(() => {
     registerAppProtocol();
     hardenSession();
-    registerIpc(() => mainWindow);
+    registerIpc(() => mainWindow, virtualCamera);
     createWindow();
 
     app.on('activate', () => {

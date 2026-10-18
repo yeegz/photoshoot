@@ -6,20 +6,25 @@
     <title>Photoshoot — a photobooth for your webcam</title>
     <meta
       name="description"
-      content="Photoshoot is a free photobooth for your webcam: live effects, face effects, four quick pictures, backdrops and six themes, in the browser or on Windows. Everything stays on your device."
+      content="Photoshoot is a free photobooth for your webcam: 17 live effects, 8 face effects, backdrops, four quick pictures and six themes, in the browser or on Windows. Everything stays on your device."
     />
-    <meta name="theme-color" content="#0f0f11" />
+    <meta name="theme-color" content="#131313" />
     <link rel="icon" href="assets/icon.png" />
     <meta property="og:title" content="Photoshoot — a photobooth for your webcam" />
-    <meta property="og:description" content="Live effects, face effects, four quick pictures and six themes. In your browser or on Windows. Everything stays on your device." />
+    <meta property="og:description" content="17 live effects, face effects, backdrops and four quick pictures. In your browser or on Windows. Everything stays on your device." />
     <meta property="og:image" content="assets/icon.png" />
     <link rel="stylesheet" href="landing.css" />
+    <link id="samplePhoto" rel="preload" as="image" href="assets/photobooth-sample.jpg" />
   </head>
   <body>
     <header class="top">
-      <a class="wordmark" href="#top">Photoshoot</a>
+      <a class="wordmark" href="#top">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="2" y="3.5" width="20" height="17" rx="5" fill="#d61f16"/><path d="M7 9.4h2l.8-1.2h4.4l.8 1.2h2a1 1 0 0 1 1 1v4.9a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V10.4a1 1 0 0 1 1-1Z" fill="#fff"/><circle cx="12" cy="12.8" r="2.05" fill="#d61f16"/></svg>
+        Photoshoot
+      </a>
       <nav class="top-links" aria-label="Sections">
-        <a href="#booth">What's in the booth</a>
+        <a href="#effects">Effects</a>
+        <a href="#backdrops">Backdrops</a>
         <a href="#themes">Themes</a>
         <a href="#get">Get it</a>
       </nav>
@@ -27,160 +32,81 @@
     </header>
 
     <main id="top">
-      <!-- The hero is the product: a working replica of the Photoshoot window. -->
-      <section class="stage" aria-label="Try Photoshoot">
-        <div class="pb" id="pb" data-mode="single">
-          <div class="pb-titlebar">
-            <span class="pb-lights" aria-hidden="true"><i></i><i></i><i></i></span>
-            <span class="pb-title">Photoshoot</span>
-            <span class="pb-status" id="pbStatus">Camera off</span>
+      <section class="hero">
+        <div class="hero-copy">
+          <h1>Make faces.<br />Keep the prints.</h1>
+          <p class="lede">
+            A photobooth for your webcam. Play with live effects, change the backdrop,
+            and take four quick pictures. Everything stays on your device.
+          </p>
+          <div class="ctas">
+            <a class="pill pill-blue" href="app/">Open in your browser</a>
+            <a class="pill pill-glass" href="https://github.com/yeegz/photoshoot/releases/latest">Download for Windows</a>
           </div>
-
-          <div class="pb-view" id="pbView">
-            <video id="pbVideo" playsinline muted autoplay aria-label="Live camera preview"></video>
-
-            <div class="pb-message" id="pbMessage" role="status">
-              <div class="pb-card">
-                <div class="pb-card-icon" id="pbMessageIcon" aria-hidden="true">◌</div>
-                <h2 id="pbMessageTitle">Camera is off</h2>
-                <p id="pbMessageText">Turn it on to try Photoshoot right here. Nothing leaves your device.</p>
-                <button class="pb-btn" id="pbMessageAction" type="button">Turn on camera</button>
-              </div>
-            </div>
-
-            <div class="pb-strip-progress" id="pbStripProgress" hidden aria-hidden="true"></div>
-            <div class="pb-grid" id="pbGrid" hidden role="group" aria-label="Effects"></div>
-          </div>
-
-          <div class="pb-tray" id="pbTray" hidden aria-label="Your photos">
-            <div class="pb-tray-scroll" id="pbTrayScroll"></div>
-          </div>
-
-          <div class="pb-toolbar" id="pbToolbar">
-            <div class="pb-mode glass" id="pbMode" role="radiogroup" aria-label="Capture mode">
-              <button type="button" role="radio" aria-checked="false" data-mode="strip" aria-label="Four-shot strip" title="4-shot strip">
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8.2" height="8.2" rx="2"/><rect x="12.8" y="3" width="8.2" height="8.2" rx="2"/><rect x="3" y="12.8" width="8.2" height="8.2" rx="2"/><rect x="12.8" y="12.8" width="8.2" height="8.2" rx="2"/></svg>
-              </button>
-              <button type="button" role="radio" aria-checked="true" data-mode="single" class="is-active" aria-label="Single photo" title="Single photo">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3.2"/><circle cx="12" cy="10" r="2.6" fill="currentColor" stroke="none"/><path d="M6.8 20c.6-3.1 2.6-4.7 5.2-4.7s4.6 1.6 5.2 4.7" fill="currentColor" stroke="none"/></svg>
-              </button>
-              <button type="button" role="radio" aria-checked="false" data-mode="video" aria-label="Record video" title="Video recording is in the app" disabled>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="2.6" y="7" width="12.6" height="10" rx="2.4"/><path d="M15.2 10.6 21.4 7.4v9.2L15.2 13.4Z"/></svg>
-              </button>
-            </div>
-
-            <button class="pb-shutter" id="pbShutter" type="button" aria-label="Take photo" disabled>
-              <svg viewBox="0 0 28 28" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M9.6 5.4 8.4 7H5A2.2 2.2 0 0 0 2.8 9.2V19.4A2.2 2.2 0 0 0 5 21.6H23A2.2 2.2 0 0 0 25.2 19.4V9.2A2.2 2.2 0 0 0 23 7H19.6L18.4 5.4Z M14 9.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2Z M14 11.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z"/></svg>
-            </button>
-
-            <button class="pb-effects glass" id="pbEffects" type="button" disabled>Effects</button>
-
-            <div class="pb-countbar" aria-hidden="true">
-              <span class="pb-cd" data-n="3">3</span><span class="pb-cd" data-n="2">2</span><span class="pb-cd" data-n="1">1</span>
-              <svg class="pb-cd pb-cd-cam" data-n="0" viewBox="0 0 28 28"><path fill="currentColor" fill-rule="evenodd" d="M9.6 5.4 8.4 7H5A2.2 2.2 0 0 0 2.8 9.2V19.4A2.2 2.2 0 0 0 5 21.6H23A2.2 2.2 0 0 0 25.2 19.4V9.2A2.2 2.2 0 0 0 23 7H19.6L18.4 5.4Z M14 9.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2Z M14 11.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z"/></svg>
-            </div>
-          </div>
-
-          <div class="pb-flash" id="pbFlash" aria-hidden="true"></div>
+          <p class="fine">Free and open source · v{{version}}</p>
         </div>
 
-        <div class="pb-slot" aria-hidden="true"></div>
-
-        <div class="strip-out" id="pbStrip" hidden>
-          <img id="pbStripImg" alt="Your four quick pictures" />
-          <a class="pill pill-glass pill-sm" id="pbStripSave" download="photoshoot-4-up.png">Save photos</a>
-        </div>
-
-        <p class="stage-line">A photobooth for your webcam. Everything stays on your device.</p>
-        <div class="stage-ctas">
-          <a class="pill pill-blue" href="app/">Open the full app</a>
-          <a class="pill pill-glass" href="https://github.com/yeegz/photoshoot/releases/latest">Download for Windows · v{{version}}</a>
+        <div class="prints" aria-label="Pictures made with Photoshoot">
+          <figure class="print print-back">
+            <canvas id="heroSingle" width="560" height="350" role="img" aria-label="Two friends sharing a laugh in a photobooth"></canvas>
+          </figure>
+          <figure class="print print-front">
+            <canvas id="heroSheet" width="824" height="524" role="img" aria-label="A sample portrait with the Normal, Black and White, Sepia and Plastic Camera effects"></canvas>
+            <figcaption>Four quick pictures. One to keep.</figcaption>
+          </figure>
         </div>
       </section>
 
-      <!-- Everything below is made from the product's own parts. -->
-      <section class="section" id="booth">
+      <section class="section" id="effects">
         <div class="section-head">
-          <h2>What's in the booth</h2>
-          <p>Every frame here is drawn by Photoshoot itself: its backdrops, its effects, its window.</p>
+          <div>
+            <h2>Seventeen effects, rendered live</h2>
+            <p>One photo, seventeen ways to see it. Turn on your camera to try them on yourself.</p>
+          </div>
+          <div class="wall-controls">
+            <button class="pill pill-glass" id="wallCamera" type="button" aria-pressed="false" disabled>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><rect x="2.6" y="7" width="12.6" height="10" rx="2.4"/><path d="M15.2 10.6 21.4 7.4v9.2L15.2 13.4Z"/></svg>
+              <span id="wallCameraLabel">Use my camera</span>
+            </button>
+            <p class="wall-note" id="wallNote" role="status">Your camera stays on this page. Nothing is recorded or sent.</p>
+          </div>
         </div>
-        <div class="film" id="film" tabindex="0" aria-label="Frames, scroll sideways">
-          <ol class="frames" id="frames">
-            <li class="frame"><canvas data-backdrop="space" width="300" height="200"></canvas><span>Backdrop · Space Horizon</span></li>
-            <li class="frame"><canvas data-backdrop="clouds" data-filter="sepia" width="300" height="200"></canvas><span>Effect · Sepia</span></li>
-            <li class="frame"><canvas data-backdrop="sunset" width="300" height="200"></canvas><span>Backdrop · Mountain Sunset</span></li>
-            <li class="frame"><canvas data-backdrop="underwater" data-filter="thermal" width="300" height="200"></canvas><span>Effect · Thermal</span></li>
-            <li class="frame frame-note">
-              <b>8</b>
-              <strong>Face effects</strong>
-              <small>Bug Out, Chipmunk, Frog, Dizzy, Blockhead, Nose Twirl, Lovestruck, Space Alien. Faces are tracked on your device.</small>
-            </li>
-            <li class="frame"><canvas data-backdrop="dots" width="300" height="200"></canvas><span>Backdrop · Retro Dots</span></li>
-            <li class="frame"><canvas data-backdrop="stage" data-filter="xray" width="300" height="200"></canvas><span>Effect · X‑Ray</span></li>
-            <li class="frame frame-note">
-              <b>4</b>
-              <strong>Quick pictures</strong>
-              <small>One countdown, four quick shots with a flash each, saved as a 2×2 sheet. Or a single photo, or a video clip. Option-click skips the countdown, Shift-click the flash.</small>
-            </li>
-            <li class="frame"><canvas data-backdrop="clouds" width="300" height="200"></canvas><span>Backdrop · Dreamy Clouds</span></li>
-            <li class="frame"><canvas data-backdrop="sunset" data-filter="popart" width="300" height="200"></canvas><span>Effect · Pop Art</span></li>
-            <li class="frame"><canvas data-backdrop="underwater" width="300" height="200"></canvas><span>Backdrop · Underwater</span></li>
-            <li class="frame frame-note">
-              <b>0</b>
-              <strong>Uploads</strong>
-              <small>No servers, no account, no tracking. Photos save to your Pictures folder or your browser.</small>
-            </li>
-            <li class="frame"><canvas data-backdrop="stage" width="300" height="200"></canvas><span>Backdrop · Stage Lights</span></li>
-            <li class="frame"><canvas data-backdrop="space" data-filter="comic" width="300" height="200"></canvas><span>Effect · Comic Book</span></li>
-            <li class="frame frame-note">
-              <b>17</b>
-              <strong>Live effects</strong>
-              <small>Sepia, Black &amp; White, Plastic Camera, Comic Book, Color Pencil, Glow, Thermal, X‑Ray, Bulge, Dent, Twirl, Squeeze, Mirror, Light Tunnel, Fish Eye, Stretch, Pop Art.</small>
-            </li>
-          </ol>
+        <div class="wall" id="wall" data-source="sample"></div>
+        <p class="aside">Plus eight face effects in the app: Bug Out, Chipmunk, Frog, Dizzy, Blockhead, Nose Twirl, Lovestruck and Space Alien, tracked on your device.</p>
+      </section>
+
+      <section class="section" id="backdrops">
+        <div class="section-head">
+          <div>
+            <h2>Your space, your way.</h2>
+            <p>Keep yourself in focus. Blur the room, choose a quiet studio or bring your own photo. Person detection runs on your device—no need to step out of frame.</p>
+          </div>
         </div>
+        <div class="backdrops" id="backdropGrid"></div>
       </section>
 
       <section class="section" id="themes">
         <div class="section-head">
-          <h2>Six themes</h2>
-          <p>Photo Booth is the default. The others restyle the whole window, not just a colour.</p>
+          <div>
+            <h2>Six themes</h2>
+            <p>Photo Booth's dark glass is the default. The others restyle the whole window, and you can import community themes.</p>
+          </div>
         </div>
         <ul class="chips">
-          <li class="chip">
-            <div class="cw cw-booth" aria-hidden="true"><i class="cw-bar"></i><i class="cw-view"></i><i class="cw-tool"><b></b></i></div>
-            <strong>Photo Booth</strong><span>Default · dark glass</span>
-          </li>
-          <li class="chip">
-            <div class="cw cw-modern" aria-hidden="true"><i class="cw-bar"></i><i class="cw-view"></i><i class="cw-tool"><b></b></i></div>
-            <strong>Studio</strong><span>Bright and neutral</span>
-          </li>
-          <li class="chip">
-            <div class="cw cw-glass" aria-hidden="true"><i class="cw-bar"></i><i class="cw-view"></i><i class="cw-tool"><b></b></i></div>
-            <strong>Studio Dark</strong><span>Lights down</span>
-          </li>
-          <li class="chip">
-            <div class="cw cw-metal" aria-hidden="true"><i class="cw-bar"></i><i class="cw-view"></i><i class="cw-tool"><b></b></i></div>
-            <strong>Classic Metal</strong><span>Brushed aluminium</span>
-          </li>
-          <li class="chip">
-            <div class="cw cw-retro" aria-hidden="true"><i class="cw-bar"></i><i class="cw-view"></i><i class="cw-tool"><b></b></i></div>
-            <strong>Retro Film</strong><span>Warm and faded</span>
-          </li>
-          <li class="chip">
-            <div class="cw cw-darkroom" aria-hidden="true"><i class="cw-bar"></i><i class="cw-view"></i><i class="cw-tool"><b></b></i></div>
-            <strong>Darkroom</strong><span>Safelight red</span>
-          </li>
+          <li class="chip"><div class="cw cw-booth" aria-hidden="true"><i class="cw-bar"></i><i class="cw-view"></i><i class="cw-tool"><b></b></i></div><strong>Photo Booth</strong><span>Default · dark glass</span></li>
+          <li class="chip"><div class="cw cw-modern" aria-hidden="true"><i class="cw-bar"></i><i class="cw-view"></i><i class="cw-tool"><b></b></i></div><strong>Studio</strong><span>Bright and neutral</span></li>
+          <li class="chip"><div class="cw cw-glass" aria-hidden="true"><i class="cw-bar"></i><i class="cw-view"></i><i class="cw-tool"><b></b></i></div><strong>Studio Dark</strong><span>Lights down</span></li>
+          <li class="chip"><div class="cw cw-metal" aria-hidden="true"><i class="cw-bar"></i><i class="cw-view"></i><i class="cw-tool"><b></b></i></div><strong>Classic Metal</strong><span>Brushed aluminium</span></li>
+          <li class="chip"><div class="cw cw-retro" aria-hidden="true"><i class="cw-bar"></i><i class="cw-view"></i><i class="cw-tool"><b></b></i></div><strong>Retro Film</strong><span>Warm and faded</span></li>
+          <li class="chip"><div class="cw cw-darkroom" aria-hidden="true"><i class="cw-bar"></i><i class="cw-view"></i><i class="cw-tool"><b></b></i></div><strong>Darkroom</strong><span>Safelight red</span></li>
         </ul>
       </section>
 
       <section class="section" id="get">
-        <div class="section-head">
-          <h2>Get it</h2>
-        </div>
+        <div class="section-head"><div><h2>Get it</h2></div></div>
         <ul class="get-list">
           <li class="get-row" id="getWeb">
-            <div><strong>Web app</strong><span>Chrome, Edge, Firefox or Safari. Nothing to install.</span></div>
+            <div><strong>Web app</strong><span>Chrome, Edge, Firefox or Safari, on a computer or a phone. Nothing to install.</span></div>
             <a class="pill pill-blue" href="app/">Open</a>
           </li>
           <li class="get-row" id="getWin">

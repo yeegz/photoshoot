@@ -1,201 +1,155 @@
-// Original, procedurally-drawn backdrops for background replacement. No external
-// images — everything is generated with Canvas2D so the assets are unambiguously
-// our own. Each background renders at any size for both the compositing path and
-// the small menu tiles.
-
+// Calm, useful backdrops shared by the app and its landing-page previews.
+// DOM/image work is lazy so importing this registry has no browser side effects.
 export interface BackgroundDef {
   id: string;
   label: string;
   draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void;
 }
 
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
+function studio(colors: [string, string, string]): BackgroundDef['draw'] {
+  return (ctx, w, h) => {
+    const gradient = ctx.createRadialGradient(w * 0.45, h * 0.32, 0, w * 0.5, h * 0.4, w * 0.85);
+    colors.forEach((color, index) => gradient.addColorStop(index / 2, color));
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, w, h);
+  };
+}
+
+let roomImage: HTMLImageElement | null = null;
+let roomLoading: Promise<void> | null = null;
+let customImage: HTMLCanvasElement | null = null;
+let customLoad = 0;
+const cache = new Map<string, HTMLCanvasElement>();
+
+function cover(ctx: CanvasRenderingContext2D, image: CanvasImageSource, iw: number, ih: number, w: number, h: number): void {
+  const scale = Math.max(w / iw, h / ih);
+  ctx.drawImage(image, (w - iw * scale) / 2, (h - ih * scale) / 2, iw * scale, ih * scale);
 }
 
 export const BACKGROUNDS: BackgroundDef[] = [
   {
-    id: 'clouds',
-    label: 'Dreamy Clouds',
+    id: 'blur', label: 'Background blur',
     draw(ctx, w, h) {
-      const sky = ctx.createLinearGradient(0, 0, 0, h);
-      sky.addColorStop(0, '#7db8ff');
-      sky.addColorStop(0.55, '#bfe0ff');
-      sky.addColorStop(1, '#eef7ff');
-      ctx.fillStyle = sky;
-      ctx.fillRect(0, 0, w, h);
-      ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 14; i++) {
-        const cx = (i * 97.3) % w;
-        const cy = h * (0.25 + ((i * 53) % 100) / 320);
-        const r = w * (0.08 + ((i * 31) % 60) / 360);
-        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-        g.addColorStop(0, 'rgba(255,255,255,0.9)');
-        g.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalCompositeOperation = 'source-over';
+      studio(['#c9cbc5', '#949d99', '#616f6e'])(ctx, w, h);
+      ctx.save();
+      ctx.filter = `blur(${w * 0.045}px)`;
+      ctx.fillStyle = '#e4ddd0';
+      ctx.fillRect(w * 0.13, h * 0.15, w * 0.27, h * 0.68);
+      ctx.fillStyle = '#596861';
+      ctx.beginPath();
+      ctx.ellipse(w * 0.83, h * 0.65, w * 0.18, h * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    },
+  },
+  { id: 'studio', label: 'Soft studio', draw: studio(['#ebe9e4', '#d5d3ce', '#b5b4b0']) },
+  { id: 'paper', label: 'Warm paper', draw: studio(['#f3e9db', '#dfcfba', '#b8a58e']) },
+  { id: 'slate', label: 'Slate', draw: studio(['#697678', '#414e51', '#253134']) },
+  {
+    id: 'room', label: 'Quiet room',
+    draw(ctx, w, h) {
+      if (roomImage) cover(ctx, roomImage, roomImage.naturalWidth, roomImage.naturalHeight, w, h);
+      else studio(['#e6dfd1', '#c6bdab', '#9d9f90'])(ctx, w, h);
     },
   },
   {
-    id: 'dots',
-    label: 'Retro Dots',
+    id: 'custom', label: 'Your photo…',
     draw(ctx, w, h) {
-      const g = ctx.createLinearGradient(0, 0, w, h);
-      g.addColorStop(0, '#ffd36e');
-      g.addColorStop(1, '#ff7eb3');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-      const step = Math.max(26, w / 26);
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      for (let y = step / 2; y < h; y += step) {
-        for (let x = step / 2; x < w; x += step) {
-          ctx.beginPath();
-          ctx.arc(x, y, step * 0.16, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-    },
-  },
-  {
-    id: 'space',
-    label: 'Space Horizon',
-    draw(ctx, w, h) {
-      const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, '#05030f');
-      g.addColorStop(0.6, '#10123a');
-      g.addColorStop(1, '#2a1d5e');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = '#ffffff';
-      for (let i = 0; i < 220; i++) {
-        const x = Math.random() * w;
-        const y = Math.random() * h * 0.8;
-        const s = Math.random() * 1.6;
-        ctx.globalAlpha = 0.3 + Math.random() * 0.7;
-        ctx.fillRect(x, y, s, s);
-      }
-      ctx.globalAlpha = 1;
-      // Planet limb glow along the bottom.
-      const glow = ctx.createRadialGradient(w / 2, h * 1.15, h * 0.2, w / 2, h * 1.15, h * 0.9);
-      glow.addColorStop(0, 'rgba(120,90,255,0.55)');
-      glow.addColorStop(1, 'rgba(120,90,255,0)');
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, w, h);
-    },
-  },
-  {
-    id: 'sunset',
-    label: 'Mountain Sunset',
-    draw(ctx, w, h) {
-      const sky = ctx.createLinearGradient(0, 0, 0, h);
-      sky.addColorStop(0, '#2a1a55');
-      sky.addColorStop(0.45, '#ff6e7f');
-      sky.addColorStop(0.7, '#ffb36b');
-      sky.addColorStop(1, '#ffe39e');
-      ctx.fillStyle = sky;
-      ctx.fillRect(0, 0, w, h);
-      const sun = ctx.createRadialGradient(w * 0.5, h * 0.62, 0, w * 0.5, h * 0.62, w * 0.22);
-      sun.addColorStop(0, 'rgba(255,240,200,1)');
-      sun.addColorStop(1, 'rgba(255,200,120,0)');
-      ctx.fillStyle = sun;
-      ctx.fillRect(0, 0, w, h);
-      const ridges = [
-        { y: 0.74, c: '#7a3b6e' },
-        { y: 0.82, c: '#54265a' },
-        { y: 0.9, c: '#331a44' },
-      ];
-      for (const ridge of ridges) {
-        ctx.fillStyle = ridge.c;
+      if (customImage) cover(ctx, customImage, customImage.width, customImage.height, w, h);
+      else {
+        studio(['#dddeda', '#bfc5bf', '#969f99'])(ctx, w, h);
+        ctx.strokeStyle = 'rgba(255,255,255,.85)';
+        ctx.lineWidth = Math.max(1.5, w / 150);
         ctx.beginPath();
-        ctx.moveTo(0, h);
-        ctx.lineTo(0, h * ridge.y);
-        const peaks = 6;
-        for (let i = 0; i <= peaks; i++) {
-          const x = (w / peaks) * i;
-          const jag = (Math.sin(i * 12.9 + ridge.y * 40) * 0.5 + 0.5) * h * 0.08;
-          ctx.lineTo(x, h * ridge.y - jag);
-        }
-        ctx.lineTo(w, h);
-        ctx.closePath();
-        ctx.fill();
+        ctx.roundRect(w * 0.4, h * 0.29, w * 0.2, h * 0.29, w * 0.012);
+        ctx.moveTo(w * 0.5, h * 0.35);
+        ctx.lineTo(w * 0.5, h * 0.51);
+        ctx.moveTo(w * 0.44, h * 0.43);
+        ctx.lineTo(w * 0.56, h * 0.43);
+        ctx.stroke();
       }
-    },
-  },
-  {
-    id: 'underwater',
-    label: 'Underwater',
-    draw(ctx, w, h) {
-      const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, '#0fb6c9');
-      g.addColorStop(0.5, '#0a6e9e');
-      g.addColorStop(1, '#063a63');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-      ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 7; i++) {
-        ctx.fillStyle = 'rgba(180,240,255,0.07)';
-        ctx.save();
-        ctx.translate(lerp(0, w, i / 6), 0);
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(w * 0.08, 0);
-        ctx.lineTo(w * 0.28, h);
-        ctx.lineTo(w * 0.18, h);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      }
-      for (let i = 0; i < 40; i++) {
-        ctx.globalAlpha = 0.1 + Math.random() * 0.4;
-        ctx.fillStyle = 'rgba(220,250,255,0.9)';
-        ctx.beginPath();
-        ctx.arc(Math.random() * w, Math.random() * h, 1 + Math.random() * 4, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-      ctx.globalCompositeOperation = 'source-over';
-    },
-  },
-  {
-    id: 'stage',
-    label: 'Stage Lights',
-    draw(ctx, w, h) {
-      ctx.fillStyle = '#0a0a12';
-      ctx.fillRect(0, 0, w, h);
-      const colors = ['rgba(255,70,140,0.55)', 'rgba(90,160,255,0.55)', 'rgba(120,255,180,0.5)'];
-      ctx.globalCompositeOperation = 'lighter';
-      colors.forEach((c, i) => {
-        const x = lerp(w * 0.2, w * 0.8, i / 2);
-        ctx.fillStyle = c;
-        ctx.beginPath();
-        ctx.moveTo(x, -h * 0.1);
-        ctx.lineTo(x - w * 0.22, h);
-        ctx.lineTo(x + w * 0.22, h);
-        ctx.closePath();
-        ctx.fill();
-      });
-      ctx.globalCompositeOperation = 'source-over';
-      const floor = ctx.createLinearGradient(0, h * 0.7, 0, h);
-      floor.addColorStop(0, 'rgba(0,0,0,0)');
-      floor.addColorStop(1, 'rgba(255,255,255,0.12)');
-      ctx.fillStyle = floor;
-      ctx.fillRect(0, h * 0.7, w, h * 0.3);
     },
   },
 ];
 
-export const BACKGROUND_BY_ID = new Map(BACKGROUNDS.map((b) => [b.id, b]));
+export const BACKGROUND_BY_ID = new Map(BACKGROUNDS.map((background) => [background.id, background]));
 
-const cache = new Map<string, HTMLCanvasElement>();
+export async function prepareBackground(id: string): Promise<void> {
+  if (id === 'custom' && !customImage) throw new Error('Choose a photo for your background first.');
+  if (id !== 'room' || roomImage) return;
+  if (!roomLoading) {
+    roomLoading = new Promise<void>((resolve, reject) => {
+      const image = new Image();
+      const fail = () => {
+        clearTimeout(timer);
+        image.onload = image.onerror = null;
+        reject(new Error('The room background could not load. Try another background.'));
+      };
+      const timer = setTimeout(fail, 10000);
+      image.onload = () => {
+        clearTimeout(timer);
+        roomImage = image;
+        image.onload = image.onerror = null;
+        cache.clear();
+        resolve();
+      };
+      image.onerror = fail;
+      image.src = 'assets/background-room.jpg';
+    }).finally(() => { roomLoading = null; });
+  }
+  return roomLoading;
+}
 
-/** Returns a cached, full-size background canvas for compositing. */
+/** Paint synchronously, then repaint photographic thumbnails when decoded. */
+export function drawBackgroundPreview(canvas: HTMLCanvasElement, id: string): void {
+  const def = BACKGROUND_BY_ID.get(id);
+  const ctx = canvas.getContext('2d');
+  if (!def || !ctx) return;
+  def.draw(ctx, canvas.width, canvas.height);
+  if (id === 'room') void prepareBackground(id).then(() => {
+    def.draw(ctx, canvas.width, canvas.height);
+  }).catch(() => { /* The picker reports load errors when selected. */ });
+}
+
+export const MAX_BACKGROUND_BYTES = 10 * 1024 * 1024;
+const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+export function validateBackgroundFile(file: Pick<File, 'type' | 'size'>): void {
+  if (!IMAGE_TYPES.has(file.type)) throw new Error('Choose a JPG, PNG or WebP image.');
+  if (!file.size || file.size > MAX_BACKGROUND_BYTES) throw new Error('Choose a non-empty image of 10 MB or less.');
+}
+
+/** Decode locally, reject oversized images and retain a bounded in-memory copy. */
+export async function loadCustomBackground(file: File): Promise<void> {
+  validateBackgroundFile(file);
+  const request = ++customLoad;
+  let image: ImageBitmap;
+  try { image = await createImageBitmap(file); }
+  catch { throw new Error('That image could not be opened. Try another photo.'); }
+  try {
+    if (request !== customLoad) throw new DOMException('Photo selection cancelled.', 'AbortError');
+    if (!image.width || !image.height || image.width * image.height > 32_000_000) {
+      throw new Error('Choose an image with no more than 32 megapixels.');
+    }
+    const canvas = document.createElement('canvas');
+    const scale = Math.min(1, 2560 / Math.max(image.width, image.height));
+    canvas.width = Math.round(image.width * scale);
+    canvas.height = Math.round(image.height * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('This device could not prepare the photo.');
+    // Flatten transparent pictures so replacement always fills the viewfinder.
+    ctx.fillStyle = '#dedbd3';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    customImage = canvas;
+    cache.clear();
+  } finally { image.close(); }
+}
+
+/** Returns a cached, full-size replacement. Blur uses the live camera instead. */
 export function getBackgroundCanvas(id: string, w: number, h: number): HTMLCanvasElement | null {
   const def = BACKGROUND_BY_ID.get(id);
-  if (!def) return null;
+  if (!def || id === 'blur' || (id === 'room' && !roomImage) || (id === 'custom' && !customImage)) return null;
   const key = `${id}_${w}x${h}`;
   const cached = cache.get(key);
   if (cached) return cached;
@@ -205,6 +159,8 @@ export function getBackgroundCanvas(id: string, w: number, h: number): HTMLCanva
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
   def.draw(ctx, w, h);
+  // Camera switching must not retain an unbounded collection of large canvases.
+  if (cache.size >= 6) cache.clear();
   cache.set(key, canvas);
   return canvas;
 }

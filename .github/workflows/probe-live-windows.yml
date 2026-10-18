@@ -22,8 +22,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Render the live viewfinder on Direct3D 11 with GPU compositing
-        run: npx playwright test test/browser/viewfinder.spec.ts --project win-d3d11
+      - name: Render the live viewfinder and showcase on Direct3D 11 with GPU compositing
+        run: npx playwright test test/browser/viewfinder.spec.ts test/browser/landing.spec.ts --project win-d3d11
         env:
           PHOTOSHOOT_BASE_URL: ${{ inputs.url }}
       - uses: actions/upload-artifact@v4

@@ -41,6 +41,7 @@ function coerceSettings(raw: unknown): Settings {
     volume: clamp(obj.volume, 0, 1, DEFAULT_SETTINGS.volume),
     muted: typeof obj.muted === 'boolean' ? obj.muted : DEFAULT_SETTINGS.muted,
     bgTolerance: clamp(obj.bgTolerance, 0.05, 0.8, DEFAULT_SETTINGS.bgTolerance),
+    backgroundBlur: clamp(obj.backgroundBlur, 4, 40, DEFAULT_SETTINGS.backgroundBlur),
     perfOverlay: typeof obj.perfOverlay === 'boolean' ? obj.perfOverlay : DEFAULT_SETTINGS.perfOverlay,
     reducedMotion:
       typeof obj.reducedMotion === 'boolean' ? obj.reducedMotion : DEFAULT_SETTINGS.reducedMotion,

@@ -1,7 +1,7 @@
 {
   "name": "photoshoot",
   "version": "1.2.0",
-  "description": "Photoshoot — a modern Windows photobooth app. Clean-room homage, all original code and assets.",
+  "description": "Photoshoot \u2014 a modern Windows photobooth app. Clean-room homage, all original code and assets.",
   "author": "Photoshoot",
   "license": "MIT",
   "private": true,
@@ -27,12 +27,14 @@
     "test": "npm run test:unit && npm run test:node",
     "test:e2e": "playwright test",
     "web:dev": "npm run build:web && node web/serve.mjs",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run build:app:prod && npm run test:e2e"
+    "verify": "npm run typecheck && npm run lint && npm test && npm run test:backgrounds && npm run build:app:prod && npm run test:e2e",
+    "test:backgrounds": "node --test build/backgrounds.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
     "@types/node": "^22.7.5",
+    "@types/ws": "^8.18.2",
     "electron": "^44.5.1",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
@@ -40,7 +42,8 @@
     "globals": "^17.13.0",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.71.1",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "ws": "^8.22.0"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.18"

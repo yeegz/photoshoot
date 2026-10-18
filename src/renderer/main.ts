@@ -3,6 +3,7 @@
 // controls and keyboard shortcuts. This is the only module with a side-effecting
 // entry point.
 
+import { initVirtualCamera, stopVirtualCamera } from './virtualCamera';
 import { app } from './app';
 import { api } from './bridge';
 import { GLRenderer } from './gl/renderer';
@@ -14,7 +15,7 @@ import { loadImportedThemes, applyResolvedTheme, watchDeviceTheme } from './them
 import { loadCustomFilters, registerFilterSink } from './customFilters';
 import { refreshGallery, exitReview, initReviewActions } from './gallery';
 import { buildEffectsMenu, toggleEffects, closeEffects, isEffectsOpen, openEffects, backdropPageStart } from './effectsMenu';
-import { initBackgroundsMenu, pickBackground, currentBackground } from './backgroundsMenu';
+import { initBackgroundsMenu, pickBackground } from './backgroundsMenu';
 import { BackgroundReplacer } from './backgroundReplace';
 import { initSettings, openSettings } from './settings';
 import { setPerfOverlay } from './perf';
@@ -130,9 +131,10 @@ function handleCameraError(kind: CameraErrorKind | undefined): void {
 
 async function startCamera(deviceId: string | null): Promise<void> {
   if (!app.renderer.available) return;
+  await stopVirtualCamera('Virtual camera stopped while switching cameras. Start it again when ready.');
   videoRecorder.stop();
   // Any selected backdrop (even one still learning the background) is cleared.
-  if (bgReplacer?.isActive() || currentBackground() !== 'none') void pickBackground('none');
+  if (bgReplacer) await pickBackground('none');
   app.renderer.stop();
   byId<HTMLButtonElement>('shutter').disabled = true;
   setStatus('Starting camera…', '');
@@ -198,6 +200,7 @@ function wireControls(): void {
 
   byId('btnEffects').addEventListener('click', () => toggleEffects());
   byId('btnBackgrounds').addEventListener('click', () => openEffects(backdropPageStart()));
+  byId('virtualCameraBadge').addEventListener('click', () => void openSettings());
   byId('btnSettings').addEventListener('click', () => void openSettings());
 
   // Click the reviewed photo to return to the live camera.
@@ -297,6 +300,7 @@ async function bootstrap(): Promise<void> {
     console.warn('[shader]', id, msg);
   };
   renderer.onContextLost = () => {
+    void stopVirtualCamera('Virtual camera stopped because the graphics context was lost.');
     videoRecorder.stop();
     cancelCountdown();
     byId<HTMLButtonElement>('shutter').disabled = true;
@@ -325,6 +329,7 @@ async function bootstrap(): Promise<void> {
     selectCamera: (id: string) => startCamera(id || null),
   });
   await refreshGallery();
+  await initVirtualCamera();
 
   wireControls();
   wireKeyboard();
@@ -353,6 +358,7 @@ async function bootstrap(): Promise<void> {
   camera.onDeviceListChanged = () => {
     const media = camera.video.srcObject as MediaStream | null;
     if (media && media.getVideoTracks().every((track) => track.readyState === 'ended')) {
+      void stopVirtualCamera('Virtual camera stopped because the camera disconnected.');
       videoRecorder.stop();
       app.renderer.stop();
       camera.stop();
@@ -361,6 +367,8 @@ async function bootstrap(): Promise<void> {
   };
 
   window.addEventListener('beforeunload', () => {
+    void stopVirtualCamera();
+    bgReplacer.stop();
     camera.stop();
     renderer.dispose();
   });

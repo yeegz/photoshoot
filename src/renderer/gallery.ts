@@ -4,6 +4,7 @@
 // right-click menu to export it out of the app's folder. No "saved" toast, no
 // chrome — the photo dropping in is the confirmation.
 
+import { virtualCameraActive } from './virtualCamera';
 import { api } from './bridge';
 import { app } from './app';
 import { byId, el, clear } from './dom';
@@ -112,7 +113,7 @@ async function enterReview(item: GalleryItem): Promise<void> {
   else return;
 
   reviewId = item.id;
-  app.renderer?.stop(); // pause the live camera while viewing
+  if (!virtualCameraActive()) app.renderer?.stop(); // output remains live behind photo review
   review.classList.remove('hidden');
   document.body.classList.add('is-reviewing');
   // Grey the shutter, but keep it clickable — clicking it returns to the camera.

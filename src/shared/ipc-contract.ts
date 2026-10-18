@@ -2,6 +2,7 @@
 // and the renderer. Pure types + channel-name constants only — no Node or DOM
 // imports — so it is safe to bundle into all three execution contexts.
 
+import type { VirtualCameraConfig, VirtualCameraStatus } from './virtual-camera';
 import type { FilterParams } from './filter-schema';
 
 export const IPC = {
@@ -22,6 +23,10 @@ export const IPC = {
   filterImport: 'filter:import',
   filterList: 'filter:list',
   filterRemove: 'filter:remove',
+  virtualCameraStatus: 'virtualCamera:status',
+  virtualCameraStart: 'virtualCamera:start',
+  virtualCameraStop: 'virtualCamera:stop',
+  virtualCameraFrame: 'virtualCamera:frame',
   windowMinimize: 'window:minimize',
   windowMaximize: 'window:maximize',
   windowClose: 'window:close',
@@ -52,6 +57,7 @@ export interface Settings {
   volume: number; // 0..1
   muted: boolean;
   bgTolerance: number; // 0..1 (background replacement sensitivity)
+  backgroundBlur: number; // 4..40 background-only blur radius in pixels
   perfOverlay: boolean;
   reducedMotion: boolean;
   screenFlash: boolean; // light up the whole window when a photo is taken
@@ -67,6 +73,7 @@ export const DEFAULT_SETTINGS: Settings = {
   volume: 0.7,
   muted: false,
   bgTolerance: 0.28,
+  backgroundBlur: 18,
   perfOverlay: false,
   reducedMotion: false,
   screenFlash: true,
@@ -175,6 +182,10 @@ export interface PhotoshootBridge {
   importFilter(): Promise<FilterImportResult>;
   listCustomFilters(): Promise<CustomFilter[]>;
   removeCustomFilter(id: string): Promise<{ ok: boolean }>;
+  getVirtualCameraStatus(): Promise<VirtualCameraStatus>;
+  startVirtualCamera(config: VirtualCameraConfig): Promise<VirtualCameraStatus>;
+  stopVirtualCamera(): Promise<VirtualCameraStatus>;
+  sendVirtualCameraFrame(frame: Uint8Array): Promise<boolean>;
   minimizeWindow(): void;
   toggleMaximizeWindow(): void;
   toggleFullscreen(): void;

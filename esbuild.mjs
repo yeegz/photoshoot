@@ -29,6 +29,17 @@ const common = {
 
 const targets = [
   {
+    name: 'personSegmentation.worker',
+    options: {
+      ...common,
+      entryPoints: [path.join(root, 'src/renderer/personSegmentation.worker.ts')],
+      outfile: path.join(dist, 'personSegmentation.worker.js'),
+      platform: 'browser',
+      format: 'iife',
+      target: ['chrome120'],
+    },
+  },
+  {
     name: 'main',
     options: {
       ...common,
@@ -73,6 +84,7 @@ async function copyStatic() {
     await cp(stylesSrc, path.join(dist, 'styles'), { recursive: true });
   }
   await copyMediapipe(dist);
+  await cp(path.join(root, 'src/renderer/assets'), path.join(dist, 'assets'), { recursive: true });
 }
 
 // MediaPipe face-landmarker WASM fileset + model, served locally (no CDN).
@@ -85,6 +97,10 @@ async function copyMediapipe(targetDir) {
   if (existsSync(modelSrc)) {
     await mkdir(path.join(targetDir, 'mediapipe'), { recursive: true });
     await cp(modelSrc, path.join(targetDir, 'mediapipe/face_landmarker.task'));
+  }
+  await cp(path.join(root, 'build/mediapipe/selfie_segmenter.tflite'), path.join(targetDir, 'mediapipe/selfie_segmenter.tflite'));
+  for (const file of ['selfie_segmenter.LICENSE', 'selfie_segmenter.README.md']) {
+    await cp(path.join(root, 'build/mediapipe', file), path.join(targetDir, 'mediapipe', file));
   }
 }
 

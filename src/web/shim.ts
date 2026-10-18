@@ -106,6 +106,7 @@ function coerceSettings(raw: unknown): Settings {
     volume: clampNum(o.volume, 0, 1, DEFAULT_SETTINGS.volume),
     muted: typeof o.muted === 'boolean' ? o.muted : DEFAULT_SETTINGS.muted,
     bgTolerance: clampNum(o.bgTolerance, 0.05, 0.8, DEFAULT_SETTINGS.bgTolerance),
+    backgroundBlur: clampNum(o.backgroundBlur, 4, 40, DEFAULT_SETTINGS.backgroundBlur),
     perfOverlay: typeof o.perfOverlay === 'boolean' ? o.perfOverlay : DEFAULT_SETTINGS.perfOverlay,
     reducedMotion: typeof o.reducedMotion === 'boolean' ? o.reducedMotion : DEFAULT_SETTINGS.reducedMotion,
     screenFlash: typeof o.screenFlash === 'boolean' ? o.screenFlash : DEFAULT_SETTINGS.screenFlash,
@@ -328,7 +329,17 @@ async function importThemeFromFiles(files: File[]): Promise<ThemeImportResult> {
 // Bridge
 // ---------------------------------------------------------------------------
 
+const unsupportedCamera = () => ({
+  supported: false,
+  state: 'unsupported' as const,
+  message: 'Virtual camera requires the Photoshoot Windows desktop app and OBS Studio. It is not available in the browser.',
+});
+
 const bridge: PhotoshootBridge = {
+  getVirtualCameraStatus: async () => unsupportedCamera(),
+  startVirtualCamera: async () => unsupportedCamera(),
+  stopVirtualCamera: async () => unsupportedCamera(),
+  sendVirtualCameraFrame: async () => false,
   getAppInfo: async (): Promise<AppInfo> => ({
     name: 'Photoshoot',
     version: typeof __PHOTOSHOOT_VERSION__ === 'string' ? __PHOTOSHOOT_VERSION__ : '0.0.0',

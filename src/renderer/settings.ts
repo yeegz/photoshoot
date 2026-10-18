@@ -2,6 +2,8 @@
 // directly to the persisted settings. Every control writes through
 // app.updateSettings() so changes save immediately and apply live.
 
+import { buildVirtualCameraSection } from './virtualCamera';
+import { pickBackground } from './backgroundsMenu';
 import { app } from './app';
 import { byId, el, clear } from './dom';
 import { toast } from './toast';
@@ -301,6 +303,8 @@ export function render(): void {
     ])
   );
 
+  body.appendChild(buildVirtualCameraSection());
+
   // Appearance (themes)
   body.appendChild(buildThemeSection());
 
@@ -370,13 +374,13 @@ export function render(): void {
     ])
   );
 
-  // Background replacement
+  // Backgrounds
   body.appendChild(
-    group('Background Replacement', [
+    group('Backgrounds', [
       row(
-        'Edge tolerance',
-        'Higher keeps more of you; lower removes more background.',
-        range(0.05, 0.8, 0.01, s.bgTolerance, (v) => void app.updateSettings({ bgTolerance: v }))
+        'Background blur',
+        'Blur strength when Background blur is selected. Person detection runs on your device.',
+        range(4, 40, 1, s.backgroundBlur, (v) => void app.updateSettings({ backgroundBlur: v }))
       ),
     ])
   );
@@ -412,6 +416,7 @@ export function render(): void {
   const resetAll = el('button', { className: 'btn btn-danger btn-sm', type: 'button', text: 'Reset all settings' });
   resetAll.addEventListener('click', async () => {
     if (resetAll.dataset.confirm === '1') {
+      await pickBackground('none');
       await app.updateSettings({ ...DEFAULT_SETTINGS, cameraId: app.settings.cameraId });
       await setAutoTheme();
       setPerfOverlay(false);

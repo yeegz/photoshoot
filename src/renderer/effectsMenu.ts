@@ -10,7 +10,7 @@ import { app } from './app';
 import { GLRenderer } from './gl/renderer';
 import { EFFECTS, isDraggable, isFaceEffect } from './gl/effects';
 import type { EffectDef } from './gl/effects';
-import { BACKGROUNDS } from './backgrounds';
+import { BACKGROUNDS, drawBackgroundPreview } from './backgrounds';
 import type { BackgroundDef } from './backgrounds';
 import { pickBackground, currentBackground } from './backgroundsMenu';
 import { byId, el, clear } from './dom';
@@ -133,14 +133,14 @@ function backdropTile(def: BackgroundDef): HTMLElement {
   const tileEl = el('button', {
     className: 'effect-tile',
     type: 'button',
-    ariaLabel: `${def.label} backdrop`,
+    ariaLabel: def.id === 'custom' ? 'Choose your own background photo' : def.label,
     dataset: { backdrop: def.id },
     onClick: () => pickBackdrop(def.id),
   });
   const canvas = document.createElement('canvas');
   canvas.width = 320;
   canvas.height = 240;
-  def.draw(canvas.getContext('2d')!, canvas.width, canvas.height);
+  drawBackgroundPreview(canvas, def.id);
   tileEl.append(canvas, el('span', { className: 'effect-name', text: def.label }));
   return tileEl;
 }
