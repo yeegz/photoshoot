@@ -49,7 +49,7 @@ jobs:
       - run: npm run build:win -- --publish never
       - name: Verify Electron camera startup on Windows
         run: npx playwright test test/browser/electron.spec.ts --project chromium
-      - name: Verify the packaged app (app.asar): camera, segmentation, update check
+      - name: 'Verify the packaged app (app.asar) - camera, segmentation, update check'
         run: npx playwright test test/browser/electron.spec.ts --project chromium
         env:
           PHOTOSHOOT_EXE: release/win-unpacked/Photoshoot.exe
