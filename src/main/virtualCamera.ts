@@ -252,4 +252,7 @@ export class VirtualCameraService {
   }
 
   async dispose(): Promise<void> { this.disposed = true; await this.stop(); }
+
+  /** True while an OBS session exists and quitting must wait for its cleanup. */
+  get hasSession(): boolean { return this.session !== undefined; }
 }

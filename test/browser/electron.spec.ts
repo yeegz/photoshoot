@@ -1,4 +1,4 @@
-import { _electron as electron, expect, test } from '@playwright/test';
+import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
 // PHOTOSHOOT_EXE points at a packaged build (e.g. release/win-unpacked/Photoshoot.exe)
 // so CI exercises the real app.asar, not just the unpacked dist folder.
@@ -7,6 +7,15 @@ const launchOptions = () =>
   process.env.PHOTOSHOOT_EXE
     ? { executablePath: process.env.PHOTOSHOOT_EXE, args: fakeCamera }
     : { args: [...fakeCamera, '.'], env: { ...process.env, NODE_ENV: 'production' } };
+
+// Playwright attaches a Node debugger to Electron, and Node waits for that
+// debugger to disconnect before exiting, so close() can stall in tests (never
+// for users, who have no debugger attached). Bound it, then kill.
+async function closeApp(desktop: ElectronApplication): Promise<void> {
+  const proc = desktop.process();
+  await Promise.race([desktop.close().catch(() => undefined), new Promise((r) => setTimeout(r, 10000))]);
+  if (proc.exitCode === null && proc.signalCode === null) proc.kill('SIGKILL');
+}
 
 test('desktop app acquires a camera and renders pixels through its secure app origin', async () => {
   const desktop = await electron.launch(launchOptions());
@@ -29,17 +38,22 @@ test('desktop app acquires a camera and renders pixels through its secure app or
     );
     expect(['available', 'current', 'unavailable']).toContain(update.status);
   } finally {
-    await desktop.close();
+    await closeApp(desktop);
   }
 });
 
 test('desktop app runs person segmentation from its app:// origin', async () => {
+  test.setTimeout(60000);
   const desktop = await electron.launch(launchOptions());
   try {
     const page = await desktop.firstWindow();
     const errors: string[] = [];
     page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.text()); });
     await expect(page.locator('#shutter')).toBeEnabled({ timeout: 15000 });
+    // Without WebGL2 (e.g. Electron under xvfb on Linux CI) the app runs in
+    // basic camera mode, where effects and backdrops are intentionally off.
+    // Windows CI runs this test for real against the packaged app.
+    test.skip(await page.locator('#btnEffects').isDisabled(), 'No WebGL2 here: basic camera mode has no backdrops.');
     await page.locator('#btnEffects').click();
     await page.keyboard.press('End');
     await page.locator('[data-backdrop="studio"]').click();
@@ -50,6 +64,6 @@ test('desktop app runs person segmentation from its app:// origin', async () => 
     await expect(page.locator('#btnBackgrounds')).toHaveClass(/is-on/);
     expect(errors.filter((e) => /person detection|worker|importScripts/i.test(e))).toEqual([]);
   } finally {
-    await desktop.close();
+    await closeApp(desktop);
   }
 });

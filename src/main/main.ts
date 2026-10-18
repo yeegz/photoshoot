@@ -44,13 +44,29 @@ const virtualCamera = new VirtualCameraService({
   },
 });
 let cameraShutdownComplete = false;
+// Quitting only waits when a virtual-camera session has OBS cleanup to do.
+// Re-quit on the next tick (a quit requested inside a cancelled quit can be
+// dropped) and force-exit if cleanup ever stalls, so the app can never be left
+// running with no window.
 app.on('before-quit', (event) => {
   if (cameraShutdownComplete) return;
-  event.preventDefault();
-  void virtualCamera.dispose().finally(() => {
+  if (!virtualCamera.hasSession) {
     cameraShutdownComplete = true;
-    app.quit();
-  });
+    void virtualCamera.dispose();
+    return;
+  }
+  event.preventDefault();
+  const finish = () => {
+    if (cameraShutdownComplete) return;
+    cameraShutdownComplete = true;
+    setImmediate(() => app.quit());
+  };
+  void virtualCamera.dispose().finally(finish);
+  setTimeout(() => {
+    if (cameraShutdownComplete) return;
+    cameraShutdownComplete = true;
+    app.exit(0);
+  }, 6000).unref();
 });
 
 // Must run before app `ready`. Marks app:// as a standard, secure origin that
