@@ -1196,3 +1196,38 @@ input[type="range"] {
 .virtual-camera-status[data-state="live"] { color: var(--accent); }
 .virtual-camera-status[data-state="error"] { color: var(--danger); }
 .virtual-camera-badge { border: 0; border-radius: 999px; padding: 6px 9px; background: var(--surface); color: var(--text); font-size: 10px; cursor: pointer; -webkit-app-region: no-drag; }
+
+/* ---------- Update notice (top centre, under the titlebar) ---------- */
+.update-notice {
+  position: fixed;
+  top: calc(var(--titlebar-h) + var(--safe-top) + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 85;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: auto;
+  min-height: var(--pill-h);
+  padding: 6px 8px 6px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+  max-width: calc(100vw - 24px);
+}
+.update-notice[hidden] {
+  display: none;
+}
+.update-get {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+.update-later {
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: var(--text-dim);
+}
+.update-later:hover {
+  color: var(--text);
+  background: var(--glass-fill-hover);
+}

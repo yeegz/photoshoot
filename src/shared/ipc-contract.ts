@@ -4,6 +4,7 @@
 
 import type { VirtualCameraConfig, VirtualCameraStatus } from './virtual-camera';
 import type { FilterParams } from './filter-schema';
+import type { UpdateInfo } from './update-check';
 
 export const IPC = {
   appInfo: 'app:info',
@@ -31,6 +32,7 @@ export const IPC = {
   windowMaximize: 'window:maximize',
   windowClose: 'window:close',
   windowFullscreen: 'window:fullscreen',
+  updateCheck: 'update:check',
 } as const;
 
 export type CaptureFormat = 'png' | 'jpg';
@@ -61,6 +63,7 @@ export interface Settings {
   perfOverlay: boolean;
   reducedMotion: boolean;
   screenFlash: boolean; // light up the whole window when a photo is taken
+  checkForUpdates: boolean; // look for a newer GitHub release at launch
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -77,6 +80,7 @@ export const DEFAULT_SETTINGS: Settings = {
   perfOverlay: false,
   reducedMotion: false,
   screenFlash: true,
+  checkForUpdates: true,
 };
 
 export interface SaveRequest {
@@ -189,5 +193,6 @@ export interface PhotoshootBridge {
   minimizeWindow(): void;
   toggleMaximizeWindow(): void;
   toggleFullscreen(): void;
+  checkForUpdate(): Promise<UpdateInfo>;
   closeWindow(): void;
 }

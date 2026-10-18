@@ -46,6 +46,8 @@ function coerceSettings(raw: unknown): Settings {
     reducedMotion:
       typeof obj.reducedMotion === 'boolean' ? obj.reducedMotion : DEFAULT_SETTINGS.reducedMotion,
     screenFlash: typeof obj.screenFlash === 'boolean' ? obj.screenFlash : DEFAULT_SETTINGS.screenFlash,
+    checkForUpdates:
+      typeof obj.checkForUpdates === 'boolean' ? obj.checkForUpdates : DEFAULT_SETTINGS.checkForUpdates,
   };
 }
 

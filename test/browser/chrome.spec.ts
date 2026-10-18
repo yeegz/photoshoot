@@ -311,3 +311,56 @@ test('the effects pager uses drawn chevrons, not text arrows', async ({ page }) 
     expect((await a.innerText()).trim()).toBe('');
   }
 });
+
+// ---- update check (GitHub Releases) ----
+
+// Replace the bridge's update check before the app boots; the web shim itself
+// always reports "current" because the web app is always the latest version.
+function stubUpdate(page: import('@playwright/test').Page, result: object) {
+  return page.addInitScript((r) => {
+    let bridge: Record<string, unknown> | undefined;
+    (window as unknown as { __updateChecks: number }).__updateChecks = 0;
+    Object.defineProperty(window, 'photoshoot', {
+      configurable: true,
+      get: () => bridge,
+      set: (v: Record<string, unknown>) => {
+        bridge = v;
+        v.checkForUpdate = async () => {
+          (window as unknown as { __updateChecks: number }).__updateChecks++;
+          return r;
+        };
+      },
+    });
+  }, result);
+}
+
+test('a newer release shows an update notice at launch with a download link', async ({ page }) => {
+  await stubUpdate(page, { status: 'available', version: '9.9.9', url: 'https://github.com/yeegz/photoshoot/releases/tag/v9.9.9' });
+  await page.goto('/app/');
+  const notice = page.locator('#updateNotice');
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText('9.9.9');
+  await expect(notice.locator('a')).toHaveAttribute('href', 'https://github.com/yeegz/photoshoot/releases/tag/v9.9.9');
+  await notice.getByRole('button', { name: 'Later' }).click();
+  await expect(notice).toBeHidden();
+});
+
+test('no notice when up to date', async ({ page }) => {
+  await stubUpdate(page, { status: 'current' });
+  await page.goto('/app/');
+  await expectLive(page);
+  await expect(page.locator('#updateNotice')).toBeHidden();
+});
+
+test('update checks can be turned off in Settings', async ({ page }) => {
+  await stubUpdate(page, { status: 'available', version: '9.9.9', url: 'https://github.com/yeegz/photoshoot/releases/latest' });
+  await page.goto('/app/');
+  await expect(page.locator('#updateNotice')).toBeVisible();
+  await page.locator('#btnSettings').click();
+  const row = page.locator('.setting-row', { hasText: 'Check for updates' });
+  await row.locator('input[type="checkbox"]').uncheck({ force: true });
+  await page.reload();
+  await expectLive(page);
+  await expect(page.locator('#updateNotice')).toBeHidden();
+  expect(await page.evaluate(() => (window as unknown as { __updateChecks: number }).__updateChecks)).toBe(0);
+});

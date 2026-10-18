@@ -397,6 +397,11 @@ export function render(): void {
         })
       ),
       row('Reduce motion', 'Minimize animations.', toggle(s.reducedMotion, (v) => void app.updateSettings({ reducedMotion: v }))),
+      row(
+        'Check for updates',
+        'Look for a newer version on GitHub when Photoshoot opens.',
+        toggle(s.checkForUpdates, (v) => void app.updateSettings({ checkForUpdates: v }))
+      ),
     ])
   );
 

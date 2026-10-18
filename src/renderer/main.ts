@@ -373,7 +373,27 @@ async function bootstrap(): Promise<void> {
     renderer.dispose();
   });
 
+  void checkUpdates();
   await startCamera(app.settings.cameraId);
+}
+
+// Launch-time update check against GitHub Releases (Settings → Check for updates).
+async function checkUpdates(): Promise<void> {
+  if (!app.settings.checkForUpdates) return;
+  let info;
+  try {
+    info = await api.checkForUpdate();
+  } catch {
+    return; // never let an update check disturb the camera
+  }
+  if (info.status !== 'available') return;
+  byId('updateText').textContent = `Photoshoot ${info.version} is available.`;
+  byId<HTMLAnchorElement>('updateLink').href = info.url;
+  const notice = byId('updateNotice');
+  notice.hidden = false;
+  const hide = () => (notice.hidden = true);
+  byId('updateLater').onclick = hide;
+  byId('updateLink').addEventListener('click', hide);
 }
 
 bootstrap().catch((err) => {

@@ -163,6 +163,13 @@
     <!-- Screen flash: lights the whole window, like Photo Booth -->
     <div class="flash" id="flash" aria-hidden="true"></div>
 
+    <!-- Shown at launch when GitHub has a newer release (Settings → Check for updates) -->
+    <div class="update-notice glass-pill" id="updateNotice" role="status" hidden>
+      <span id="updateText">A new version is available.</span>
+      <a class="update-get" id="updateLink" href="https://github.com/yeegz/photoshoot/releases/latest" target="_blank" rel="noopener">Download</a>
+      <button class="update-later" id="updateLater" type="button">Later</button>
+    </div>
+
     <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
     <script src="renderer.js"></script>

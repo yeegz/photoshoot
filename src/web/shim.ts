@@ -110,6 +110,7 @@ function coerceSettings(raw: unknown): Settings {
     perfOverlay: typeof o.perfOverlay === 'boolean' ? o.perfOverlay : DEFAULT_SETTINGS.perfOverlay,
     reducedMotion: typeof o.reducedMotion === 'boolean' ? o.reducedMotion : DEFAULT_SETTINGS.reducedMotion,
     screenFlash: typeof o.screenFlash === 'boolean' ? o.screenFlash : DEFAULT_SETTINGS.screenFlash,
+    checkForUpdates: typeof o.checkForUpdates === 'boolean' ? o.checkForUpdates : DEFAULT_SETTINGS.checkForUpdates,
   };
 }
 
@@ -340,6 +341,8 @@ const bridge: PhotoshootBridge = {
   startVirtualCamera: async () => unsupportedCamera(),
   stopVirtualCamera: async () => unsupportedCamera(),
   sendVirtualCameraFrame: async () => false,
+  // The web app is served fresh on every load, so it is always the latest.
+  checkForUpdate: async () => ({ status: 'current' }),
   getAppInfo: async (): Promise<AppInfo> => ({
     name: 'Photoshoot',
     version: typeof __PHOTOSHOOT_VERSION__ === 'string' ? __PHOTOSHOOT_VERSION__ : '0.0.0',

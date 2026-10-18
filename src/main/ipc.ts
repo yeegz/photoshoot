@@ -19,6 +19,7 @@ import {
 } from './storage';
 import { importThemeFromPath, listImportedThemes, removeImportedTheme } from './themeImport';
 import { importFilterFromPath, listCustomFilters, removeCustomFilter } from './filterImport';
+import { checkForUpdate } from './updates';
 
 function asString(x: unknown): string {
   return typeof x === 'string' ? x : '';
@@ -54,6 +55,8 @@ export function registerIpc(getWindow: () => BrowserWindow | null, virtualCamera
     themesFolder: themesDir(),
     platform: process.platform,
   }));
+
+  ipcMain.handle(IPC.updateCheck, () => checkForUpdate(app.getVersion()));
 
   ipcMain.handle(IPC.settingsGet, () => readSettings());
 

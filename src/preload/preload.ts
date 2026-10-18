@@ -34,6 +34,7 @@ const bridge: PhotoshootBridge = {
   startVirtualCamera: (config) => ipcRenderer.invoke(IPC.virtualCameraStart, config),
   stopVirtualCamera: () => ipcRenderer.invoke(IPC.virtualCameraStop),
   sendVirtualCameraFrame: (frame) => ipcRenderer.invoke(IPC.virtualCameraFrame, frame),
+  checkForUpdate: () => ipcRenderer.invoke(IPC.updateCheck),
   minimizeWindow: () => ipcRenderer.send(IPC.windowMinimize),
   toggleMaximizeWindow: () => ipcRenderer.send(IPC.windowMaximize),
   toggleFullscreen: () => ipcRenderer.send(IPC.windowFullscreen),

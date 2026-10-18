@@ -17,6 +17,12 @@ test('desktop app acquires a camera and renders pixels through its secure app or
       ctx.drawImage(canvas, 0, 0, 16, 16);
       return ctx.getImageData(0, 0, 16, 16).data.some((v, i) => i % 4 !== 3 && v > 30);
     })).toBe(true);
+    // The update check runs in the main process over IPC. GitHub may rate-limit
+    // CI, so any well-formed answer proves the wiring.
+    const update = await page.evaluate(() =>
+      (window as unknown as { photoshoot: { checkForUpdate(): Promise<{ status: string }> } }).photoshoot.checkForUpdate()
+    );
+    expect(['available', 'current', 'unavailable']).toContain(update.status);
   } finally {
     await desktop.close();
   }

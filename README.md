@@ -87,6 +87,10 @@ If the device is missing, restart the calling app after installing OBS. If the w
 | Full screen | F11; Control-Command-F on macOS |
 | Move a distortion | Drag on the live preview |
 
+## Updates
+
+The desktop app checks [GitHub Releases](https://github.com/yeegz/photoshoot/releases) once when it opens. If a newer version exists, a notice under the titlebar links to its release page; nothing downloads or installs on its own. Turn it off in **Settings → Advanced → Check for updates**. The check is a single request for the latest release's version number, made from the main process; it sends no camera data or personal information. The web app is always the latest version, so it never shows the notice.
+
 ## Privacy and storage
 
 Camera frames, face landmarks and person masks are processed locally. Photoshoot does not upload your captures or use analytics. The web app loads its code and models from its hosting origin; it does not fetch remote camera-processing services.
