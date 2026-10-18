@@ -138,6 +138,28 @@ test('real canvas replacement preserves foreground; blur removes background deta
   } finally { await page.close(); }
 });
 
+test('blur keeps the subject out of the blurred background (no dark halo)', { timeout: 30000 }, async () => {
+  const page = await pageForTest();
+  try {
+    const near = await page.evaluate(async () => {
+      const { BackgroundCompositor } = await import('/harness.js');
+      const size = 256;
+      const source = document.createElement('canvas'); source.width = source.height = size;
+      const ctx = source.getContext('2d');
+      ctx.fillStyle = 'rgb(200,200,200)'; ctx.fillRect(0, 0, size, size); // light room
+      ctx.fillStyle = 'rgb(20,20,20)'; ctx.fillRect(0, 0, 128, size);     // dark subject, left half
+      const confidence = new Float32Array(size * size);
+      for (let y = 0; y < size; y++) for (let x = 0; x < 128; x++) confidence[y * size + x] = 1;
+      const compositor = new BackgroundCompositor();
+      compositor.draw(source, { width: size, height: size, confidence }, size, size, null, 24);
+      const out = compositor.canvas.getContext('2d');
+      // Background pixels 8 and 20 px from the subject's edge.
+      return [136, 148].map((x) => out.getImageData(x, 128, 1, 1).data[0]);
+    });
+    for (const value of near) assert.ok(value > 180, `background beside the subject darkened to ${value}`);
+  } finally { await page.close(); }
+});
+
 test('replacement activation, cancellation, reselection and custom photo recovery', { timeout: 30000 }, async () => {
   const page = await pageForTest();
   try {

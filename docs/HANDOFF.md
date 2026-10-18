@@ -1,6 +1,6 @@
 # Photoshoot continuation record
 
-Updated 17 October 2026 (Asia/Kuala_Lumpur).
+Updated 18 October 2026 (Asia/Kuala_Lumpur).
 
 ## Current direction
 
@@ -31,9 +31,20 @@ Evidence: [1.2.0 release](https://github.com/yeegz/photoshoot/releases/tag/v1.2.
 - Extended Windows CI and the live Windows probe to include the landing suite as well as viewfinder pixels.
 - An independent review found shader-failure and delayed-initialization edge cases; both received dedicated regression tests and fixes.
 
+## Backgrounds, virtual camera and updates (continuation, 18 October)
+
+- **Person segmentation backgrounds** replace the old "step out of frame" technique: blur, three studio tones, a room photo and a custom photo. Model: `build/mediapipe/selfie_segmenter.tflite` (licence beside it), run in `src/renderer/personSegmentation.worker.ts`; compositing in `backgroundCompositor.ts`; lifecycle in `backgroundReplace.ts`; definitions in `backgrounds.ts`. Spec and plan: `docs/superpowers/specs/2026-10-17-backgrounds-virtual-camera-design.md`, `docs/superpowers/plans/2026-10-17-backgrounds-virtual-camera.md`.
+- **Windows virtual camera through OBS Studio 28+**: `src/main/obsClient.ts` (WebSocket v5), `virtualCamera.ts` (service), `virtualCameraFeed.ts` (token-protected loopback MJPEG), renderer UI `src/renderer/virtualCamera.ts`, shared types `src/shared/virtual-camera.ts`. Web builds explain that the desktop app is required.
+- **Update check**: `src/shared/update-check.ts` (pure version logic, unit-tested), `src/main/updates.ts` (Node fetch of the GitHub Releases API from the main process, 8 s timeout, silent on failure), launch notice in `src/renderer/main.ts` (`#updateNotice`), toggle under Settings → Advanced → Check for updates (`Settings.checkForUpdates`, default on). The web shim always reports "current".
+
 ## Verification and release status
 
-Final verification and publishing are in progress. Replace this paragraph with final results before closing the task.
+See the bottom of this file for the final status; it is updated when each release ships.
+
+### Status log
+
+- 18 Oct: checkpoint of the uncommitted continuation work committed (`18bef78`); full verify green except a stale test (fixed) and a one-off Electron timeout that did not reproduce; update check added with unit, browser and Electron tests; visual check done (update notice moved under panels, duplicate web copy removed). Independent review running; release 1.3.0 pending.
+- **Not verified on real hardware:** an end-to-end OBS virtual-camera run. OBS is installed on the owner's Mac, but the feature is Windows-only and needs the owner's OBS WebSocket password, so it was not exercised with real OBS. The OBS protocol, feed and cleanup are covered by unit tests against a real local WebSocket server.
 
 ## Source map and instructions for future work
 

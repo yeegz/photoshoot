@@ -60,12 +60,17 @@ export const BACKGROUNDS: BackgroundDef[] = [
         studio(['#dddeda', '#bfc5bf', '#969f99'])(ctx, w, h);
         ctx.strokeStyle = 'rgba(255,255,255,.85)';
         ctx.lineWidth = Math.max(1.5, w / 150);
+        // A photo-with-plus glyph in the upper third, clear of the tile's
+        // centred label.
+        const s = Math.min(w, h) * 0.2;
+        const cx = w / 2;
+        const cy = h * 0.27;
         ctx.beginPath();
-        ctx.roundRect(w * 0.4, h * 0.29, w * 0.2, h * 0.29, w * 0.012);
-        ctx.moveTo(w * 0.5, h * 0.35);
-        ctx.lineTo(w * 0.5, h * 0.51);
-        ctx.moveTo(w * 0.44, h * 0.43);
-        ctx.lineTo(w * 0.56, h * 0.43);
+        ctx.roundRect(cx - s * 0.6, cy - s / 2, s * 1.2, s, s * 0.12);
+        ctx.moveTo(cx, cy - s * 0.26);
+        ctx.lineTo(cx, cy + s * 0.26);
+        ctx.moveTo(cx - s * 0.26, cy);
+        ctx.lineTo(cx + s * 0.26, cy);
         ctx.stroke();
       }
     },
