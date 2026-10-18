@@ -235,14 +235,14 @@ test('restarting the camera clears the selected backdrop', async ({ page }) => {
   await expectLive(page);
   await page.locator('#btnEffects').click();
   await page.keyboard.press('End');
-  await page.locator('[data-backdrop="space"]').click();
+  await page.locator('[data-backdrop="studio"]').click();
   await page.locator('#btnSettings').click();
   await page.locator('#settingsBody select').first().dispatchEvent('change');
   await page.keyboard.press('Escape');
   await expectLive(page);
   await page.locator('#btnEffects').click();
   await page.keyboard.press('End');
-  await expect(page.locator('[data-backdrop="space"]')).not.toHaveClass(/is-active/);
+  await expect(page.locator('[data-backdrop="studio"]')).not.toHaveClass(/is-active/);
   await expect(page.locator('#btnBackgrounds')).not.toHaveClass(/is-on/);
 });
 
