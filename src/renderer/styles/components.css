@@ -1203,7 +1203,8 @@ input[type="range"] {
   top: calc(var(--titlebar-h) + var(--safe-top) + 10px);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 85;
+  z-index: 25; /* above the viewfinder, below the effects browser (30) and panels (60) */
+  background: rgba(30, 30, 32, 0.82); /* readable over any camera image */
   display: flex;
   align-items: center;
   gap: 12px;

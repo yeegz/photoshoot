@@ -186,7 +186,9 @@ export function buildVirtualCameraSection(): HTMLElement {
       link('Download Photoshoot for Windows', 'https://github.com/yeegz/photoshoot/releases/latest'),
     ]));
   }
-  children.push(statusLabel);
+  // The status line only means something where the feature can run; on the
+  // web it would repeat the explanation above.
+  if (status.supported !== false) children.push(statusLabel);
   section = el('section', { className: 'settings-group', attrs: { id: 'virtualCameraSettings' } }, [
     el('h3', { className: 'settings-group-title', text: 'Virtual camera' }),
     el('div', { className: 'settings-card' }, [el('div', { className: 'settings-block virtual-camera-block' }, children)]),
