@@ -187,7 +187,7 @@ function renderPageDots(): void {
   const prev = el('button', { className: 'page-arrow', type: 'button', ariaLabel: 'Previous page' });
   prev.appendChild(chevron('M10 3.5 5.5 8l4.5 4.5'));
   (prev as HTMLButtonElement).disabled = currentPage === 0;
-  prev.addEventListener('click', () => renderPage(currentPage - 1));
+  prev.addEventListener('click', () => goToPage(currentPage - 1));
   bar.appendChild(prev);
 
   for (let p = 0; p < pages.length; p++) {
@@ -198,7 +198,7 @@ function renderPageDots(): void {
   const next = el('button', { className: 'page-arrow', type: 'button', ariaLabel: 'Next page' });
   next.appendChild(chevron('M6 3.5 10.5 8 6 12.5'));
   (next as HTMLButtonElement).disabled = currentPage === pages.length - 1;
-  next.addEventListener('click', () => renderPage(currentPage + 1));
+  next.addEventListener('click', () => goToPage(currentPage + 1));
   bar.appendChild(next);
 }
 
@@ -230,31 +230,74 @@ function applyEffect(id: string): void {
 
 /** Pick an effect from a tile: apply it and exit the effects view. "Normal"
  *  also turns any backdrop off, like Photo Booth. */
-/** Zoom the grid into the chosen tile as it closes, like Photo Booth. */
-function zoomInto(tile: Element | null): void {
+// ---- Photo Booth motion ----
+// Opening zooms out from the active tile (the live view shrinks into its place),
+// closing zooms back into the chosen or active tile, and pages slide sideways.
+
+const EASE_OUT = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
+const EASE_IN_OUT = 'cubic-bezier(0.4, 0, 0.2, 1)';
+let closing: Animation | null = null;
+let paging = false;
+
+function reducedMotion(): boolean {
+  return app.settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function ms(duration: number): number {
+  return reducedMotion() ? 0 : duration;
+}
+
+/** The tile the zoom should centre on: given, else the active one, else the centre cell. */
+function focusTile(tile?: Element | null): Element | null {
   const grid = byId('effectsGrid');
-  if (!tile) return;
+  return tile ?? grid.querySelector('.effect-tile.is-active') ?? grid.children[CENTER] ?? null;
+}
+
+function setOrigin(tile: Element | null): void {
+  const grid = byId('effectsGrid');
   const g = grid.getBoundingClientRect();
+  if (!tile || g.width === 0) {
+    grid.style.transformOrigin = `${g.width / 2}px ${g.height / 2}px`;
+    return;
+  }
   const t = tile.getBoundingClientRect();
   grid.style.transformOrigin = `${t.left - g.left + t.width / 2}px ${t.top - g.top + t.height / 2}px`;
-  grid.classList.add('is-zooming');
+}
+
+/** Slide to another page: out one side, in from the other. */
+function goToPage(page: number): void {
+  const target = Math.min(Math.max(0, page), pages.length - 1);
+  if (target === currentPage || paging) return;
+  const dir = target > currentPage ? 1 : -1;
+  const grid = byId('effectsGrid');
+  const duration = ms(170);
+  if (!duration) {
+    renderPage(target);
+    return;
+  }
+  paging = true;
+  const out = grid.animate([{ transform: 'translateX(0px)' }, { transform: `translateX(${-dir * 100}%)` }], { duration, easing: 'ease-in' });
+  out.finished.then(() => {
+    renderPage(target);
+    return grid.animate([{ transform: `translateX(${dir * 100}%)` }, { transform: 'translateX(0px)' }], { duration, easing: EASE_OUT }).finished;
+  }).catch(() => undefined).finally(() => { paging = false; });
 }
 
 function pick(id: string): void {
-  zoomInto(byId('effectsGrid').querySelector(`.effect-tile[data-id="${CSS.escape(id)}"]`));
+  const tile = byId('effectsGrid').querySelector(`.effect-tile[data-id="${CSS.escape(id)}"]`);
   applyEffect(id);
   if (id === 'normal') void pickBackground('none');
   sound.play('button');
-  closeEffects();
+  closeEffects(tile);
 }
 
 /** Pick a backdrop from a tile: start background replacement and exit. */
 function pickBackdrop(id: string): void {
-  zoomInto(byId('effectsGrid').querySelector(`.effect-tile[data-backdrop="${CSS.escape(id)}"]`));
+  const tile = byId('effectsGrid').querySelector(`.effect-tile[data-backdrop="${CSS.escape(id)}"]`);
   void pickBackground(id);
   markActive();
   sound.play('button');
-  closeEffects();
+  closeEffects(tile);
 }
 
 // ---- open / close ----
@@ -266,30 +309,56 @@ export function isEffectsOpen(): boolean {
 export function openEffects(page = 0): void {
   if (!menuRenderer || !menuRenderer.available) return;
   if (running) {
-    renderPage(page); // already browsing: just jump to the page
+    goToPage(page); // already browsing: slide to the page
     return;
   }
   running = true;
+  closing?.cancel();
+  closing = null;
   const grid = byId('effectsGrid');
-  grid.classList.remove('is-zooming');
-  grid.style.transformOrigin = '';
   renderPage(page);
   byId('effectsPanel').classList.add('is-open');
   byId('toolbar').classList.add('is-effects');
   document.addEventListener('keydown', onKey);
   sound.play('button');
-  void activateFaceTracking(); // so face-effect tiles preview live
-  loop();
+  // The live view shrinks into its tile as the other effects appear around it.
+  // Every tile gets one frame first; live updates start once the zoom settles,
+  // so the zoom stays smooth on slow graphics.
+  paintAllOnce();
+  setOrigin(focusTile());
+  const zoom = grid.animate([{ transform: 'scale(3)' }, { transform: 'scale(1)' }], { duration: ms(380), easing: EASE_OUT });
+  void zoom.finished.catch(() => undefined).then(() => {
+    if (!running || rafHandle) return;
+    void activateFaceTracking(); // so face-effect tiles preview live
+    loop();
+  });
 }
 
-export function closeEffects(): void {
+/** Close the browser, zooming into `tile` (the pick) or the active effect. */
+export function closeEffects(tile?: Element | null): void {
+  const wasOpen = running;
   running = false;
   if (rafHandle) cancelAnimationFrame(rafHandle);
   rafHandle = 0;
   document.removeEventListener('keydown', onKey);
-  byId('effectsPanel').classList.remove('is-open');
   byId('toolbar').classList.remove('is-effects');
   if (!isFaceEffect(app.effect)) deactivateFaceTracking();
+  const panel = byId('effectsPanel');
+  const duration = wasOpen ? ms(320) : 0;
+  if (!duration) {
+    panel.classList.remove('is-open');
+    return;
+  }
+  const grid = byId('effectsGrid');
+  setOrigin(focusTile(tile));
+  const anim = grid.animate([{ transform: 'scale(1)' }, { transform: 'scale(3)' }], { duration, easing: EASE_IN_OUT, fill: 'forwards' });
+  closing = anim;
+  anim.finished.then(() => {
+    if (closing !== anim) return;
+    closing = null;
+    if (!running) panel.classList.remove('is-open');
+    anim.cancel();
+  }).catch(() => undefined);
 }
 
 export function toggleEffects(): void {
@@ -312,13 +381,27 @@ function onKey(e: KeyboardEvent): void {
       const target =
         e.key === 'ArrowLeft' ? currentPage - 1 : e.key === 'ArrowRight' ? currentPage + 1 : e.key === 'Home' ? 0 : pages.length - 1;
       const clamped = Math.min(Math.max(0, target), pages.length - 1);
-      if (clamped !== currentPage) renderPage(clamped); // no rebuild at either end
+      if (clamped !== currentPage) goToPage(clamped); // no rebuild at either end
       break;
     }
     default:
       return;
   }
   e.preventDefault();
+}
+
+/** Draw the current camera frame into every tile once. */
+function paintAllOnce(): void {
+  if (!menuRenderer || !menuRenderer.prepareFrame()) return;
+  for (const t of tiles) {
+    menuRenderer.drawEffect(t.id, t.amount, app.settings.mirror);
+    const gc = menuRenderer.canvas;
+    if (t.canvas.width !== gc.width || t.canvas.height !== gc.height) {
+      t.canvas.width = gc.width;
+      t.canvas.height = gc.height;
+    }
+    t.ctx.drawImage(gc, 0, 0);
+  }
 }
 
 function loop(): void {

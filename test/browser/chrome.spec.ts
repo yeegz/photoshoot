@@ -376,3 +376,79 @@ test('the segmentation worker is content-hashed, so a cached old worker cannot b
   await expect.poll(() => workers.length, { timeout: 20000 }).toBeGreaterThan(0);
   expect(workers[0]).toMatch(/personSegmentation\.worker-[A-Z0-9]{8}\.js$/);
 });
+
+// ---- Photo Booth motion: effects browser ----
+
+// Record every animation started on the effects grid, with its first/last keyframes.
+async function recordGridAnimations(page: import('@playwright/test').Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as { __gridAnims: { from: string; to: string; origin: string }[] };
+    w.__gridAnims = [];
+    const grid = document.getElementById('effectsGrid')!;
+    const original = grid.animate.bind(grid);
+    grid.animate = (frames: Keyframe[] | PropertyIndexedKeyframes | null, opts?: number | KeyframeAnimationOptions) => {
+      const list = (frames as Keyframe[]) ?? [];
+      w.__gridAnims.push({ from: String(list[0]?.transform ?? ''), to: String(list.at(-1)?.transform ?? ''), origin: grid.style.transformOrigin });
+      return original(frames, opts);
+    };
+  });
+}
+const gridAnims = (page: import('@playwright/test').Page) =>
+  page.evaluate(() => (window as unknown as { __gridAnims: { from: string; to: string; origin: string }[] }).__gridAnims);
+
+test('opening Effects shrinks the live view into its tile (zoom out from scale 3)', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  await recordGridAnimations(page);
+  await page.locator('#btnEffects').click();
+  await expect.poll(() => gridAnims(page)).toContainEqual(expect.objectContaining({ from: 'scale(3)', to: 'scale(1)' }));
+  // "Normal" is the centre tile on the first page, so the zoom is centred.
+  const anim = (await gridAnims(page)).find((a) => a.from === 'scale(3)')!;
+  expect(anim.origin).toMatch(/px/);
+});
+
+test('effects pages slide sideways instead of swapping', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#btnEffects').click();
+  await recordGridAnimations(page);
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => gridAnims(page)).toContainEqual(expect.objectContaining({ to: 'translateX(-100%)' }));
+  await expect.poll(() => gridAnims(page)).toContainEqual(expect.objectContaining({ from: 'translateX(100%)', to: 'translateX(0px)' }));
+  await expect(page.locator('.page-dot').nth(1)).toHaveClass(/active/);
+});
+
+test('closing Effects without picking zooms back into the active effect', async ({ page }) => {
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#btnEffects').click();
+  await expect(page.locator('#effectsPanel')).toHaveClass(/is-open/);
+  await recordGridAnimations(page);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => gridAnims(page)).toContainEqual(expect.objectContaining({ from: 'scale(1)', to: 'scale(3)' }));
+  await expect(page.locator('#effectsPanel')).not.toHaveClass(/is-open/);
+});
+
+test('a deleted photo collapses out of the tray', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('photoshoot.settings', JSON.stringify({ countdownSeconds: 0, checkForUpdates: false })));
+  await page.goto('/app/');
+  await expectLive(page);
+  await page.locator('#shutter').click();
+  await expect(page.locator('.thumb')).toHaveCount(1, { timeout: 60000 });
+  await page.locator('#shutter').click();
+  await expect(page.locator('.thumb')).toHaveCount(2, { timeout: 60000 });
+  await page.evaluate(() => {
+    const w = window as unknown as { __collapse: string[] };
+    w.__collapse = [];
+    const original = Element.prototype.animate;
+    Element.prototype.animate = function (frames, opts) {
+      if (this.classList.contains('thumb')) w.__collapse.push(JSON.stringify(frames));
+      return original.call(this, frames, opts);
+    };
+  });
+  await page.locator('.thumb').first().click();
+  await page.keyboard.press('Delete');
+  await expect(page.locator('.thumb')).toHaveCount(1);
+  const frames = await page.evaluate(() => (window as unknown as { __collapse: string[] }).__collapse);
+  expect(frames.some((f) => f.includes('"width":"0px"'))).toBe(true);
+});

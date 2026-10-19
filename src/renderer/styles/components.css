@@ -557,13 +557,11 @@ body.is-reviewing .effects-btn {
   z-index: 30;
   background: #000;
   overflow: hidden;
-  opacity: 0;
+  /* Shown at once; the grid's zoom (effectsMenu.ts) carries the transition. */
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.34s var(--ease), visibility 0.34s var(--ease);
 }
 .effects-view.is-open {
-  opacity: 1;
   visibility: visible;
   pointer-events: auto;
 }
@@ -575,17 +573,6 @@ body.is-reviewing .effects-btn {
   width: 100%;
   height: 100%;
   background: #000;
-  /* zoom-out reveal: the grid pulls back from the live view when opening */
-  transform: scale(1.18);
-  transform-origin: center;
-  transition: transform 0.45s var(--ease);
-}
-.effects-view.is-open .effects-grid {
-  transform: scale(1);
-}
-/* Picking a tile zooms into it as the browser closes */
-.effects-view:not(.is-open) .effects-grid.is-zooming {
-  transform: scale(3);
 }
 .effect-tile {
   position: relative;

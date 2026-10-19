@@ -162,7 +162,25 @@ async function deleteItem(item: GalleryItem): Promise<void> {
   if (reviewId === item.id) exitReview();
   await api.deleteGalleryItem(item.id, true);
   sound.play('button');
+  await collapseThumb(item.id);
   await refreshGallery();
+}
+
+/** The removed photo shrinks away and its neighbours close the gap. */
+async function collapseThumb(id: string): Promise<void> {
+  const thumb = byId('trayScroll').querySelector<HTMLElement>(`.thumb[data-id="${CSS.escape(id)}"]`);
+  const reduce = app.settings.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!thumb || reduce) return;
+  const width = thumb.getBoundingClientRect().width;
+  await thumb
+    .animate(
+      [
+        { width: `${width}px`, opacity: 1, transform: 'scale(1)' },
+        { width: '0px', opacity: 0, transform: 'scale(0.6)' },
+      ],
+      { duration: 220, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' }
+    )
+    .finished.catch(() => undefined);
 }
 
 async function exportItem(item: GalleryItem): Promise<void> {

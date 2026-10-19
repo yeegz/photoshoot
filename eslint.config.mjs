@@ -8,6 +8,7 @@ export default tseslint.config(
   {
     ignores: [
       'node_modules/',
+      '.superpowers/',
       'dist/',
       'release/',
       'web-dist/',
