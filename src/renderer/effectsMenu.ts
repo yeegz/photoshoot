@@ -265,9 +265,15 @@ function setOrigin(tile: Element | null): void {
 }
 
 /** Slide to another page: out one side, in from the other. */
+let queuedPage: number | null = null;
+
 function goToPage(page: number): void {
   const target = Math.min(Math.max(0, page), pages.length - 1);
-  if (target === currentPage || paging) return;
+  if (paging) {
+    queuedPage = target; // a click or key during a slide runs when it ends
+    return;
+  }
+  if (target === currentPage) return;
   const dir = target > currentPage ? 1 : -1;
   const grid = byId('effectsGrid');
   const duration = ms(170);
@@ -280,7 +286,12 @@ function goToPage(page: number): void {
   out.finished.then(() => {
     renderPage(target);
     return grid.animate([{ transform: `translateX(${dir * 100}%)` }, { transform: 'translateX(0px)' }], { duration, easing: EASE_OUT }).finished;
-  }).catch(() => undefined).finally(() => { paging = false; });
+  }).catch(() => undefined).finally(() => {
+    paging = false;
+    const next = queuedPage;
+    queuedPage = null;
+    if (next !== null && running) goToPage(next);
+  });
 }
 
 function pick(id: string): void {
