@@ -53,7 +53,13 @@ test('desktop app runs person segmentation from its app:// origin', async () => 
     // Without WebGL2 (e.g. Electron under xvfb on Linux CI) the app runs in
     // basic camera mode, where effects and backdrops are intentionally off.
     // Windows CI runs this test for real against the packaged app.
-    test.skip(await page.locator('#btnEffects').isDisabled(), 'No WebGL2 here: basic camera mode has no backdrops.');
+    // Settle first: the app decides basic mode during start-up.
+    await page.waitForTimeout(1500);
+    const basicMode = await page.evaluate(() => {
+      const fx = document.getElementById('btnEffects') as HTMLButtonElement;
+      return fx.disabled || /WebGL2/.test(fx.title);
+    });
+    test.skip(basicMode, 'No WebGL2 here: basic camera mode has no backdrops.');
     await page.locator('#btnEffects').click();
     await page.keyboard.press('End');
     await page.locator('[data-backdrop="studio"]').click();
