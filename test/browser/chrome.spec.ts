@@ -137,7 +137,7 @@ test('with no captures the toolbar sits on the bottom edge and the effects brows
 
 test('the Settings reset button returns to Photo Booth and says so', async ({ page }) => {
   await page.addInitScript(() =>
-    localStorage.setItem('photoshoot.settings', JSON.stringify({ theme: 'retro', autoTheme: false }))
+    localStorage.setItem('photoshoot.settings', JSON.stringify({ theme: 'retro', autoTheme: false, lastSeenVersion: '1.5.1' }))
   );
   await page.goto('/app/');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'retro');
@@ -148,7 +148,7 @@ test('the Settings reset button returns to Photo Booth and says so', async ({ pa
 
 test('light themes paint the tray band in their own chrome colour', async ({ page }) => {
   await page.addInitScript(() =>
-    localStorage.setItem('photoshoot.settings', JSON.stringify({ theme: 'modern', autoTheme: false, countdownSeconds: 0 }))
+    localStorage.setItem('photoshoot.settings', JSON.stringify({ theme: 'modern', autoTheme: false, countdownSeconds: 0, lastSeenVersion: '1.5.1' }))
   );
   await page.goto('/app/');
   await expectLive(page);

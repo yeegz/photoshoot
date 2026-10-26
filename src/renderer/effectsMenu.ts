@@ -8,7 +8,7 @@
 
 import { app } from './app';
 import { GLRenderer } from './gl/renderer';
-import { EFFECTS, isDraggable, isFaceEffect } from './gl/effects';
+import { ALL_EFFECTS, EFFECT_BY_ID, isDraggable, isFaceEffect } from './gl/effects';
 import type { EffectDef } from './gl/effects';
 import { BACKGROUNDS, drawBackgroundPreview } from './backgrounds';
 import type { BackgroundDef } from './backgrounds';
@@ -51,7 +51,7 @@ let slotCurrent = '';
 
 // Built-in effects followed by any imported community filters.
 function allEffects(): EffectDef[] {
-  return EFFECTS.concat(customFilterDefs());
+  return ALL_EFFECTS.concat(customFilterDefs());
 }
 
 function chunk<T>(list: T[], size: number): T[][] {
@@ -184,27 +184,52 @@ function chevron(d: string): SVGElement {
   return svg;
 }
 
+// Page dots, iOS style: at most five show at once. The row slides to keep the
+// current page in view, and the end dots shrink and fade when more lie beyond.
+const VISIBLE_DOTS = 5;
+const DOT_STEP = 16; // 8px dot + 8px gap
+let dotsBuiltFor = -1;
+
 function renderPageDots(): void {
   const bar = byId('barPages');
-  clear(bar);
-  if (pages.length <= 1) return;
-
-  const prev = el('button', { className: 'page-arrow', type: 'button', ariaLabel: 'Previous page' });
-  prev.appendChild(chevron('M10 3.5 5.5 8l4.5 4.5'));
-  (prev as HTMLButtonElement).disabled = currentPage === 0;
-  prev.addEventListener('click', () => goToPage(currentPage - 1));
-  bar.appendChild(prev);
-
-  for (let p = 0; p < pages.length; p++) {
-    const dot = el('span', { className: `page-dot${p === currentPage ? ' active' : ''}` });
-    bar.appendChild(dot);
+  if (pages.length <= 1) {
+    clear(bar);
+    dotsBuiltFor = -1;
+    return;
   }
-
-  const next = el('button', { className: 'page-arrow', type: 'button', ariaLabel: 'Next page' });
-  next.appendChild(chevron('M6 3.5 10.5 8 6 12.5'));
-  (next as HTMLButtonElement).disabled = currentPage === pages.length - 1;
-  next.addEventListener('click', () => goToPage(currentPage + 1));
-  bar.appendChild(next);
+  if (dotsBuiltFor !== pages.length || !bar.querySelector('.page-dots-track')) {
+    clear(bar);
+    dotsBuiltFor = pages.length;
+    const prev = el('button', { className: 'page-arrow page-prev', type: 'button', ariaLabel: 'Previous page' });
+    prev.appendChild(chevron('M10 3.5 5.5 8l4.5 4.5'));
+    prev.addEventListener('click', () => goToPage(currentPage - 1));
+    const viewport = el('div', { className: 'page-dots', role: 'img' });
+    viewport.style.width = `${Math.min(VISIBLE_DOTS, pages.length) * DOT_STEP}px`;
+    const track = el('div', { className: 'page-dots-track' });
+    for (let p = 0; p < pages.length; p++) track.appendChild(el('span', { className: 'page-dot' }));
+    viewport.appendChild(track);
+    const next = el('button', { className: 'page-arrow page-next', type: 'button', ariaLabel: 'Next page' });
+    next.appendChild(chevron('M6 3.5 10.5 8 6 12.5'));
+    next.addEventListener('click', () => goToPage(currentPage + 1));
+    bar.append(prev, viewport, next);
+  }
+  const n = pages.length;
+  const first = Math.min(Math.max(0, currentPage - Math.floor(VISIBLE_DOTS / 2)), Math.max(0, n - VISIBLE_DOTS));
+  const last = Math.min(n - 1, first + VISIBLE_DOTS - 1);
+  const viewport = bar.querySelector<HTMLElement>('.page-dots')!;
+  viewport.setAttribute('aria-label', `Page ${currentPage + 1} of ${n}`);
+  viewport.classList.toggle('more-before', first > 0);
+  viewport.classList.toggle('more-after', last < n - 1);
+  bar.querySelector<HTMLElement>('.page-dots-track')!.style.transform = `translateX(${-first * DOT_STEP}px)`;
+  bar.querySelectorAll<HTMLElement>('.page-dot').forEach((dot, p) => {
+    dot.classList.toggle('active', p === currentPage);
+    const edge = (p === first && first > 0) || (p === last && last < n - 1);
+    const outside = p < first || p > last;
+    dot.classList.toggle('is-edge', edge && !outside);
+    dot.classList.toggle('is-out', outside);
+  });
+  bar.querySelector<HTMLButtonElement>('.page-prev')!.disabled = currentPage === 0;
+  bar.querySelector<HTMLButtonElement>('.page-next')!.disabled = currentPage === n - 1;
 }
 
 function markActive(): void {
@@ -237,6 +262,24 @@ export function applyEffect(id: string): void {
   if (isFaceEffect(id)) void activateFaceTracking();
   byId('shutterHint').textContent = id === 'normal' ? modeHint() : `Effect · ${effectDisplayLabel(id)}`;
   document.dispatchEvent(new CustomEvent('photoshoot:effect')); // the four-photo plan follows it
+  showEffectHint(EFFECT_BY_ID.get(id)?.hint);
+}
+
+let hintTimer = 0;
+/** A short pill over the picture saying how to trigger the effect. */
+function showEffectHint(hint: string | undefined): void {
+  const pill = byId('effectHint');
+  window.clearTimeout(hintTimer);
+  if (!hint) {
+    pill.hidden = true;
+    return;
+  }
+  pill.textContent = hint;
+  pill.hidden = false;
+  pill.classList.remove('is-showing');
+  void pill.offsetWidth; // restart the pop-in
+  pill.classList.add('is-showing');
+  hintTimer = window.setTimeout(() => (pill.hidden = true), 2800);
 }
 
 /** Pick an effect from a tile: apply it and exit the effects view. "Normal"

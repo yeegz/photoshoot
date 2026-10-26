@@ -23,7 +23,8 @@ import { setPerfOverlay } from './perf';
 import { triggerShutter, videoRecorder, cancelCountdown, isCounting } from './capture';
 import { initStripPlan, updatePlanVisibility } from './stripPlan';
 import { isSheetOpen } from './stripSheet';
-import { initTips } from './tips';
+import { initTips, maybeShowStripTour } from './tips';
+import { initUpdates, maybeShowWhatsNew } from './updates';
 import { closeOverlay, closeTop, isAnyOpen } from './overlays';
 import { effectLabel, isDraggable } from './gl/effects';
 import type { CameraErrorKind } from './camera';
@@ -199,6 +200,7 @@ function setMode(mode: CaptureKind): void {
   );
   byId('shutterHint').textContent = app.effect === 'normal' ? modeHint() : `Effect · ${effectDisplayLabel(app.effect)}`;
   updatePlanVisibility();
+  if (mode === 'strip') maybeShowStripTour();
   sound.play('button');
 }
 
@@ -391,29 +393,11 @@ async function bootstrap(): Promise<void> {
     renderer.dispose();
   });
 
-  void checkUpdates();
+  initUpdates();
   await startCamera(app.settings.cameraId);
   updatePlanVisibility();
+  maybeShowWhatsNew();
   initTips();
-}
-
-// Launch-time update check against GitHub Releases (Settings → Check for updates).
-async function checkUpdates(): Promise<void> {
-  if (!app.settings.checkForUpdates) return;
-  let info;
-  try {
-    info = await api.checkForUpdate();
-  } catch {
-    return; // never let an update check disturb the camera
-  }
-  if (info.status !== 'available') return;
-  byId('updateText').textContent = `Photoshoot ${info.version} is available.`;
-  byId<HTMLAnchorElement>('updateLink').href = info.url;
-  const notice = byId('updateNotice');
-  notice.hidden = false;
-  const hide = () => (notice.hidden = true);
-  byId('updateLater').onclick = hide;
-  byId('updateLink').addEventListener('click', hide);
 }
 
 bootstrap().catch((err) => {

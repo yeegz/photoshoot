@@ -10,6 +10,7 @@ export interface EffectDef {
   animated: boolean;
   draggable?: boolean;
   face?: boolean; // needs face-landmark tracking
+  hint?: string; // what to do to trigger it, shown when the effect is picked
 }
 
 // Ordered so "Normal" lands in the centre cell of the first page (index 4) — the
@@ -44,7 +45,47 @@ export const EFFECTS: EffectDef[] = [
   { id: 'alien', label: 'Space Alien', amount: 1, animated: false, face: true },
 ];
 
-export const EFFECT_BY_ID = new Map(EFFECTS.map((e) => [e.id, e]));
+// The extended library: the looks people use most on social apps, two effects
+// from earlier Photo Booth releases (Kaleidoscope, Edge Work) and cute face
+// effects. Kept apart from EFFECTS (the Photo Booth set the landing page shows).
+// Page 3 gets Doe Eyes in its last cell; then Looks, Fun, and Cute faces.
+export const MORE_EFFECTS: EffectDef[] = [
+  { id: 'doeeyes', label: 'Doe Eyes', amount: 1, animated: true, face: true, hint: 'Blink' },
+  // Looks
+  { id: 'film', label: 'Film', amount: 1, animated: true },
+  { id: 'disposable', label: 'Disposable', amount: 1, animated: true },
+  { id: 'softglam', label: 'Soft Glam', amount: 1, animated: false },
+  { id: 'dreamy', label: 'Dreamy', amount: 1, animated: false },
+  { id: 'goldenhour', label: 'Golden Hour', amount: 1, animated: false },
+  { id: 'noir', label: 'Noir', amount: 1, animated: true },
+  { id: 'vhs', label: 'VHS', amount: 1, animated: true },
+  { id: 'duotone', label: 'Duotone', amount: 1, animated: false },
+  { id: 'lomo', label: 'Lomo', amount: 1, animated: false },
+  // Fun
+  { id: 'sparkle', label: 'Sparkles', amount: 1, animated: true },
+  { id: 'hearts', label: 'Hearts', amount: 1, animated: true },
+  { id: 'rainbow', label: 'Rainbow', amount: 1, animated: true },
+  { id: 'glitch', label: 'Glitch', amount: 1, animated: true },
+  { id: 'neon', label: 'Neon', amount: 1, animated: true },
+  { id: 'halftone', label: 'Halftone', amount: 1, animated: false },
+  { id: 'pixel', label: 'Pixel', amount: 1, animated: false },
+  { id: 'kaleido', label: 'Kaleidoscope', amount: 1, animated: false, draggable: true },
+  { id: 'edgework', label: 'Edge Work', amount: 1, animated: false },
+  // Cute faces
+  { id: 'puppy', label: 'Puppy', amount: 1, animated: true, face: true, hint: 'Open your mouth' },
+  { id: 'kitty', label: 'Kitty', amount: 1, animated: true, face: true, hint: 'Raise your eyebrows' },
+  { id: 'rainbowmouth', label: 'Rainbow Mouth', amount: 1, animated: true, face: true, hint: 'Open your mouth' },
+  { id: 'hearteyes', label: 'Heart Eyes', amount: 1, animated: true, face: true, hint: 'Smile' },
+  { id: 'flowercrown', label: 'Flower Crown', amount: 1, animated: true, face: true, hint: 'Raise your eyebrows' },
+  { id: 'starry', label: 'Seeing Stars', amount: 1, animated: true, face: true, hint: 'Raise your eyebrows' },
+  { id: 'blush', label: 'Blush', amount: 1, animated: false, face: true, hint: 'Smile' },
+  { id: 'glam', label: 'Glam', amount: 1, animated: false, face: true, hint: 'Smile' },
+];
+
+/** Everything the app offers, in Effects-browser order. */
+export const ALL_EFFECTS: EffectDef[] = EFFECTS.concat(MORE_EFFECTS);
+
+export const EFFECT_BY_ID = new Map(ALL_EFFECTS.map((e) => [e.id, e]));
 
 export function effectLabel(id: string): string {
   return EFFECT_BY_ID.get(id)?.label ?? id;

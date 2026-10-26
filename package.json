@@ -1,6 +1,6 @@
 {
   "name": "photoshoot",
-  "version": "1.4.0",
+  "version": "1.5.1",
   "description": "Photoshoot — a modern Windows photobooth app. Clean-room homage, all original code and assets.",
   "author": "Photoshoot",
   "license": "MIT",
@@ -46,7 +46,8 @@
     "ws": "^8.22.0"
   },
   "dependencies": {
-    "@mediapipe/tasks-vision": "^0.10.18"
+    "@mediapipe/tasks-vision": "^0.10.18",
+    "electron-updater": "^6.8.11"
   },
   "engines": {
     "node": ">=22"

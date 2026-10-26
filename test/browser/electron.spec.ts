@@ -36,7 +36,7 @@ test('desktop app acquires a camera and renders pixels through its secure app or
     const update = await page.evaluate(() =>
       (window as unknown as { photoshoot: { checkForUpdate(): Promise<{ status: string }> } }).photoshoot.checkForUpdate()
     );
-    expect(['available', 'current', 'unavailable']).toContain(update.status);
+    expect(['available', 'current', 'unavailable', 'downloading', 'ready']).toContain(update.status);
   } finally {
     await closeApp(desktop);
   }

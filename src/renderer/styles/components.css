@@ -407,6 +407,10 @@ body.is-reviewing .effects-btn {
   place-items: center;
 }
 .review img {
+  /* Pinned to the box: as a grid item a tall strip sized its row to the image's
+     own height and overflowed, showing only part of the print. */
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -667,15 +671,49 @@ body.is-reviewing .effects-btn {
   width: 13px;
   height: 13px;
 }
+.page-dots {
+  overflow: hidden;
+  height: 12px;
+  display: flex;
+  align-items: center;
+}
+.page-dots.more-before.more-after {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+}
+.page-dots.more-before:not(.more-after) {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 14px);
+  mask-image: linear-gradient(to right, transparent, #000 14px);
+}
+.page-dots.more-after:not(.more-before) {
+  -webkit-mask-image: linear-gradient(to left, transparent, #000 14px);
+  mask-image: linear-gradient(to left, transparent, #000 14px);
+}
+.page-dots-track {
+  display: flex;
+  align-items: center;
+  transition: transform 0.32s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
 .page-dot {
+  flex: none;
   width: 8px;
   height: 8px;
+  margin: 0 4px;
   border-radius: 50%;
   background: var(--text-faint);
-  transition: background var(--dur) var(--ease);
+  transition: background var(--dur) var(--ease), transform 0.32s var(--ease), opacity 0.32s var(--ease);
+}
+.page-dot.is-edge {
+  transform: scale(0.6);
+  opacity: 0.7;
+}
+.page-dot.is-out {
+  transform: scale(0.35);
+  opacity: 0;
 }
 .page-dot.active {
   background: var(--accent);
+  transform: scale(1.1);
 }
 
 /* ---------- Settings (macOS inset grouped lists) ---------- */
@@ -1244,6 +1282,39 @@ body.is-reviewing .strip-plan {
   }
 }
 
+/* ---------- Effect hint ("Open your mouth") ---------- */
+.effect-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  z-index: 3;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 18px;
+  color: #fff;
+  background: rgba(28, 28, 30, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 4px 14px rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.effect-hint[hidden] {
+  display: none;
+}
+.effect-hint.is-showing {
+  animation: hintPop 2.8s var(--ease) forwards;
+}
+@keyframes hintPop {
+  0% { opacity: 0; transform: translate(-50%, 8px) scale(0.9); }
+  10% { opacity: 1; transform: translate(-50%, 0) scale(1.04); }
+  16% { transform: translate(-50%, 0) scale(1); }
+  85% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -4px) scale(0.98); }
+}
+
 /* ---------- Layout sheet (after four photos) ---------- */
 .strip-sheet {
   position: fixed;
@@ -1267,13 +1338,15 @@ body.is-reviewing .strip-plan {
   pointer-events: auto;
   transition: opacity var(--dur) var(--ease);
 }
-/* A Mac sheet drops from the top edge of the window. */
+/* A Mac sheet drops from the top edge of the window. The action buttons always
+   stay on screen; only the controls scroll when the window is short. */
 .sheet-card {
+  --sheet-avail: calc(100dvh - var(--titlebar-h) - var(--toolbar-h) - var(--safe-top) - var(--safe-bottom) - 16px);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 248px;
+  grid-template-columns: minmax(0, 1fr) 268px;
   gap: 20px;
-  width: min(760px, 100%);
-  max-height: 100%;
+  width: min(780px, 100%);
+  max-height: var(--sheet-avail);
   padding: 18px;
   border-radius: 0 0 12px 12px;
   color: var(--text);
@@ -1286,13 +1359,15 @@ body.is-reviewing .strip-plan {
   transform: translateY(0);
 }
 .sheet-preview {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
   min-height: 0;
-  height: min(56vh, 520px); /* the card keeps its size whichever layout is shown */
-  padding: 10px;
+  height: min(56vh, 520px, calc(var(--sheet-avail) - 36px));
+  padding: 12px;
+  overflow: hidden;
   border-radius: 8px;
   background: rgba(127, 127, 127, 0.14);
 }
@@ -1301,13 +1376,30 @@ body.is-reviewing .strip-plan {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 22px rgba(0, 0, 0, 0.28);
 }
 .sheet-side {
   display: flex;
   flex-direction: column;
   gap: 14px;
   min-width: 0;
+  min-height: 0;
+  max-height: calc(var(--sheet-avail) - 36px);
+}
+.sheet-controls.has-more {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+}
+.sheet-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: -3px; /* room for focus rings inside the scroller */
+  padding: 3px;
 }
 .sheet-side h2 {
   font-size: 15px;
@@ -1378,7 +1470,7 @@ body.is-reviewing .strip-plan {
 }
 .sheet-frames {
   display: flex;
-  gap: 10px;
+  gap: 9px;
 }
 .sheet-swatch {
   width: 22px;
@@ -1390,6 +1482,155 @@ body.is-reviewing .strip-plan {
 .sheet-swatch.is-active {
   box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.45), 0 0 0 2px var(--menu-bg), 0 0 0 4px var(--accent);
 }
+.sheet-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 2px;
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.18);
+}
+.sheet-tab {
+  height: 26px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-dim);
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.sheet-tab[aria-selected='true'] {
+  color: var(--text);
+  background: var(--btn-bg-hover);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), inset 0 0 0 0.5px var(--btn-border);
+}
+.sheet-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sheet-pane[hidden] {
+  display: none;
+}
+.sheet-pane:not([hidden]) {
+  animation: paneIn 0.22s var(--ease);
+}
+@keyframes paneIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.sheet-fonts {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+.sheet-font {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 0 5px;
+  border-radius: 7px;
+  font-size: 10px;
+  color: var(--text-dim);
+  background: var(--btn-bg);
+  box-shadow: inset 0 0 0 1px var(--btn-border);
+  transition: box-shadow var(--dur) var(--ease), transform 0.12s var(--ease);
+}
+.sheet-font-sample {
+  font-size: 19px;
+  line-height: 1.2;
+  color: var(--text);
+}
+.sheet-font:active {
+  transform: scale(0.94);
+}
+.sheet-font.is-active {
+  color: var(--text);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.sheet-seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 7px;
+  background: rgba(127, 127, 127, 0.18);
+}
+.sheet-seg-btn {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  height: 24px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.sheet-seg-btn svg {
+  width: 15px;
+  height: 15px;
+}
+.sheet-seg-btn.is-active {
+  color: var(--text);
+  background: var(--btn-bg-hover);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+.sheet-swatch.is-auto {
+  display: grid;
+  place-items: center;
+  background: var(--paper, #fff);
+  color: var(--swatch);
+  font: 600 12px/1 'New York', Georgia, serif;
+}
+.sheet-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sheet-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sheet-chip {
+  height: 26px;
+  padding: 0 11px;
+  border-radius: 13px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: var(--btn-bg);
+  box-shadow: inset 0 0 0 1px var(--btn-border);
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease), transform 0.12s var(--ease);
+}
+.sheet-chip:hover {
+  color: var(--text);
+}
+.sheet-chip:active {
+  transform: scale(0.95);
+}
+.sheet-chip[aria-pressed='true'] {
+  color: var(--accent-contrast, #fff);
+  background: var(--accent);
+  box-shadow: none;
+}
+.sheet-caption {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 7px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.sheet-caption::placeholder {
+  color: var(--text-dim);
+}
+.sheet-caption:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+}
 .sheet-actions {
   display: flex;
   align-items: center;
@@ -1399,18 +1640,48 @@ body.is-reviewing .strip-plan {
 .sheet-spacer {
   flex: 1;
 }
+/* Narrow windows and phones: preview on top, controls below, buttons pinned. */
 @media (max-width: 640px) {
+  .strip-sheet {
+    padding: 0 8px 8px;
+  }
   .sheet-card {
     grid-template-columns: 1fr;
-    gap: 14px;
-    padding: 14px;
-    overflow: auto;
+    grid-template-rows: minmax(140px, 1fr) auto;
+    gap: 12px;
+    height: var(--sheet-avail);
+    padding: 12px;
   }
   .sheet-preview {
-    height: 38vh;
+    height: auto;
+  }
+  .sheet-side {
+    max-height: min(62vh, calc(var(--sheet-avail) - 180px));
   }
   .sheet-layouts {
     grid-template-columns: repeat(4, 1fr);
+  }
+  .sheet-layout {
+    padding: 8px 2px 6px;
+  }
+  .sheet-fonts {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+/* Short, wide windows (a phone on its side): keep the side-by-side sheet compact. */
+@media (max-height: 520px) and (min-width: 641px) {
+  .sheet-card {
+    padding: 12px;
+    gap: 14px;
+  }
+  .sheet-layout {
+    flex-direction: row;
+    justify-content: center;
+    padding: 7px 6px;
+  }
+  .sheet-layout svg {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -1463,6 +1734,67 @@ body.is-reviewing .strip-plan {
 .tip-popover[data-side='bottom'] .tip-arrow {
   top: -7px;
   box-shadow: -1px -1px 0 var(--panel-border);
+}
+/* Small illustrations inside the four-photo tutorial */
+.tip-art {
+  display: flex;
+  gap: 5px;
+  margin-top: 9px;
+}
+.tip-cd,
+.tip-slot,
+.tip-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px 5px;
+  border-radius: 6px;
+  background: rgba(127, 127, 127, 0.14);
+  font-size: 10px;
+  color: var(--text-dim);
+  animation: tipArtIn 0.32s var(--ease-drop) backwards;
+}
+.tip-art > :nth-child(2) { animation-delay: 60ms; }
+.tip-art > :nth-child(3) { animation-delay: 120ms; }
+.tip-art > :nth-child(4) { animation-delay: 180ms; }
+@keyframes tipArtIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.92);
+  }
+}
+.tip-cd b {
+  font-size: 12px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.tip-slot b {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: rgba(127, 127, 127, 0.3);
+  color: var(--text);
+  font-size: 10px;
+}
+.tip-slot.is-picked b {
+  background: var(--accent);
+  color: #fff;
+}
+.tip-slot.is-picked {
+  color: var(--text);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+.tip-layout svg {
+  width: 20px;
+  height: 20px;
+  color: var(--text);
+}
+.tip-popover[data-tour='strip'] {
+  width: 292px;
 }
 .tip-actions {
   display: flex;
@@ -1570,6 +1902,8 @@ body.is-reviewing .strip-plan {
   margin-left: 1px;
 }
 .review video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -1772,6 +2106,134 @@ body.is-reviewing .strip-plan {
   color: var(--accent);
   font-weight: 600;
   text-decoration: none;
+  font-size: inherit;
+}
+.update-get[hidden] {
+  display: none;
+}
+.update-notice:not([hidden]) {
+  animation: noticeIn 0.34s var(--ease-drop);
+}
+@keyframes noticeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px) scale(0.96);
+  }
+}
+
+/* ---------- What's New (a Mac-style centred sheet) ---------- */
+.whats-new {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0);
+  transition: background var(--dur) var(--ease);
+}
+.whats-new[hidden] {
+  display: none;
+}
+.whats-new.is-open {
+  background: rgba(0, 0, 0, 0.45);
+}
+.wn-card {
+  display: flex;
+  flex-direction: column;
+  width: min(460px, 100%);
+  max-height: min(620px, calc(100dvh - 32px));
+  padding: 22px 22px 16px;
+  border-radius: 14px;
+  color: var(--text);
+  background: var(--menu-bg);
+  box-shadow: 0 0 0 1px var(--panel-border), 0 24px 60px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: scale(0.94);
+  transition: opacity 0.22s var(--ease), transform 0.32s var(--ease-drop);
+}
+.whats-new.is-open .wn-card {
+  opacity: 1;
+  transform: scale(1);
+}
+.wn-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.wn-glyph {
+  width: 46px;
+  height: 46px;
+  padding: 10px;
+  border-radius: 12px;
+  color: #fff;
+  background: radial-gradient(circle at 50% 26%, var(--shutter-top, var(--shutter)) 0%, var(--shutter) 58%, var(--shutter-2) 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.wn-head h2 {
+  font-size: 17px;
+  font-weight: 700;
+}
+.wn-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.wn-release + .wn-release {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--panel-border);
+}
+.wn-release h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.wn-date {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.wn-release ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+}
+.wn-release li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+.wn-release li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.wn-release li strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.wn-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 .update-later {
   padding: 2px 8px;

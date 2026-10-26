@@ -52,5 +52,9 @@ jobs:
           if ($packages.Count -ne 2) { throw 'Expected installer and portable executable' }
           $lines = $packages | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" }
           $lines | Set-Content release/SHA256SUMS.txt -Encoding utf8NoBOM
-          gh release create $env:GITHUB_REF_NAME $packages.FullName release/SHA256SUMS.txt --verify-tag --title "Photoshoot $env:GITHUB_REF_NAME" --notes-file .github/RELEASE_NOTES.md
+          # Auto-update feed: installed apps read latest.yml and download the installer (blockmap = smaller updates).
+          $feed = @('release/latest.yml') + @(Get-ChildItem release -Filter '*-x64.exe.blockmap' | ForEach-Object { $_.FullName })
+          foreach ($f in $feed) { if (-not (Test-Path $f)) { throw "Missing update feed file $f" } }
+          if ((Select-String -Path release/latest.yml -Pattern "version: $((Get-Content package.json | ConvertFrom-Json).version)" -Quiet) -ne $true) { throw 'latest.yml version does not match' }
+          gh release create $env:GITHUB_REF_NAME $packages.FullName release/SHA256SUMS.txt $feed --verify-tag --title "Photoshoot $env:GITHUB_REF_NAME" --notes-file .github/RELEASE_NOTES.md
           if ($LASTEXITCODE -ne 0) { throw 'GitHub release publication failed' }

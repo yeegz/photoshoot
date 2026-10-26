@@ -19,7 +19,7 @@ import {
 } from './storage';
 import { importThemeFromPath, listImportedThemes, removeImportedTheme } from './themeImport';
 import { importFilterFromPath, listCustomFilters, removeCustomFilter } from './filterImport';
-import { checkForUpdate } from './updates';
+import { Updater } from './updates';
 
 function asString(x: unknown): string {
   return typeof x === 'string' ? x : '';
@@ -29,7 +29,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null, virtualCamera
   const requireMainFrame = (event: IpcMainInvokeEvent) => {
     const contents = getWindow()?.webContents;
     if (!contents || event.sender !== contents || event.senderFrame !== contents.mainFrame) {
-      throw new Error('Unknown virtual camera sender.');
+      throw new Error('Unknown sender.');
     }
   };
   ipcMain.handle(IPC.virtualCameraStatus, (event) => {
@@ -56,7 +56,17 @@ export function registerIpc(getWindow: () => BrowserWindow | null, virtualCamera
     platform: process.platform,
   }));
 
-  ipcMain.handle(IPC.updateCheck, () => checkForUpdate(app.getVersion()));
+  const updater = new Updater((info) => getWindow()?.webContents.send(IPC.updateStatus, info));
+  ipcMain.handle(IPC.updateCheck, async (event) => {
+    requireMainFrame(event);
+    const settings = await readSettings();
+    return updater.check(settings.autoUpdate);
+  });
+  ipcMain.on(IPC.updateInstall, (event) => {
+    const contents = getWindow()?.webContents;
+    if (!contents || event.sender !== contents || event.senderFrame !== contents.mainFrame) return;
+    updater.install();
+  });
 
   ipcMain.handle(IPC.settingsGet, () => readSettings());
 

@@ -11,7 +11,10 @@ export interface CompiledProgram {
     u_amount: WebGLUniformLocation | null;
     u_mirror: WebGLUniformLocation | null;
     u_center: WebGLUniformLocation | null;
+    u_faceCount: WebGLUniformLocation | null;
+    /** @deprecated faces are counted by u_faceCount now; always null (setting it is a no-op). */
     u_faceFound: WebGLUniformLocation | null;
+    u_expr: WebGLUniformLocation | null; // vec4 per face: mouth open, brows up, smile, blink
     u_eyeL: WebGLUniformLocation | null;
     u_eyeR: WebGLUniformLocation | null;
     u_nose: WebGLUniformLocation | null;
@@ -76,17 +79,19 @@ export function linkProgram(
       u_amount: gl.getUniformLocation(program, 'u_amount'),
       u_mirror: gl.getUniformLocation(program, 'u_mirror'),
       u_center: gl.getUniformLocation(program, 'u_center'),
-      u_faceFound: gl.getUniformLocation(program, 'u_faceFound'),
-      u_eyeL: gl.getUniformLocation(program, 'u_eyeL'),
-      u_eyeR: gl.getUniformLocation(program, 'u_eyeR'),
-      u_nose: gl.getUniformLocation(program, 'u_nose'),
-      u_mouth: gl.getUniformLocation(program, 'u_mouth'),
-      u_chin: gl.getUniformLocation(program, 'u_chin'),
-      u_brow: gl.getUniformLocation(program, 'u_brow'),
-      u_cheekL: gl.getUniformLocation(program, 'u_cheekL'),
-      u_cheekR: gl.getUniformLocation(program, 'u_cheekR'),
-      u_faceC: gl.getUniformLocation(program, 'u_faceC'),
-      u_faceR: gl.getUniformLocation(program, 'u_faceR'),
+      u_faceCount: gl.getUniformLocation(program, 'u_faceCount'),
+      u_faceFound: null,
+      u_expr: gl.getUniformLocation(program, 'f_expr'),
+      u_eyeL: gl.getUniformLocation(program, 'f_eyeL'), // per-face array
+      u_eyeR: gl.getUniformLocation(program, 'f_eyeR'), // per-face array
+      u_nose: gl.getUniformLocation(program, 'f_nose'), // per-face array
+      u_mouth: gl.getUniformLocation(program, 'f_mouth'), // per-face array
+      u_chin: gl.getUniformLocation(program, 'f_chin'), // per-face array
+      u_brow: gl.getUniformLocation(program, 'f_brow'), // per-face array
+      u_cheekL: gl.getUniformLocation(program, 'f_cheekL'), // per-face array
+      u_cheekR: gl.getUniformLocation(program, 'f_cheekR'), // per-face array
+      u_faceC: gl.getUniformLocation(program, 'f_faceC'), // per-face array
+      u_faceR: gl.getUniformLocation(program, 'f_faceR'), // per-face array
       u_lut: gl.getUniformLocation(program, 'u_lut'),
       u_cfA: gl.getUniformLocation(program, 'u_cfA'),
       u_cfB: gl.getUniformLocation(program, 'u_cfB'),

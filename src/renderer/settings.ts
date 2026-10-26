@@ -12,6 +12,9 @@ import { sound } from './sound';
 import { setPerfOverlay } from './perf';
 import { openOverlay, closeOverlay } from './overlays';
 import { showTips } from './tips';
+import { api } from './bridge';
+import { checkForUpdatesNow, onUpdateState, showWhatsNew, updateState } from './updates';
+import type { UpdateInfo } from '../shared/update-check';
 import { openSaveFolder } from './gallery';
 import {
   BUILTIN_THEMES,
@@ -223,6 +226,51 @@ function buildThemeSection(): HTMLElement {
   return group('Appearance', [block([list, actions, note])]);
 }
 
+// ---- software update --------------------------------------------------------
+
+function updateText(info: UpdateInfo): string {
+  const version = app.info?.version ?? '';
+  switch (info.status) {
+    case 'checking':
+      return 'Checking for updates…';
+    case 'available':
+      return `Photoshoot ${info.version} is available.`;
+    case 'downloading':
+      return `Downloading Photoshoot ${info.version}… ${info.percent}%`;
+    case 'ready':
+      return `Photoshoot ${info.version} is ready. Restart to install it.`;
+    case 'unavailable':
+      return `Photoshoot ${version}. Couldn't reach GitHub just now.`;
+    default:
+      return app.info?.platform === 'web' ? `Photoshoot ${version}. The web app is always up to date.` : `Photoshoot ${version} is up to date.`;
+  }
+}
+
+let unsubscribeUpdates: (() => void) | null = null;
+
+function buildUpdateRow(): HTMLElement {
+  const desc = el('div', { className: 'setting-desc update-status', text: updateText(updateState()) });
+  const action = el('button', { className: 'btn btn-sm', type: 'button' });
+  const sync = (info: UpdateInfo) => {
+    desc.textContent = updateText(info);
+    const ready = info.status === 'ready';
+    action.textContent = ready ? 'Restart to Update' : info.status === 'available' ? 'Download' : 'Check Now';
+    action.classList.toggle('btn-primary', ready);
+    action.disabled = info.status === 'checking' || info.status === 'downloading';
+  };
+  action.addEventListener('click', () => {
+    const info = updateState();
+    if (info.status === 'ready') api.installUpdate();
+    else if (info.status === 'available') window.open(info.url, '_blank', 'noopener');
+    else void checkForUpdatesNow();
+  });
+  unsubscribeUpdates?.();
+  unsubscribeUpdates = onUpdateState(sync);
+  sync(updateState());
+  const left = el('div', {}, [el('div', { className: 'setting-label', text: 'Software Update' }), desc]);
+  return el('div', { className: 'setting-row' }, [left, el('div', { className: 'setting-control' }, [action])]);
+}
+
 // ---- help -----------------------------------------------------------------
 
 function shortcuts(): [string, string][] {
@@ -245,12 +293,17 @@ function buildHelpSection(): HTMLElement {
   for (const [what, keys] of shortcuts()) {
     list.append(el('dt', { text: what }), el('dd', {}, [el('kbd', { text: keys })]));
   }
+  const whatsNewBtn = el('button', { className: 'btn btn-sm', type: 'button', text: "What's New" });
+  whatsNewBtn.addEventListener('click', () => {
+    closeOverlay('settingsPanel');
+    window.setTimeout(() => showWhatsNew(), 260);
+  });
   const tipsBtn = el('button', { className: 'btn btn-sm', type: 'button', text: 'Show Tips' });
   tipsBtn.addEventListener('click', () => {
     closeOverlay('settingsPanel');
     window.setTimeout(showTips, 260); // after the panel slides away
   });
-  return group('Help', [block([list, el('div', { className: 'settings-actions' }, [tipsBtn])])]);
+  return group('Help', [block([list, el('div', { className: 'settings-actions' }, [whatsNewBtn, tipsBtn])])]);
 }
 
 // ---- custom filters -------------------------------------------------------
@@ -434,6 +487,16 @@ export function render(): void {
         'Look for a newer version on GitHub when Photoshoot opens.',
         toggle(s.checkForUpdates, (v) => void app.updateSettings({ checkForUpdates: v }))
       ),
+      ...(app.info?.platform === 'web'
+        ? []
+        : [
+            row(
+              'Install updates automatically',
+              'Download new versions in the background and install them when Photoshoot restarts.',
+              toggle(s.autoUpdate, (v) => void app.updateSettings({ autoUpdate: v }))
+            ),
+          ]),
+      buildUpdateRow(),
     ])
   );
 

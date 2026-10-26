@@ -33,14 +33,25 @@ export const IPC = {
   windowClose: 'window:close',
   windowFullscreen: 'window:fullscreen',
   updateCheck: 'update:check',
+  updateStatus: 'update:status',
+  updateInstall: 'update:install',
 } as const;
 
 export type CaptureFormat = 'png' | 'jpg';
 export type CaptureKind = 'single' | 'strip' | 'video';
 export type StripLayout = 'grid' | 'strip' | 'row' | 'feature';
-export type StripFrame = 'white' | 'black' | 'cream';
+export type StripFrame = 'white' | 'cream' | 'blush' | 'sky' | 'black';
 export const STRIP_LAYOUTS: readonly StripLayout[] = ['grid', 'strip', 'row', 'feature'];
-export const STRIP_FRAMES: readonly StripFrame[] = ['white', 'black', 'cream'];
+export const STRIP_FRAMES: readonly StripFrame[] = ['white', 'cream', 'blush', 'sky', 'black'];
+export const STRIP_CAPTION_MAX = 40;
+export type StripFont = 'classic' | 'modern' | 'rounded' | 'typewriter' | 'script';
+export type StripTextSize = 's' | 'm' | 'l';
+export type StripInk = 'auto' | 'red' | 'blue' | 'green' | 'gold' | 'pink';
+export type StripAlign = 'left' | 'center' | 'right';
+export const STRIP_FONTS: readonly StripFont[] = ['classic', 'modern', 'rounded', 'typewriter', 'script'];
+export const STRIP_TEXT_SIZES: readonly StripTextSize[] = ['s', 'm', 'l'];
+export const STRIP_INKS: readonly StripInk[] = ['auto', 'red', 'blue', 'green', 'gold', 'pink'];
+export const STRIP_ALIGNS: readonly StripAlign[] = ['left', 'center', 'right'];
 export type BuiltInThemeId = 'booth' | 'modern' | 'metal' | 'glass' | 'retro' | 'darkroom';
 
 export interface AppInfo {
@@ -68,9 +79,20 @@ export interface Settings {
   reducedMotion: boolean;
   screenFlash: boolean; // light up the whole window when a photo is taken
   checkForUpdates: boolean; // look for a newer GitHub release at launch
+  autoUpdate: boolean; // desktop installer: download updates and install them on restart
+  lastSeenVersion: string; // the version whose What's New was last shown
   stripLayout: StripLayout; // last layout picked for four-photo sheets
   stripFrame: StripFrame; // paper colour around four-photo sheets
+  stripShowName: boolean; // print the Photoshoot wordmark under the photos
+  stripShowDate: boolean; // print the date under the photos
+  stripCaption: string; // optional line printed under the photos
+  stripRounded: boolean; // round the photos' corners on the print
+  stripFont: StripFont; // typeface for the caption and date
+  stripTextSize: StripTextSize;
+  stripInk: StripInk; // text colour; auto follows the paper
+  stripAlign: StripAlign;
   tipsSeen: boolean; // first-run tips were shown (Settings → Help shows them again)
+  stripTourSeen: boolean; // the four-photo tutorial was shown (the ? on the slot row replays it)
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -88,9 +110,20 @@ export const DEFAULT_SETTINGS: Settings = {
   reducedMotion: false,
   screenFlash: true,
   checkForUpdates: true,
+  autoUpdate: true,
+  lastSeenVersion: '',
   stripLayout: 'strip',
   stripFrame: 'white',
+  stripShowName: true,
+  stripShowDate: true,
+  stripCaption: '',
+  stripRounded: false,
+  stripFont: 'classic',
+  stripTextSize: 'm',
+  stripInk: 'auto',
+  stripAlign: 'center',
   tipsSeen: false,
+  stripTourSeen: false,
 };
 
 export interface SaveRequest {
@@ -204,5 +237,9 @@ export interface PhotoshootBridge {
   toggleMaximizeWindow(): void;
   toggleFullscreen(): void;
   checkForUpdate(): Promise<UpdateInfo>;
+  /** Progress pushed by the desktop updater (downloading, ready). Returns an unsubscribe. */
+  onUpdateStatus(listener: (info: UpdateInfo) => void): () => void;
+  /** Restart now and install a downloaded update. */
+  installUpdate(): void;
   closeWindow(): void;
 }

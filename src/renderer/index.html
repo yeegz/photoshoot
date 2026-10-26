@@ -79,6 +79,9 @@
 
           <div class="perf-overlay hidden" id="perfOverlay" aria-hidden="true"></div>
 
+          <!-- "Open your mouth" and friends: what makes the chosen effect react -->
+          <div class="effect-hint" id="effectHint" role="status" aria-live="polite" hidden></div>
+
         </div>
       </main>
 
@@ -151,11 +154,43 @@
       <div class="sheet-card">
         <div class="sheet-preview"><img id="sheetPreview" alt="Preview of your four photos" /></div>
         <div class="sheet-side">
-          <h2 id="sheetTitle">Choose a Layout</h2>
-          <div class="sheet-layouts" id="sheetLayouts" role="radiogroup" aria-label="Layout"></div>
-          <div class="sheet-row">
-            <span class="sheet-label" id="sheetPaperLabel">Paper</span>
-            <div class="sheet-frames" id="sheetFrames" role="radiogroup" aria-labelledby="sheetPaperLabel"></div>
+          <h2 id="sheetTitle" class="visually-hidden">Design your print</h2>
+          <div class="sheet-controls">
+          <div class="sheet-tabs" role="tablist" aria-label="Design">
+            <button class="sheet-tab" id="tabLayout" role="tab" type="button" aria-selected="true" aria-controls="paneLayout">Layout</button>
+            <button class="sheet-tab" id="tabText" role="tab" type="button" aria-selected="false" aria-controls="paneText">Text</button>
+          </div>
+          <div class="sheet-pane" id="paneLayout" role="tabpanel" aria-labelledby="tabLayout">
+            <div class="sheet-layouts" id="sheetLayouts" role="radiogroup" aria-label="Layout"></div>
+            <div class="sheet-row">
+              <span class="sheet-label" id="sheetPaperLabel">Paper</span>
+              <div class="sheet-frames" id="sheetFrames" role="radiogroup" aria-labelledby="sheetPaperLabel"></div>
+            </div>
+            <div class="sheet-row">
+              <span class="sheet-label">Corners</span>
+              <button class="sheet-chip" id="sheetRounded" type="button" aria-pressed="false">Rounded</button>
+            </div>
+          </div>
+          <div class="sheet-pane" id="paneText" role="tabpanel" aria-labelledby="tabText" hidden>
+            <input class="sheet-caption" id="sheetCaption" type="text" maxlength="40" placeholder="Add a caption" aria-label="Caption" autocomplete="off" spellcheck="true" />
+            <div class="sheet-chips">
+              <button class="sheet-chip" id="sheetDate" type="button" aria-pressed="true">Date</button>
+              <button class="sheet-chip" id="sheetName" type="button" aria-pressed="true">Photoshoot mark</button>
+            </div>
+            <div class="sheet-fonts" id="sheetFonts" role="radiogroup" aria-label="Font"></div>
+            <div class="sheet-row">
+              <span class="sheet-label">Size</span>
+              <div class="sheet-seg" id="sheetSizes" role="radiogroup" aria-label="Text size"></div>
+            </div>
+            <div class="sheet-row">
+              <span class="sheet-label">Align</span>
+              <div class="sheet-seg" id="sheetAligns" role="radiogroup" aria-label="Alignment"></div>
+            </div>
+            <div class="sheet-row">
+              <span class="sheet-label" id="sheetInkLabel">Colour</span>
+              <div class="sheet-frames" id="sheetInks" role="radiogroup" aria-labelledby="sheetInkLabel"></div>
+            </div>
+          </div>
           </div>
           <div class="sheet-actions">
             <button class="btn" id="sheetRetake" type="button">Retake</button>
@@ -172,6 +207,7 @@
       <span class="tip-arrow" id="tipArrow"></span>
       <h3 id="tipTitle"></h3>
       <p id="tipText"></p>
+      <div id="tipArtSlot"></div>
       <div class="tip-actions">
         <span class="tip-step" id="tipStep"></span>
         <button class="tip-skip" id="tipSkip" type="button">Skip</button>
@@ -202,7 +238,20 @@
     <div class="update-notice glass-pill" id="updateNotice" role="status" hidden>
       <span id="updateText">A new version is available.</span>
       <a class="update-get" id="updateLink" href="https://github.com/yeegz/photoshoot/releases/latest" target="_blank" rel="noopener">Download</a>
+      <button class="update-get" id="updateRestart" type="button" hidden>Restart</button>
       <button class="update-later" id="updateLater" type="button">Later</button>
+    </div>
+
+    <!-- What's New: shown once after an update, and from Settings → Help -->
+    <div class="whats-new" id="whatsNew" role="dialog" aria-modal="true" aria-labelledby="whatsNewTitle" hidden>
+      <div class="wn-card">
+        <div class="wn-head">
+          <svg class="wn-glyph" viewBox="0 0 28 28" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M9.6 5.4 8.4 7H5A2.2 2.2 0 0 0 2.8 9.2V19.4A2.2 2.2 0 0 0 5 21.6H23A2.2 2.2 0 0 0 25.2 19.4V9.2A2.2 2.2 0 0 0 23 7H19.6L18.4 5.4Z M14 9.4a4.6 4.6 0 1 0 0 9.2 4.6 4.6 0 0 0 0-9.2Z M14 11.1a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8Z"/></svg>
+          <h2 id="whatsNewTitle">What's New in Photoshoot</h2>
+        </div>
+        <div class="wn-list" id="whatsNewList"></div>
+        <div class="wn-actions"><button class="btn btn-primary" id="whatsNewDone" type="button">Continue</button></div>
+      </div>
     </div>
 
     <div class="toast-stack" id="toastStack" aria-live="polite"></div>

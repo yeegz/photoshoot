@@ -15,6 +15,15 @@ import {
   CaptureFormat,
   STRIP_LAYOUTS,
   STRIP_FRAMES,
+  STRIP_CAPTION_MAX,
+  STRIP_FONTS,
+  STRIP_TEXT_SIZES,
+  STRIP_INKS,
+  STRIP_ALIGNS,
+  StripFont,
+  StripTextSize,
+  StripInk,
+  StripAlign,
   StripLayout,
   StripFrame,
 } from '../shared/ipc-contract';
@@ -55,6 +64,24 @@ function coerceSettings(raw: unknown): Settings {
     stripLayout: (STRIP_LAYOUTS as readonly unknown[]).includes(obj.stripLayout) ? (obj.stripLayout as StripLayout) : DEFAULT_SETTINGS.stripLayout,
     stripFrame: (STRIP_FRAMES as readonly unknown[]).includes(obj.stripFrame) ? (obj.stripFrame as StripFrame) : DEFAULT_SETTINGS.stripFrame,
     tipsSeen: typeof obj.tipsSeen === 'boolean' ? obj.tipsSeen : DEFAULT_SETTINGS.tipsSeen,
+    autoUpdate: typeof obj.autoUpdate === 'boolean' ? obj.autoUpdate : DEFAULT_SETTINGS.autoUpdate,
+    // Settings saved before 1.5.1 have no lastSeenVersion: that's an upgrade from
+    // 1.4.0 (What's New should show), not a fresh install (nothing to announce).
+    lastSeenVersion:
+      typeof obj.lastSeenVersion === 'string' && obj.lastSeenVersion.length < 32
+        ? obj.lastSeenVersion
+        : typeof obj.theme === 'string' // a full file written by 1.4.0 or earlier
+          ? '1.4.0'
+          : DEFAULT_SETTINGS.lastSeenVersion,
+    stripTourSeen: typeof obj.stripTourSeen === 'boolean' ? obj.stripTourSeen : DEFAULT_SETTINGS.stripTourSeen,
+    stripShowName: typeof obj.stripShowName === 'boolean' ? obj.stripShowName : DEFAULT_SETTINGS.stripShowName,
+    stripShowDate: typeof obj.stripShowDate === 'boolean' ? obj.stripShowDate : DEFAULT_SETTINGS.stripShowDate,
+    stripCaption: typeof obj.stripCaption === 'string' ? obj.stripCaption.slice(0, STRIP_CAPTION_MAX) : DEFAULT_SETTINGS.stripCaption,
+    stripRounded: typeof obj.stripRounded === 'boolean' ? obj.stripRounded : DEFAULT_SETTINGS.stripRounded,
+    stripFont: (STRIP_FONTS as readonly unknown[]).includes(obj.stripFont) ? (obj.stripFont as StripFont) : DEFAULT_SETTINGS.stripFont,
+    stripTextSize: (STRIP_TEXT_SIZES as readonly unknown[]).includes(obj.stripTextSize) ? (obj.stripTextSize as StripTextSize) : DEFAULT_SETTINGS.stripTextSize,
+    stripInk: (STRIP_INKS as readonly unknown[]).includes(obj.stripInk) ? (obj.stripInk as StripInk) : DEFAULT_SETTINGS.stripInk,
+    stripAlign: (STRIP_ALIGNS as readonly unknown[]).includes(obj.stripAlign) ? (obj.stripAlign as StripAlign) : DEFAULT_SETTINGS.stripAlign,
   };
 }
 

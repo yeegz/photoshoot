@@ -285,7 +285,7 @@ async function runStrip(opts: ShotOptions): Promise<'retake' | void> {
     sound.play('stripComplete');
     const choice = await chooseSheet(frames);
     if (choice.action === 'retake') return 'retake';
-    const sheet = composeSheet(frames, frames[0].width, frames[0].height, choice.layout, choice.frame);
+    const sheet = composeSheet(frames, frames[0].width, frames[0].height, choice.layout, choice.frame, choice.print);
     const saved = await saveCanvas(sheet, 'strip', choice.from);
     if (saved?.id && choice.action === 'share') await shareCapture(saved.id);
   } finally {

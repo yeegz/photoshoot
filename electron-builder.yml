@@ -9,6 +9,14 @@ files:
   - package.json
   - "!**/*.map"
 asar: true
+# Installed copies update themselves from GitHub Releases (electron-updater
+# reads latest.yml from the release). CI builds with --publish never and uploads
+# latest.yml + the blockmap itself, after the packaged app is tested.
+publish:
+  - provider: github
+    owner: yeegz
+    repo: photoshoot
+    releaseType: release
 win:
   target:
     - target: nsis

@@ -10,7 +10,7 @@
 import { VERTEX_SRC, FRAGMENTS } from './shaders';
 import { EFFECT_BY_ID } from './effects';
 import { CompiledProgram, linkProgram, createQuad, createVideoTexture } from './glcore';
-import { getFace } from '../faceTracker';
+import { getFaces, MAX_FACES } from '../faceTracker';
 import type { CustomFilter } from '../../shared/ipc-contract';
 import { clampParams } from '../../shared/filter-schema';
 
@@ -52,6 +52,7 @@ export class GLRenderer {
   private center = { x: 0.5, y: 0.5 };
   private maxSize: number | null = null;
   private frameHook: (() => void) | null = null;
+  private faceScratch = new Float32Array(MAX_FACES * 2);
 
   private running = false;
   private rafHandle = 0;
@@ -304,21 +305,42 @@ export class GLRenderer {
     // Mirror-correct the center so a dragged point lines up with the pointer.
     gl.uniform2f(prog.uniforms.u_center, mirror ? 1 - this.center.x : this.center.x, this.center.y);
 
-    // Face landmarks (mirror-corrected x), used by the fun-face effects.
-    const f = getFace();
-    const fx = (p: readonly [number, number]) => (mirror ? 1 - p[0] : p[0]);
+    // Face landmarks for every tracked person (up to MAX_FACES), used by the
+    // face effects. They come from the camera video (image space, y down);
+    // run() samples texture space (y up, already un-mirrored by the shader's
+    // main), so only y flips — never x.
+    const faces = getFaces().slice(0, MAX_FACES);
     const u = prog.uniforms;
-    gl.uniform1f(u.u_faceFound, f.found ? 1 : 0);
-    gl.uniform2f(u.u_eyeL, fx(f.eyeL), f.eyeL[1]);
-    gl.uniform2f(u.u_eyeR, fx(f.eyeR), f.eyeR[1]);
-    gl.uniform2f(u.u_nose, fx(f.nose), f.nose[1]);
-    gl.uniform2f(u.u_mouth, fx(f.mouth), f.mouth[1]);
-    gl.uniform2f(u.u_chin, fx(f.chin), f.chin[1]);
-    gl.uniform2f(u.u_brow, fx(f.brow), f.brow[1]);
-    gl.uniform2f(u.u_cheekL, fx(f.cheekL), f.cheekL[1]);
-    gl.uniform2f(u.u_cheekR, fx(f.cheekR), f.cheekR[1]);
-    gl.uniform2f(u.u_faceC, fx(f.faceC), f.faceC[1]);
-    gl.uniform1f(u.u_faceR, f.faceR);
+    gl.uniform1i(u.u_faceCount, faces.length);
+    if (faces.length) {
+      const pts = (pick: (f: (typeof faces)[number]) => readonly [number, number]) => {
+        const a = this.faceScratch;
+        a.fill(0);
+        faces.forEach((f, i) => {
+          const p = pick(f);
+          a[i * 2] = p[0];
+          a[i * 2 + 1] = 1 - p[1];
+        });
+        return a;
+      };
+      gl.uniform2fv(u.u_eyeL, pts((f) => f.eyeL));
+      gl.uniform2fv(u.u_eyeR, pts((f) => f.eyeR));
+      gl.uniform2fv(u.u_nose, pts((f) => f.nose));
+      gl.uniform2fv(u.u_mouth, pts((f) => f.mouth));
+      gl.uniform2fv(u.u_chin, pts((f) => f.chin));
+      gl.uniform2fv(u.u_brow, pts((f) => f.brow));
+      gl.uniform2fv(u.u_cheekL, pts((f) => f.cheekL));
+      gl.uniform2fv(u.u_cheekR, pts((f) => f.cheekR));
+      gl.uniform2fv(u.u_faceC, pts((f) => f.faceC));
+      const r = new Float32Array(MAX_FACES);
+      const e = new Float32Array(MAX_FACES * 4);
+      faces.forEach((f, i) => {
+        r[i] = f.faceR;
+        e.set(f.expr, i * 4);
+      });
+      gl.uniform1fv(u.u_faceR, r);
+      gl.uniform4fv(u.u_expr, e);
+    }
 
     // Custom community filter: feed the clamped grades + bind its LUT (always
     // bind *something* to unit 1 so the sampler is valid; u_cfC.w gates use).

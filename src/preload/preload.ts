@@ -35,6 +35,12 @@ const bridge: PhotoshootBridge = {
   stopVirtualCamera: () => ipcRenderer.invoke(IPC.virtualCameraStop),
   sendVirtualCameraFrame: (frame) => ipcRenderer.invoke(IPC.virtualCameraFrame, frame),
   checkForUpdate: () => ipcRenderer.invoke(IPC.updateCheck),
+  onUpdateStatus: (listener) => {
+    const handler = (_event: unknown, info: Parameters<typeof listener>[0]) => listener(info);
+    ipcRenderer.on(IPC.updateStatus, handler);
+    return () => ipcRenderer.removeListener(IPC.updateStatus, handler);
+  },
+  installUpdate: () => ipcRenderer.send(IPC.updateInstall),
   minimizeWindow: () => ipcRenderer.send(IPC.windowMinimize),
   toggleMaximizeWindow: () => ipcRenderer.send(IPC.windowMaximize),
   toggleFullscreen: () => ipcRenderer.send(IPC.windowFullscreen),

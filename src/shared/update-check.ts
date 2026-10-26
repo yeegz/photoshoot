@@ -6,8 +6,16 @@ export const RELEASES_API = 'https://api.github.com/repos/yeegz/photoshoot/relea
 export const RELEASES_PAGE = 'https://github.com/yeegz/photoshoot/releases/latest';
 const RELEASE_URL_PREFIX = 'https://github.com/yeegz/photoshoot/releases/';
 
+/**
+ * What the app knows about updates. The desktop installer downloads updates
+ * itself (downloading → ready, installed on restart or quit); the portable app,
+ * macOS builds and anything that cannot self-update get `available` with a link.
+ */
 export type UpdateInfo =
   | { status: 'available'; version: string; url: string }
+  | { status: 'checking' }
+  | { status: 'downloading'; version: string; percent: number }
+  | { status: 'ready'; version: string }
   | { status: 'current' }
   | { status: 'unavailable' };
 

@@ -7,9 +7,10 @@ import { app } from './app';
 import { byId, el, clear } from './dom';
 import { icon } from './icons';
 import { sound } from './sound';
-import { EFFECTS, effectLabel } from './gl/effects';
+import { ALL_EFFECTS, effectLabel } from './gl/effects';
 import { effectDisplayLabel } from './customFilters';
 import { openEffectsForSlot } from './effectsMenu';
+import { showStripTour } from './tips';
 
 const COUNT = 4;
 let slots: string[] | null = null; // null = linked to the live effect
@@ -41,7 +42,7 @@ function assign(i: number, id: string): void {
 
 /** Four different effects, never Normal twice. */
 export function shufflePlan(random: () => number = Math.random): void {
-  const pool = EFFECTS.map((e) => e.id).filter((id) => id !== 'normal');
+  const pool = ALL_EFFECTS.map((e) => e.id).filter((id) => id !== 'normal');
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -138,8 +139,10 @@ function render(): void {
   }, [icon('link')]);
   link.setAttribute('aria-pressed', String(!mixed));
   link.addEventListener('click', () => linkPlan());
-  shuffle.disabled = link.disabled = shooting >= 0;
-  row.append(el('span', { className: 'plan-sep' }), shuffle, link);
+  const help = el('button', { className: 'plan-tool', type: 'button', title: 'How four photos work', ariaLabel: 'How four photos work' }, [icon('question')]);
+  help.addEventListener('click', () => showStripTour());
+  shuffle.disabled = link.disabled = help.disabled = shooting >= 0;
+  row.append(el('span', { className: 'plan-sep' }), shuffle, link, help);
   landed = -1;
   shuffled = false;
 }

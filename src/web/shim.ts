@@ -18,6 +18,15 @@ import {
   BuiltInThemeId,
   STRIP_LAYOUTS,
   STRIP_FRAMES,
+  STRIP_CAPTION_MAX,
+  STRIP_FONTS,
+  STRIP_TEXT_SIZES,
+  STRIP_INKS,
+  STRIP_ALIGNS,
+  StripFont,
+  StripTextSize,
+  StripInk,
+  StripAlign,
   StripLayout,
   StripFrame,
 } from '../shared/ipc-contract';
@@ -118,6 +127,24 @@ function coerceSettings(raw: unknown): Settings {
     stripLayout: (STRIP_LAYOUTS as readonly unknown[]).includes(o.stripLayout) ? (o.stripLayout as StripLayout) : DEFAULT_SETTINGS.stripLayout,
     stripFrame: (STRIP_FRAMES as readonly unknown[]).includes(o.stripFrame) ? (o.stripFrame as StripFrame) : DEFAULT_SETTINGS.stripFrame,
     tipsSeen: typeof o.tipsSeen === 'boolean' ? o.tipsSeen : DEFAULT_SETTINGS.tipsSeen,
+    autoUpdate: typeof o.autoUpdate === 'boolean' ? o.autoUpdate : DEFAULT_SETTINGS.autoUpdate,
+    // Settings saved before 1.5.1 have no lastSeenVersion: that's an upgrade from
+    // 1.4.0 (What's New should show), not a fresh install (nothing to announce).
+    lastSeenVersion:
+      typeof o.lastSeenVersion === 'string' && o.lastSeenVersion.length < 32
+        ? o.lastSeenVersion
+        : typeof o.theme === 'string' // a full file written by 1.4.0 or earlier
+          ? '1.4.0'
+          : DEFAULT_SETTINGS.lastSeenVersion,
+    stripTourSeen: typeof o.stripTourSeen === 'boolean' ? o.stripTourSeen : DEFAULT_SETTINGS.stripTourSeen,
+    stripShowName: typeof o.stripShowName === 'boolean' ? o.stripShowName : DEFAULT_SETTINGS.stripShowName,
+    stripShowDate: typeof o.stripShowDate === 'boolean' ? o.stripShowDate : DEFAULT_SETTINGS.stripShowDate,
+    stripCaption: typeof o.stripCaption === 'string' ? o.stripCaption.slice(0, STRIP_CAPTION_MAX) : DEFAULT_SETTINGS.stripCaption,
+    stripRounded: typeof o.stripRounded === 'boolean' ? o.stripRounded : DEFAULT_SETTINGS.stripRounded,
+    stripFont: (STRIP_FONTS as readonly unknown[]).includes(o.stripFont) ? (o.stripFont as StripFont) : DEFAULT_SETTINGS.stripFont,
+    stripTextSize: (STRIP_TEXT_SIZES as readonly unknown[]).includes(o.stripTextSize) ? (o.stripTextSize as StripTextSize) : DEFAULT_SETTINGS.stripTextSize,
+    stripInk: (STRIP_INKS as readonly unknown[]).includes(o.stripInk) ? (o.stripInk as StripInk) : DEFAULT_SETTINGS.stripInk,
+    stripAlign: (STRIP_ALIGNS as readonly unknown[]).includes(o.stripAlign) ? (o.stripAlign as StripAlign) : DEFAULT_SETTINGS.stripAlign,
   };
 }
 
@@ -368,7 +395,9 @@ const bridge: PhotoshootBridge = {
   stopVirtualCamera: async () => unsupportedCamera(),
   sendVirtualCameraFrame: async () => false,
   // The web app is served fresh on every load, so it is always the latest.
-  checkForUpdate: async () => ({ status: 'current' }),
+  checkForUpdate: async () => ({ status: 'current' }), // the web app is always the latest
+  onUpdateStatus: () => () => undefined,
+  installUpdate: () => undefined,
   getAppInfo: async (): Promise<AppInfo> => ({
     name: 'Photoshoot',
     version: typeof __PHOTOSHOOT_VERSION__ === 'string' ? __PHOTOSHOOT_VERSION__ : '0.0.0',
