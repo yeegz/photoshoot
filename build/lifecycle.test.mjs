@@ -112,7 +112,11 @@ async function recorderSetup(failure) {
       if (failure === 'save') throw new Error('storage failed');
       saved.push(data); return { ok: true };
     } } },
-    './gallery': { refreshGallery: async () => {}, exitReview() {}, isReviewing: () => false },
+    './gallery': { refreshGallery: async () => {}, exitReview() {}, isReviewing: () => false, shareCapture: async () => {} },
+    './effectsMenu': { applyEffect() {}, closeEffects() {}, isEffectsOpen: () => false },
+    './stripPlan': { beginShoot() {}, endShoot() {}, markShot() {}, planEffect: () => 'normal', setShotThumb() {} },
+    './stripSheet': { chooseSheet: async () => ({ action: 'save' }) },
+    './stripLayouts': { composeSheet() {} },
   }, {
     MediaRecorder: Recorder, FileReader,
     window: { setInterval: (fn) => { timers.add(fn); return fn; }, clearInterval: (id) => timers.delete(id) },

@@ -18,6 +18,7 @@ import { sound } from './sound';
 import { isAnyOpen } from './overlays';
 import { activateFaceTracking, deactivateFaceTracking } from './faceTracker';
 import { customFilterDefs, effectDisplayLabel, registerFilterSink } from './customFilters';
+import { exitReview, isReviewing } from './gallery';
 
 const PAGE_SIZE = 9;
 const CENTER = 4;
@@ -43,6 +44,10 @@ let currentPage = 0;
 let cycle = 0;
 let running = false;
 let rafHandle = 0;
+// While choosing the effect for one photo of a four-photo run, the pick goes to
+// that photo instead of becoming the live effect (see stripPlan.ts).
+let slotPicker: ((id: string) => void) | null = null;
+let slotCurrent = '';
 
 // Built-in effects followed by any imported community filters.
 function allEffects(): EffectDef[] {
@@ -203,20 +208,26 @@ function renderPageDots(): void {
 }
 
 function markActive(): void {
-  const backdrop = currentBackground();
+  const backdrop = slotPicker ? '' : currentBackground();
+  const effect = slotPicker ? slotCurrent : app.effect;
   byId('effectsGrid')
     .querySelectorAll<HTMLElement>('.effect-tile')
     .forEach((t) => {
       const active =
         t.dataset.backdrop !== undefined
           ? t.dataset.backdrop === backdrop && (backdrop !== 'none' || app.effect === 'normal')
-          : t.dataset.id === app.effect;
+          : t.dataset.id === effect;
       t.classList.toggle('is-active', active);
       t.setAttribute('aria-pressed', String(active));
     });
 }
 
-function applyEffect(id: string): void {
+export function modeHint(): string {
+  return app.mode === 'strip' ? 'Tap for four photos' : app.mode === 'video' ? 'Tap to record' : 'Tap to capture';
+}
+
+/** Make `id` the live effect (also used to show each photo's effect during a four-photo run). */
+export function applyEffect(id: string): void {
   app.effect = id;
   app.renderer.setEffect(id);
   app.renderer.setCenter(0.5, 0.5); // each effect starts centered; drag to move it
@@ -224,8 +235,8 @@ function applyEffect(id: string): void {
   byId('btnEffects').classList.toggle('is-on', id !== 'normal');
   byId('viewfinder').classList.toggle('is-draggable', isDraggable(id));
   if (isFaceEffect(id)) void activateFaceTracking();
-  byId('shutterHint').textContent =
-    id === 'normal' ? 'Tap to capture' : `Effect · ${effectDisplayLabel(id)}`;
+  byId('shutterHint').textContent = id === 'normal' ? modeHint() : `Effect · ${effectDisplayLabel(id)}`;
+  document.dispatchEvent(new CustomEvent('photoshoot:effect')); // the four-photo plan follows it
 }
 
 /** Pick an effect from a tile: apply it and exit the effects view. "Normal"
@@ -296,6 +307,14 @@ function goToPage(page: number): void {
 
 function pick(id: string): void {
   const tile = byId('effectsGrid').querySelector(`.effect-tile[data-id="${CSS.escape(id)}"]`);
+  if (slotPicker) {
+    const assign = slotPicker;
+    slotPicker = null;
+    assign(id);
+    sound.play('button');
+    closeEffects(tile);
+    return;
+  }
   applyEffect(id);
   if (id === 'normal') void pickBackground('none');
   sound.play('button');
@@ -317,8 +336,21 @@ export function isEffectsOpen(): boolean {
   return running;
 }
 
+/** Open the browser to choose one photo's effect; `onPick` receives the effect id. */
+export function openEffectsForSlot(currentId: string, title: string, onPick: (id: string) => void): void {
+  if (!menuRenderer || !menuRenderer.available) return;
+  const index = allEffects().findIndex((e) => e.id === currentId);
+  if (running) closeEffects();
+  slotPicker = onPick;
+  slotCurrent = currentId;
+  byId('slotPickerTitle').textContent = title;
+  openEffects(index >= 0 ? Math.floor(index / PAGE_SIZE) : 0);
+}
+
 export function openEffects(page = 0): void {
   if (!menuRenderer || !menuRenderer.available) return;
+  // Effects belong to the live camera: leave photo review first.
+  if (isReviewing()) exitReview();
   if (running) {
     goToPage(page); // already browsing: slide to the page
     return;
@@ -329,6 +361,7 @@ export function openEffects(page = 0): void {
   const grid = byId('effectsGrid');
   renderPage(page);
   byId('effectsPanel').classList.add('is-open');
+  byId('effectsPanel').classList.toggle('is-slot-picker', slotPicker !== null);
   byId('toolbar').classList.add('is-effects');
   document.addEventListener('keydown', onKey);
   sound.play('button');
@@ -349,6 +382,7 @@ export function openEffects(page = 0): void {
 export function closeEffects(tile?: Element | null): void {
   const wasOpen = running;
   running = false;
+  slotPicker = null;
   if (rafHandle) cancelAnimationFrame(rafHandle);
   rafHandle = 0;
   document.removeEventListener('keydown', onKey);

@@ -55,7 +55,7 @@
 
           <div class="vf-overlay vf-message hidden" id="vfMessage" role="status">
             <div class="vf-message-card">
-              <div class="vf-message-icon" id="vfMessageIcon" aria-hidden="true">●</div>
+              <div class="vf-message-icon" id="vfMessageIcon" aria-hidden="true"></div>
               <h2 id="vfMessageTitle">Camera</h2>
               <p id="vfMessageText"></p>
               <button class="btn btn-primary hidden" id="vfMessageAction" type="button"></button>
@@ -70,7 +70,8 @@
             <span class="countdown-number" id="countdownNumber">3</span>
           </div>
 
-          <div class="strip-progress hidden" id="stripProgress" aria-hidden="true"></div>
+          <!-- Four-photo plan: one effect per photo; fills with the photos during the run -->
+          <div class="strip-plan glass-pill hidden" id="stripPlan" role="group" aria-label="Four photos"></div>
 
           <div class="rec-badge hidden" id="recBadge" aria-hidden="true">
             <span class="rec-dot"></span><span id="recTime">0:00</span>
@@ -92,7 +93,7 @@
       <footer class="toolbar" id="toolbar">
         <div class="toolbar-zone left">
           <div class="mode-switch glass-pill" id="modeSwitch" role="radiogroup" aria-label="Capture mode">
-            <button class="mode-option" data-mode="strip" role="radio" aria-checked="false" type="button" aria-label="Four-shot strip" title="4-shot strip">
+            <button class="mode-option" data-mode="strip" role="radio" aria-checked="false" type="button" aria-label="Four photos" title="Four photos">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8.2" height="8.2" rx="2"/><rect x="12.8" y="3" width="8.2" height="8.2" rx="2"/><rect x="3" y="12.8" width="8.2" height="8.2" rx="2"/><rect x="12.8" y="12.8" width="8.2" height="8.2" rx="2"/></svg>
             </button>
             <button class="mode-option is-active" data-mode="single" role="radio" aria-checked="true" type="button" aria-label="Single photo" title="Single photo">
@@ -141,20 +142,54 @@
 
     <section class="effects-view" id="effectsPanel" aria-label="Effects" role="group">
       <div class="effects-grid" id="effectsGrid"></div>
+      <div class="slot-picker-title glass-pill" id="slotPickerTitle" aria-live="polite"></div>
     </section>
 
+
+    <!-- After four photos: choose the print layout, then save or share -->
+    <section class="strip-sheet" id="stripSheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
+      <div class="sheet-card">
+        <div class="sheet-preview"><img id="sheetPreview" alt="Preview of your four photos" /></div>
+        <div class="sheet-side">
+          <h2 id="sheetTitle">Choose a Layout</h2>
+          <div class="sheet-layouts" id="sheetLayouts" role="radiogroup" aria-label="Layout"></div>
+          <div class="sheet-row">
+            <span class="sheet-label" id="sheetPaperLabel">Paper</span>
+            <div class="sheet-frames" id="sheetFrames" role="radiogroup" aria-labelledby="sheetPaperLabel"></div>
+          </div>
+          <div class="sheet-actions">
+            <button class="btn" id="sheetRetake" type="button">Retake</button>
+            <span class="sheet-spacer"></span>
+            <button class="btn" id="sheetShare" type="button"><span id="sheetShareLabel">Share…</span></button>
+            <button class="btn btn-primary" id="sheetSave" type="button">Save</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- First-run tips: a Mac-style popover pointing at one control at a time -->
+    <div class="tip-popover" id="tipPopover" role="dialog" aria-labelledby="tipTitle" hidden>
+      <span class="tip-arrow" id="tipArrow"></span>
+      <h3 id="tipTitle"></h3>
+      <p id="tipText"></p>
+      <div class="tip-actions">
+        <span class="tip-step" id="tipStep"></span>
+        <button class="tip-skip" id="tipSkip" type="button">Skip</button>
+        <button class="btn btn-primary tip-next" id="tipNext" type="button">Next</button>
+      </div>
+    </div>
 
     <aside class="panel panel-slideover hidden" id="settingsPanel" aria-label="Settings" role="dialog" aria-modal="true">
       <div class="panel-head">
         <h2>Settings</h2>
-        <button class="icon-btn-sm" data-close="settingsPanel" type="button" aria-label="Close">✕</button>
+        <button class="icon-btn-sm" data-close="settingsPanel" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
       </div>
       <div class="settings-body" id="settingsBody"></div>
     </aside>
 
     <div class="modal hidden" id="previewModal" role="dialog" aria-modal="true" aria-label="Capture preview">
       <div class="modal-card">
-        <button class="icon-btn-sm modal-close" data-close="previewModal" type="button" aria-label="Close">✕</button>
+        <button class="icon-btn-sm modal-close" data-close="previewModal" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
         <div class="modal-image-wrap" id="previewImageWrap"></div>
         <div class="modal-actions" id="previewActions"></div>
       </div>

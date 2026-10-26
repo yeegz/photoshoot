@@ -2,7 +2,7 @@
 
 **A little photo booth. A lot of personality.**
 
-Take photos, make a four-shot strip, record a short video, or give your webcam a new look. Photoshoot runs in your browser and on Windows, with live effects, person-aware backgrounds and a gallery that stays on your device.
+Take photos, make a four-photo strip, record a short video, or give your webcam a new look. Photoshoot runs in your browser and on Windows, with live effects, person-aware backgrounds and a gallery that stays on your device.
 
 [**Open Photoshoot**](https://photoshoot-yeegz.web.app/app/) · [**Download for Windows**](https://github.com/yeegz/photoshoot/releases/latest) · [Explore the effects](https://photoshoot-yeegz.web.app)
 
@@ -16,7 +16,7 @@ Take photos, make a four-shot strip, record a short video, or give your webcam a
 - **Find your look.** 17 live effects, from black & white and Plastic Camera to Comic Book and Fish Eye. Drag the center of distortion effects to move the warp.
 - **Have some fun.** Eight face-tracked effects, including Bug Out, Chipmunk and Space Alien.
 - **Keep the focus on you.** Blur the room behind you, pick a neutral studio or quiet interior, or use your own photo. Person segmentation follows your head and body without taking a reference photo.
-- **Capture the moment.** Single photos, four quick pictures saved as a 2×2 sheet, and videos up to 60 seconds. The saved image includes your effects, mirror setting and background.
+- **Capture the moment.** Single photos, four photos with a countdown before each (and, if you like, a different effect for each), and videos up to 60 seconds. After four photos, pick the print: 2×2 grid, classic dated strip, wide row or one big photo over three, on white, black or cream paper — then save or share. The saved image includes your effects, mirror setting and background.
 - **Make it yours.** Six themes, adjustable countdown and flash, synthesized shutter sounds, and importable community themes and color filters.
 - **Bring your look into calls.** The Windows app can send its processed viewfinder to a virtual camera. See [setup and platform support](#use-photoshoot-in-discord-zoom-or-teams).
 
@@ -82,6 +82,9 @@ If the device is missing, restart the calling app after installing OBS. If the w
 | Take a photo / start video | Red shutter, or Space when no panel is open |
 | Skip the countdown | Alt-click on Windows; Option-click on macOS |
 | Skip the screen flash | Shift-click the shutter |
+| Stop a countdown | Escape |
+| Give each of four photos its own effect | Click a numbered slot above the picture, or Shuffle |
+| Pick a print layout | Click it, or ← → in the layout sheet; Return saves |
 | Return from photo review | Click the photo, click the shutter, or press Escape |
 | Delete the photo under review | Delete or Backspace |
 | Full screen | F11; Control-Command-F on macOS |

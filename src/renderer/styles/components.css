@@ -17,13 +17,13 @@
   color: var(--btn-text);
   background: var(--btn-bg);
   border: var(--border-width) solid var(--btn-border);
-  transition: background var(--dur) var(--ease), opacity var(--dur) var(--ease);
+  transition: background var(--dur) var(--ease), opacity var(--dur) var(--ease), transform 0.12s var(--ease);
 }
 .btn:hover {
   background: var(--btn-bg-hover);
 }
 .btn:active {
-  transform: translateY(0.5px);
+  transform: scale(0.97);
 }
 .btn:disabled {
   opacity: 0.45;
@@ -303,6 +303,7 @@ body.is-reviewing .effects-btn {
 }
 .thumb {
   position: relative;
+  background: #1c1c1e;
   flex: 0 0 auto;
   width: 90px;
   height: 60px;
@@ -325,6 +326,9 @@ body.is-reviewing .effects-btn {
   object-fit: cover;
   border-radius: var(--thumb-radius);
   display: block;
+}
+.thumb.is-sheet img {
+  object-fit: contain; /* a tall strip or wide row shows whole, like a print */
 }
 .thumb:hover img {
   filter: brightness(1.06);
@@ -565,6 +569,34 @@ body.is-reviewing .effects-btn {
   visibility: visible;
   pointer-events: auto;
 }
+.slot-picker-title {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: auto;
+  padding: 6px 14px;
+  color: #fff;
+  background: rgba(28, 28, 30, 0.66);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  display: none;
+}
+.effects-view.is-slot-picker.is-open .slot-picker-title {
+  display: block;
+}
+/* The grid states its own visibility instead of inheriting it. Its zoom starts
+   in the same frame the panel opens, and Chromium can restyle an animating
+   element from its cached pre-animation style — the grid then stayed hidden
+   inside an open (black) panel, which looked like the camera going black. */
+.effects-view .effects-grid {
+  visibility: hidden;
+}
+.effects-view.is-open .effects-grid {
+  visibility: visible;
+}
 .effects-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -701,6 +733,28 @@ body.is-reviewing .effects-btn {
   flex-direction: column;
   gap: 12px;
   padding: 14px;
+}
+.shortcut-list {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px 12px;
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+.shortcut-list dt {
+  color: var(--text);
+}
+.shortcut-list dd {
+  margin: 0;
+  text-align: right;
+}
+.shortcut-list kbd {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 1px 6px;
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px var(--panel-border);
 }
 .settings-actions {
   display: flex;
@@ -903,9 +957,14 @@ input[type="range"] {
   color: #fff;
 }
 .vf-message-icon {
-  font-size: 38px;
+  display: grid;
+  place-items: center;
+  height: 44px;
   margin-bottom: 12px;
   opacity: 0.85;
+}
+.vf-message-card p:empty {
+  display: none;
 }
 .vf-message-card h2 {
   font-size: 19px;
@@ -991,26 +1050,530 @@ input[type="range"] {
   }
 }
 
-.strip-progress {
+/* ---------- Four-photo plan (HUD over the viewfinder, so always dark) ---------- */
+.strip-plan {
   position: absolute;
-  top: 18px;
+  top: 12px;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 3;
+  height: auto;
   display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  max-width: calc(100% - 24px);
+  color: #fff;
+  background: rgba(28, 28, 30, 0.58);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 2px 10px rgba(0, 0, 0, 0.28);
+}
+.strip-plan:hover,
+.strip-plan:active {
+  background: rgba(28, 28, 30, 0.66);
+}
+.plan-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 30px;
+  padding: 0 10px 0 4px;
+  border-radius: 7px;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.plan-slot:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+.plan-slot:active:not(:disabled),
+.plan-tool:active:not(:disabled) {
+  transform: scale(0.93);
+}
+.plan-slot,
+.plan-tool {
+  transition: background var(--dur) var(--ease), box-shadow var(--dur) var(--ease), transform 0.12s var(--ease);
+}
+.strip-plan:not(.hidden) {
+  animation: planIn 0.32s var(--ease-drop);
+}
+@keyframes planIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.96);
+  }
+}
+.plan-slot.is-current {
+  animation: slotPulse 1s ease-in-out infinite;
+}
+@keyframes slotPulse {
+  50% {
+    box-shadow: inset 0 0 0 1.5px #fff, 0 0 0 3px rgba(255, 255, 255, 0.28);
+  }
+}
+.plan-slot.is-landed img {
+  animation: slotPop 0.44s var(--ease-drop);
+}
+.plan-slot.is-landed::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  animation: slotFlash 0.4s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes slotPop {
+  from {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+@keyframes slotFlash {
+  from {
+    opacity: 0.9;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.plan-slot.is-shuffled {
+  animation: slotFlip 0.38s var(--ease-drop) backwards;
+}
+@keyframes slotFlip {
+  from {
+    transform: rotateX(90deg) scale(0.9);
+    opacity: 0.2;
+  }
+}
+.plan-slot:disabled {
+  cursor: default;
+}
+.plan-num {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.plan-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 96px;
+}
+body.is-reviewing .strip-plan {
+  display: none;
+}
+/* Linked: all four follow the live effect, so the names read quieter. */
+.strip-plan:not(.is-mixed) .plan-name {
+  color: rgba(255, 255, 255, 0.62);
+}
+.strip-plan.is-mixed .plan-num {
+  background: var(--accent);
+  color: #fff;
+}
+.plan-slot.is-current {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 0 1.5px #fff;
+}
+.plan-slot img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.plan-slot.is-done .plan-num {
+  position: relative;
+  background: rgba(0, 0, 0, 0.55);
+}
+.plan-slot.is-done .plan-name {
+  visibility: hidden;
+}
+.plan-sep {
+  flex: none;
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: rgba(255, 255, 255, 0.2);
+}
+.plan-tool {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.plan-tool svg {
+  width: 17px;
+  height: 17px;
+}
+.plan-tool:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+.plan-tool.is-on {
+  color: var(--accent);
+  color: color-mix(in srgb, var(--accent) 70%, #fff);
+}
+.plan-tool:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.strip-plan.is-shooting .plan-tool,
+.strip-plan.is-shooting .plan-sep {
+  display: none;
+}
+@media (max-width: 600px) {
+  .plan-name {
+    display: none;
+  }
+  .plan-slot {
+    padding: 0 4px;
+    width: 34px;
+    justify-content: center;
+  }
+}
+
+/* ---------- Layout sheet (after four photos) ---------- */
+.strip-sheet {
+  position: fixed;
+  top: calc(var(--titlebar-h) + var(--safe-top));
+  bottom: calc(var(--toolbar-h) + var(--safe-bottom));
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: grid;
+  place-items: start center;
+  padding: 0 16px 16px;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--dur) var(--ease), visibility 0s linear var(--dur);
+}
+.strip-sheet.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity var(--dur) var(--ease);
+}
+/* A Mac sheet drops from the top edge of the window. */
+.sheet-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 248px;
+  gap: 20px;
+  width: min(760px, 100%);
+  max-height: 100%;
+  padding: 18px;
+  border-radius: 0 0 12px 12px;
+  color: var(--text);
+  background: var(--menu-bg);
+  box-shadow: 0 0 0 1px var(--panel-border), 0 18px 50px rgba(0, 0, 0, 0.45);
+  transform: translateY(-100%);
+  transition: transform 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.06);
+}
+.strip-sheet.is-open .sheet-card {
+  transform: translateY(0);
+}
+.sheet-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 0;
+  height: min(56vh, 520px); /* the card keeps its size whichever layout is shown */
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.14);
+}
+.sheet-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+.sheet-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.sheet-side h2 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.sheet-layouts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
-.strip-dot {
+.sheet-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 6px 8px;
+  border-radius: 8px;
+  color: var(--text-dim);
+  background: var(--btn-bg);
+  box-shadow: inset 0 0 0 1px var(--btn-border);
+  font-size: 12px;
+  font-weight: 500;
+}
+.sheet-layout svg {
+  width: 26px;
+  height: 26px;
+}
+.sheet-layout,
+.sheet-swatch {
+  transition: background var(--dur) var(--ease), box-shadow var(--dur) var(--ease), transform 0.12s var(--ease);
+}
+.sheet-layout:active,
+.sheet-swatch:active {
+  transform: scale(0.94);
+}
+.sheet-layout.is-active svg {
+  animation: layoutPop 0.3s var(--ease-drop);
+}
+@keyframes layoutPop {
+  40% {
+    transform: scale(1.18);
+  }
+}
+.sheet-swatch.is-active {
+  animation: swatchPop 0.3s var(--ease-drop);
+}
+@keyframes swatchPop {
+  40% {
+    transform: scale(1.2);
+  }
+}
+.sheet-layout:hover {
+  background: var(--btn-bg-hover);
+  color: var(--text);
+}
+.sheet-layout.is-active {
+  color: var(--text);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.sheet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sheet-label {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.sheet-frames {
+  display: flex;
+  gap: 10px;
+}
+.sheet-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.45);
+}
+.sheet-swatch.is-active {
+  box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.45), 0 0 0 2px var(--menu-bg), 0 0 0 4px var(--accent);
+}
+.sheet-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+.sheet-spacer {
+  flex: 1;
+}
+@media (max-width: 640px) {
+  .sheet-card {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 14px;
+    overflow: auto;
+  }
+  .sheet-preview {
+    height: 38vh;
+  }
+  .sheet-layouts {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ---------- First-run tips (Mac popover) ---------- */
+.tip-popover {
+  position: fixed;
+  z-index: 85;
+  width: 264px;
+  padding: 13px 14px 11px;
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--menu-bg);
+  box-shadow: 0 0 0 1px var(--panel-border), 0 10px 32px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+  line-height: 1.45;
+  animation: tipIn 0.24s var(--ease-drop);
+  transform-origin: 50% 100%;
+}
+.tip-popover[data-side='bottom'] {
+  transform-origin: 50% 0;
+}
+.tip-popover[hidden] {
+  display: none;
+}
+@keyframes tipIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+.tip-popover h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.tip-popover p {
+  color: var(--text-dim);
+}
+.tip-arrow {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: var(--menu-bg);
+  transform: rotate(45deg);
+  box-shadow: 1px 1px 0 var(--panel-border);
+}
+.tip-popover[data-side='top'] .tip-arrow {
+  bottom: -7px;
+}
+.tip-popover[data-side='bottom'] .tip-arrow {
+  top: -7px;
+  box-shadow: -1px -1px 0 var(--panel-border);
+}
+.tip-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.tip-step {
+  flex: 1;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.tip-skip {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 3px 6px;
+  border-radius: 5px;
+}
+.tip-skip:hover {
+  color: var(--text);
+}
+.tip-next {
+  padding: 3px 12px;
+  font-size: 12px;
+}
+
+/* ---------- Mac progress spinner (twelve fading spokes) ---------- */
+.mac-spinner {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+}
+.mac-spinner i {
+  position: absolute;
+  left: 14.5px;
+  top: 2px;
+  width: 3px;
+  height: 8px;
+  border-radius: 2px;
+  background: currentColor;
+  transform-origin: 1.5px 14px;
+  animation: spoke 1s linear infinite;
+}
+@keyframes spoke {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.15;
+  }
+}
+.mac-spinner i:nth-child(1) { transform: rotate(0deg); animation-delay: -0.917s; }
+.mac-spinner i:nth-child(2) { transform: rotate(30deg); animation-delay: -0.833s; }
+.mac-spinner i:nth-child(3) { transform: rotate(60deg); animation-delay: -0.750s; }
+.mac-spinner i:nth-child(4) { transform: rotate(90deg); animation-delay: -0.667s; }
+.mac-spinner i:nth-child(5) { transform: rotate(120deg); animation-delay: -0.583s; }
+.mac-spinner i:nth-child(6) { transform: rotate(150deg); animation-delay: -0.500s; }
+.mac-spinner i:nth-child(7) { transform: rotate(180deg); animation-delay: -0.417s; }
+.mac-spinner i:nth-child(8) { transform: rotate(210deg); animation-delay: -0.333s; }
+.mac-spinner i:nth-child(9) { transform: rotate(240deg); animation-delay: -0.250s; }
+.mac-spinner i:nth-child(10) { transform: rotate(270deg); animation-delay: -0.167s; }
+.mac-spinner i:nth-child(11) { transform: rotate(300deg); animation-delay: -0.083s; }
+.mac-spinner i:nth-child(12) { transform: rotate(330deg); animation-delay: 0.000s; }
+@media (prefers-reduced-motion: reduce) {
+  .mac-spinner i {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* ---------- Icon sizing ---------- */
+.vf-message-icon svg {
+  width: 40px;
+  height: 40px;
+  stroke-width: 1.5;
+}
+.toast .toast-ico svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+}
+.icon-btn-sm svg,
+.filter-chip-remove svg {
+  width: 14px;
+  height: 14px;
+}
+.thumb-play {
+  position: absolute;
+  left: 5px;
+  bottom: 5px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+}
+.thumb-play svg {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.32);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  transition: background var(--dur) var(--ease), transform var(--dur) var(--ease);
+  fill: currentColor;
+  stroke: none;
+  margin-left: 1px;
 }
-.strip-dot.done {
-  background: var(--accent);
-  border-color: var(--accent);
-  transform: scale(1.15);
+.review video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
 }
 
 .rec-badge {

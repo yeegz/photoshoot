@@ -6,10 +6,12 @@ import { buildVirtualCameraSection } from './virtualCamera';
 import { pickBackground } from './backgroundsMenu';
 import { app } from './app';
 import { byId, el, clear } from './dom';
+import { icon } from './icons';
 import { toast } from './toast';
 import { sound } from './sound';
 import { setPerfOverlay } from './perf';
-import { openOverlay } from './overlays';
+import { openOverlay, closeOverlay } from './overlays';
+import { showTips } from './tips';
 import { openSaveFolder } from './gallery';
 import {
   BUILTIN_THEMES,
@@ -221,6 +223,36 @@ function buildThemeSection(): HTMLElement {
   return group('Appearance', [block([list, actions, note])]);
 }
 
+// ---- help -----------------------------------------------------------------
+
+function shortcuts(): [string, string][] {
+  const MAC = app.info?.platform === 'darwin' || /Mac|iPhone|iPad/.test(navigator.userAgent);
+  const opt = MAC ? '⌥' : 'Alt';
+  const full = MAC ? '⌃⌘F' : 'F11';
+  return [
+    ['Take a picture', 'Space'],
+    ['Skip the countdown', `${opt}-click`],
+    ['Skip the flash', '⇧-click'],
+    ['Stop a countdown · close Effects', 'Esc'],
+    ['Previous / next effects page', '← →'],
+    ['Delete the photo you are viewing', MAC ? '⌫' : 'Delete'],
+    ['Full screen', full],
+  ];
+}
+
+function buildHelpSection(): HTMLElement {
+  const list = el('dl', { className: 'shortcut-list' });
+  for (const [what, keys] of shortcuts()) {
+    list.append(el('dt', { text: what }), el('dd', {}, [el('kbd', { text: keys })]));
+  }
+  const tipsBtn = el('button', { className: 'btn btn-sm', type: 'button', text: 'Show Tips' });
+  tipsBtn.addEventListener('click', () => {
+    closeOverlay('settingsPanel');
+    window.setTimeout(showTips, 260); // after the panel slides away
+  });
+  return group('Help', [block([list, el('div', { className: 'settings-actions' }, [tipsBtn])])]);
+}
+
 // ---- custom filters -------------------------------------------------------
 
 function buildFilterSection(): HTMLElement {
@@ -236,7 +268,7 @@ function buildFilterSection(): HTMLElement {
           el('div', { className: 'filter-chip-sub', text: `By ${f.author}${f.lut ? ' · LUT' : ''}` }),
         ]),
       ]);
-      const rm = el('button', { className: 'filter-chip-remove', type: 'button', ariaLabel: `Remove ${f.name}`, text: '✕' });
+      const rm = el('button', { className: 'filter-chip-remove', type: 'button', ariaLabel: `Remove ${f.name}` }, [icon('close')]);
       rm.addEventListener('click', async () => {
         await removeCustomFilterFlow(f.id);
         refreshEffectsMenu();
@@ -316,7 +348,7 @@ export function render(): void {
     group('Capture', [
       row(
         'Countdown',
-        'Seconds before each shot.',
+        'Seconds before each picture. In four-photo mode every photo gets its own countdown.',
         select(
           [
             ['0', 'Instant'],
@@ -410,6 +442,8 @@ export function render(): void {
   const openBtn = el('button', { className: 'btn btn-sm', type: 'button', text: 'Open Save Folder' });
   openBtn.addEventListener('click', () => openSaveFolder());
   body.appendChild(group('Files', [block([folder, el('div', { className: 'settings-actions' }, [openBtn])])]));
+
+  body.appendChild(buildHelpSection());
 
   // Privacy + reset
   const privacy = el('p', {

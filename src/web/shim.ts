@@ -16,6 +16,10 @@ import {
   ThemeImportResult,
   RawThemeManifest,
   BuiltInThemeId,
+  STRIP_LAYOUTS,
+  STRIP_FRAMES,
+  StripLayout,
+  StripFrame,
 } from '../shared/ipc-contract';
 import {
   THEME_LIMITS,
@@ -111,7 +115,29 @@ function coerceSettings(raw: unknown): Settings {
     reducedMotion: typeof o.reducedMotion === 'boolean' ? o.reducedMotion : DEFAULT_SETTINGS.reducedMotion,
     screenFlash: typeof o.screenFlash === 'boolean' ? o.screenFlash : DEFAULT_SETTINGS.screenFlash,
     checkForUpdates: typeof o.checkForUpdates === 'boolean' ? o.checkForUpdates : DEFAULT_SETTINGS.checkForUpdates,
+    stripLayout: (STRIP_LAYOUTS as readonly unknown[]).includes(o.stripLayout) ? (o.stripLayout as StripLayout) : DEFAULT_SETTINGS.stripLayout,
+    stripFrame: (STRIP_FRAMES as readonly unknown[]).includes(o.stripFrame) ? (o.stripFrame as StripFrame) : DEFAULT_SETTINGS.stripFrame,
+    tipsSeen: typeof o.tipsSeen === 'boolean' ? o.tipsSeen : DEFAULT_SETTINGS.tipsSeen,
   };
+}
+
+// Decoded by hand: the page's CSP (connect-src 'self') blocks fetch() of data: URLs.
+function dataUrlToBlob(dataUrl: string): Blob {
+  const comma = dataUrl.indexOf(',');
+  const mime = /^data:([^;,]+)/.exec(dataUrl)?.[1] ?? 'application/octet-stream';
+  const bin = atob(dataUrl.slice(comma + 1));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+async function openInTab(id: string): Promise<{ ok: boolean }> {
+  const rec = await dbGet(id);
+  if (!rec) return { ok: false };
+  const url = URL.createObjectURL(dataUrlToBlob(rec.dataUrl));
+  window.open(url, '_blank', 'noopener');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return { ok: true };
 }
 
 function pad(n: number): string {
@@ -410,6 +436,18 @@ const bridge: PhotoshootBridge = {
   exportItem: async (id: string) => {
     const rec = await dbGet(id);
     if (!rec) return { ok: false };
+    // Phones and Safari can hand the file to the system share sheet.
+    const blob = dataUrlToBlob(rec.dataUrl);
+    const file = new File([blob], rec.filename, { type: blob.type });
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
+        return { ok: true };
+      } catch (err) {
+        if ((err as { name?: string }).name === 'AbortError') return { ok: false, canceled: true };
+        // Share sheet unavailable after all: fall back to a download.
+      }
+    }
     download(rec.dataUrl, rec.filename);
     return { ok: true };
   },
@@ -419,17 +457,10 @@ const bridge: PhotoshootBridge = {
     return { ok: true };
   },
 
-  revealItem: async (id: string) => {
-    const rec = await dbGet(id);
-    if (rec) window.open(rec.dataUrl, '_blank');
-    return { ok: !!rec };
-  },
+  revealItem: async (id: string) => openInTab(id),
 
-  openItem: async (id: string) => {
-    const rec = await dbGet(id);
-    if (rec) window.open(rec.dataUrl, '_blank');
-    return { ok: !!rec };
-  },
+  // Browsers refuse to navigate a tab to a data: URL, so open a blob URL.
+  openItem: async (id: string) => openInTab(id),
 
   openSaveFolder: async () => ({ ok: true }),
 

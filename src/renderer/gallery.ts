@@ -11,17 +11,14 @@ import { byId, el, clear } from './dom';
 import { toast } from './toast';
 import { sound } from './sound';
 import { effectDisplayLabel } from './customFilters';
+import { icon } from './icons';
 import type { GalleryItem } from '../shared/ipc-contract';
 
 let items: GalleryItem[] = [];
 let reviewId: string | null = null;
+let reviewRequest = 0; // the latest thumbnail click wins if reads finish out of order
 let ctxMenu: HTMLElement | null = null;
 
-const KIND_BADGE: Record<string, string> = {
-  strip: '', // the 2×2 thumbnail speaks for itself, as in Photo Booth
-  video: 'Video',
-  single: '',
-};
 
 export async function refreshGallery(animateNewest = false): Promise<void> {
   items = await api.listGallery();
@@ -53,7 +50,7 @@ function renderTray(animateNewest: boolean): void {
 
   for (const item of ordered) {
     const thumb = el('button', {
-      className: `thumb${item.id === reviewId ? ' is-selected' : ''}`,
+      className: `thumb${item.kind === 'strip' ? ' is-sheet' : ''}${item.id === reviewId ? ' is-selected' : ''}`,
       ariaLabel: `Photo ${item.filename}`,
       type: 'button',
       dataset: { id: item.id },
@@ -69,12 +66,9 @@ function renderTray(animateNewest: boolean): void {
       img.src = item.thumbnail;
       img.alt = `Capture with ${effectDisplayLabel(item.effect)} effect`;
       thumb.appendChild(img);
-    } else {
-      thumb.appendChild(el('span', { className: 'thumb-badge', text: '▶' }));
     }
-
-    const badge = KIND_BADGE[item.kind];
-    if (badge) thumb.appendChild(el('span', { className: 'thumb-badge', text: badge }));
+    // Movies carry a play badge, as in Photo Booth; photos and sheets speak for themselves.
+    if (item.kind === 'video') thumb.appendChild(el('span', { className: 'thumb-play' }, [icon('play')]));
 
     const del = el('button', { className: 'thumb-delete', type: 'button', ariaLabel: 'Delete photo' });
     del.appendChild(xIcon());
@@ -105,12 +99,30 @@ function toggleReview(item: GalleryItem): void {
 }
 
 async function enterReview(item: GalleryItem): Promise<void> {
+  // Never pause the camera in the middle of a countdown or a four-photo run.
+  if (app.busy) return;
+  const request = ++reviewRequest;
   const review = byId('review');
   const img = byId<HTMLImageElement>('reviewImage');
   const res = await api.readItem(item.id);
-  if (res.ok && res.dataUrl) img.src = res.dataUrl;
-  else if (item.thumbnail) img.src = item.thumbnail;
-  else return;
+  if (request !== reviewRequest || app.busy) return;
+  const isVideo = item.kind === 'video' && res.ok && !!res.dataUrl;
+  if (isVideo) {
+    // A movie plays in place; an <img> would show a black frame.
+    img.removeAttribute('src');
+    const video = reviewVideo(true)!;
+    video.src = res.dataUrl!;
+    void video.play().catch(() => undefined);
+  } else if (res.ok && res.dataUrl) {
+    img.src = res.dataUrl;
+  } else if (item.thumbnail) {
+    img.src = item.thumbnail;
+  } else {
+    toast('This capture could not be opened.', 'error');
+    return;
+  }
+  img.classList.toggle('hidden', isVideo);
+  if (!isVideo) stopReviewVideo();
 
   reviewId = item.id;
   if (!virtualCameraActive()) app.renderer?.stop(); // output remains live behind photo review
@@ -125,12 +137,35 @@ export function isReviewing(): boolean {
   return reviewId !== null;
 }
 
+/** The movie player exists only while a movie is reviewed (the camera owns the page's other <video>). */
+function reviewVideo(create: boolean): HTMLVideoElement | null {
+  let video = document.getElementById('reviewVideo') as HTMLVideoElement | null;
+  if (!video && create) {
+    video = el('video', { attrs: { id: 'reviewVideo', playsinline: '', controls: '' } });
+    // Movie controls stay usable: only clicks outside the player leave review.
+    video.addEventListener('click', (e) => e.stopPropagation());
+    byId('review').appendChild(video);
+  }
+  return video;
+}
+
+function stopReviewVideo(): void {
+  const video = reviewVideo(false);
+  if (!video) return;
+  video.pause();
+  video.removeAttribute('src');
+  video.load();
+  video.remove();
+}
+
 export function exitReview(): void {
+  reviewRequest++; // a read still in flight must not reopen review
   if (reviewId === null) return;
   reviewId = null;
   byId('review').classList.add('hidden');
   document.body.classList.remove('is-reviewing');
   byId<HTMLImageElement>('reviewImage').removeAttribute('src');
+  stopReviewVideo();
   byId('shutter').classList.remove('greyed');
   if (app.renderer?.available) app.renderer.start();
   markSelected();
@@ -184,9 +219,15 @@ async function collapseThumb(id: string): Promise<void> {
 }
 
 async function exportItem(item: GalleryItem): Promise<void> {
-  const res = await api.exportItem(item.id);
-  if (res.ok) toast('Photo exported.', 'success');
-  else if (!res.canceled) toast('Could not export photo.', 'error');
+  await shareCapture(item.id, item.kind === 'video' ? 'Movie' : 'Photo');
+}
+
+/** Share a saved capture: the system share sheet on the web when it can take
+ *  files, otherwise a Save dialog (desktop) or a download (web). */
+export async function shareCapture(id: string, noun = 'Photo'): Promise<void> {
+  const res = await api.exportItem(id);
+  if (res.ok) toast(app.info?.platform === 'web' ? `${noun} ready to share.` : `${noun} exported.`, 'success');
+  else if (!res.canceled) toast(`Could not share this ${noun.toLowerCase()}.`, 'error');
 }
 
 // ---- right-click context menu ----
@@ -204,9 +245,11 @@ function openContextMenu(item: GalleryItem, x: number, y: number): void {
     menu.appendChild(btn);
   };
 
-  add('Export…', false, () => void exportItem(item));
-  add('Show in Folder', false, () => void api.revealItem(item.id));
-  if (item.kind !== 'video') add('Open File', false, () => void api.openItem(item.id));
+  const web = app.info?.platform === 'web';
+  add(web ? 'Share…' : 'Export…', false, () => void exportItem(item));
+  // The browser has no folder to show; "Open" covers it there.
+  if (!web) add('Show in Folder', false, () => void api.revealItem(item.id));
+  if (item.kind !== 'video') add(web ? 'Open in New Tab' : 'Open File', false, () => void api.openItem(item.id));
   menu.appendChild(el('div', { className: 'ctx-sep' }));
   add('Delete', true, () => void deleteItem(item));
 

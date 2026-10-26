@@ -13,6 +13,10 @@ import {
   SaveRequest,
   SaveResult,
   CaptureFormat,
+  STRIP_LAYOUTS,
+  STRIP_FRAMES,
+  StripLayout,
+  StripFrame,
 } from '../shared/ipc-contract';
 
 const MAX_CAPTURE_BYTES = 64 * 1024 * 1024; // 64 MB hard cap per capture
@@ -48,6 +52,9 @@ function coerceSettings(raw: unknown): Settings {
     screenFlash: typeof obj.screenFlash === 'boolean' ? obj.screenFlash : DEFAULT_SETTINGS.screenFlash,
     checkForUpdates:
       typeof obj.checkForUpdates === 'boolean' ? obj.checkForUpdates : DEFAULT_SETTINGS.checkForUpdates,
+    stripLayout: (STRIP_LAYOUTS as readonly unknown[]).includes(obj.stripLayout) ? (obj.stripLayout as StripLayout) : DEFAULT_SETTINGS.stripLayout,
+    stripFrame: (STRIP_FRAMES as readonly unknown[]).includes(obj.stripFrame) ? (obj.stripFrame as StripFrame) : DEFAULT_SETTINGS.stripFrame,
+    tipsSeen: typeof obj.tipsSeen === 'boolean' ? obj.tipsSeen : DEFAULT_SETTINGS.tipsSeen,
   };
 }
 

@@ -10,16 +10,20 @@ import { GLRenderer } from './gl/renderer';
 import { CameraManager } from './camera';
 import { sound } from './sound';
 import { byId, qsa } from './dom';
+import { setIcon, type IconName } from './icons';
 import { toast } from './toast';
 import { loadImportedThemes, applyResolvedTheme, watchDeviceTheme } from './themes';
-import { loadCustomFilters, registerFilterSink } from './customFilters';
+import { loadCustomFilters, registerFilterSink, effectDisplayLabel } from './customFilters';
 import { refreshGallery, exitReview, initReviewActions } from './gallery';
-import { buildEffectsMenu, toggleEffects, closeEffects, isEffectsOpen, openEffects, backdropPageStart } from './effectsMenu';
+import { modeHint, buildEffectsMenu, toggleEffects, closeEffects, isEffectsOpen, openEffects, backdropPageStart } from './effectsMenu';
 import { initBackgroundsMenu, pickBackground } from './backgroundsMenu';
 import { BackgroundReplacer } from './backgroundReplace';
 import { initSettings, openSettings } from './settings';
 import { setPerfOverlay } from './perf';
-import { triggerShutter, videoRecorder, cancelCountdown } from './capture';
+import { triggerShutter, videoRecorder, cancelCountdown, isCounting } from './capture';
+import { initStripPlan, updatePlanVisibility } from './stripPlan';
+import { isSheetOpen } from './stripSheet';
+import { initTips } from './tips';
 import { closeOverlay, closeTop, isAnyOpen } from './overlays';
 import { effectLabel, isDraggable } from './gl/effects';
 import type { CameraErrorKind } from './camera';
@@ -37,8 +41,11 @@ interface MessageAction {
   action: () => void;
 }
 
-function showMessage(icon: string, title: string, text: string, action: MessageAction | null): void {
-  byId('vfMessageIcon').textContent = icon;
+/** `icon` is a drawn icon, or 'spinner' for a Mac-style progress spinner. */
+function showMessage(icon: IconName | 'spinner', title: string, text: string, action: MessageAction | null): void {
+  const iconEl = byId('vfMessageIcon');
+  if (icon === 'spinner') iconEl.replaceChildren(spinner());
+  else setIcon(iconEl, icon);
   byId('vfMessageTitle').textContent = title;
   byId('vfMessageText').textContent = text;
   const btn = byId<HTMLButtonElement>('vfMessageAction');
@@ -51,6 +58,13 @@ function showMessage(icon: string, title: string, text: string, action: MessageA
     btn.classList.add('hidden');
   }
   byId('vfMessage').classList.remove('hidden');
+}
+
+function spinner(): HTMLElement {
+  const wrap = document.createElement('span');
+  wrap.className = 'mac-spinner';
+  for (let i = 0; i < 12; i++) wrap.appendChild(document.createElement('i'));
+  return wrap;
 }
 
 function hideMessage(): void {
@@ -103,25 +117,25 @@ function handleCameraError(kind: CameraErrorKind | undefined): void {
   };
   switch (kind) {
     case 'denied':
-      showMessage('🔒', 'Camera access blocked', deniedHelp(), retry);
+      showMessage('lock', 'Camera access blocked', deniedHelp(), retry);
       break;
     case 'playback':
     case 'timeout':
-      showMessage('⚠', 'Camera preview could not start',
+      showMessage('cameraOff', 'Camera preview could not start',
         `No camera sent video. ${busyHelp()} You can also pick another camera in Settings.`, retry);
       break;
     case 'insecure':
-      showMessage('🔒', 'A secure connection is required',
+      showMessage('globeLock', 'A secure connection is required',
         'Open Photoshoot over HTTPS or localhost to use the camera.', retry);
       break;
     case 'notfound':
-      showMessage('📷', 'No camera found', 'Connect a webcam, then try again.', retry);
+      showMessage('camera', 'No camera found', 'Connect a webcam, then try again.', retry);
       break;
     case 'inuse':
-      showMessage('⏳', 'Camera in use', `The camera could not be read. ${busyHelp()}`, retry);
+      showMessage('cameraBusy', 'Camera in use', `The camera could not be read. ${busyHelp()}`, retry);
       break;
     default:
-      showMessage('⚠', 'Camera could not start', 'Something went wrong starting the camera.', retry);
+      showMessage('warning', 'Camera could not start', 'Something went wrong starting the camera.', retry);
   }
 }
 
@@ -138,7 +152,7 @@ async function startCamera(deviceId: string | null): Promise<void> {
   app.renderer.stop();
   byId<HTMLButtonElement>('shutter').disabled = true;
   setStatus('Starting camera…', '');
-  showMessage('◌', 'Just a moment', 'Waking up your webcam…', null);
+  showMessage('spinner', 'Starting Camera…', '', null);
 
   const res = await camera.start(deviceId);
   if (!res.ok) {
@@ -181,10 +195,10 @@ function setMode(mode: CaptureKind): void {
   shutter.classList.toggle('mode-video', mode === 'video');
   shutter.setAttribute(
     'aria-label',
-    mode === 'single' ? 'Take photo' : mode === 'strip' ? 'Take 4-shot strip' : 'Record video'
+    mode === 'single' ? 'Take photo' : mode === 'strip' ? 'Take four photos' : 'Record video'
   );
-  byId('shutterHint').textContent =
-    mode === 'single' ? 'Tap to capture' : mode === 'strip' ? 'Tap for a 4‑shot strip' : 'Tap to record';
+  byId('shutterHint').textContent = app.effect === 'normal' ? modeHint() : `Effect · ${effectDisplayLabel(app.effect)}`;
+  updatePlanVisibility();
   sound.play('button');
 }
 
@@ -257,7 +271,10 @@ function wireKeyboard(): void {
       return;
     }
     if (e.key === 'Escape') {
-      if (isEffectsOpen()) {
+      if (isSheetOpen()) return; // the sheet handles its own keys
+      if (isCounting() || (app.busy && !videoRecorder.recording)) {
+        cancelCountdown(); // Escape stops a countdown, as in Photo Booth
+      } else if (isEffectsOpen()) {
         closeEffects();
       } else if (isAnyOpen()) {
         closeTop();
@@ -304,7 +321,7 @@ async function bootstrap(): Promise<void> {
     videoRecorder.stop();
     cancelCountdown();
     byId<HTMLButtonElement>('shutter').disabled = true;
-    showMessage('⚠', 'Graphics reset', 'The graphics context was lost. It should recover shortly…', null);
+    showMessage('graphics', 'Graphics reset', 'The graphics card restarted. Photoshoot will reconnect in a moment.', null);
   };
   renderer.onContextRestored = () => {
     // Recheck the camera too: it may have been unplugged during the reset.
@@ -331,6 +348,7 @@ async function bootstrap(): Promise<void> {
   await refreshGallery();
   await initVirtualCamera();
 
+  initStripPlan();
   wireControls();
   wireKeyboard();
   wireDistortionDrag();
@@ -338,7 +356,7 @@ async function bootstrap(): Promise<void> {
 
   if (!renderer.available) {
     showMessage(
-      '⚠',
+      'graphics',
       'Graphics unavailable',
       'Photoshoot needs WebGL2 to render the camera, and it is not available on this system. You can still browse settings.',
       null
@@ -375,6 +393,8 @@ async function bootstrap(): Promise<void> {
 
   void checkUpdates();
   await startCamera(app.settings.cameraId);
+  updatePlanVisibility();
+  initTips();
 }
 
 // Launch-time update check against GitHub Releases (Settings → Check for updates).
@@ -398,5 +418,5 @@ async function checkUpdates(): Promise<void> {
 
 bootstrap().catch((err) => {
   console.error('[photoshoot] bootstrap failed', err);
-  showMessage('⚠', 'Something went wrong', 'Photoshoot could not start. Please restart the app.', null);
+  showMessage('warning', 'Something went wrong', 'Photoshoot could not start. Please restart the app.', null);
 });

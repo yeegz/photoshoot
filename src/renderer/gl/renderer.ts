@@ -64,8 +64,10 @@ export class GLRenderer {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.init();
+    let runningBeforeLoss = false;
     canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
+      runningBeforeLoss = this.running;
       this.available = false;
       this.stop();
       this.onContextLost?.();
@@ -78,7 +80,9 @@ export class GLRenderer {
       for (const f of this.customFilters.values()) {
         if (f.lut) this.uploadLut(f.id, f.lut);
       }
-      if (this.source) this.start();
+      // Only a renderer that was looping resumes; the effects-browser renderer
+      // draws on demand and must not start a loop of its own here.
+      if (this.source && runningBeforeLoss) this.start();
       if (this.available) this.onContextRestored?.();
     });
   }

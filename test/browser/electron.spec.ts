@@ -73,3 +73,37 @@ test('desktop app runs person segmentation from its app:// origin', async () => 
     await closeApp(desktop);
   }
 });
+
+// Regression: after a photo was reviewed, reopening Effects showed an open but
+// invisible grid — a black window over the camera until the app was restarted.
+test('desktop app: effect, photo, review, back, Effects — the grid is visible every time', async () => {
+  test.setTimeout(180000);
+  const desktop = await electron.launch(launchOptions());
+  try {
+    await desktop.firstWindow();
+    await expect.poll(() => desktop.windows().some((w) => w.url().startsWith('app://'))).toBe(true);
+    const page = desktop.windows().find((w) => w.url().startsWith('app://'))!;
+    await expect(page.locator('#shutter')).toBeEnabled({ timeout: 15000 });
+    await page.waitForTimeout(1500);
+    const basicMode = await page.evaluate(() => (document.getElementById('btnEffects') as HTMLButtonElement).disabled);
+    test.skip(basicMode, 'No WebGL2 here: basic camera mode has no effects.');
+    await page.evaluate(() => (window as unknown as { photoshoot: { setSettings(p: object): Promise<unknown> } }).photoshoot.setSettings({ tipsSeen: true }));
+    // First-page effects: the failure never depended on which effect was used.
+    for (const id of ['comic', 'thermal', 'sepia', 'xray']) {
+      await page.locator('#btnEffects').click();
+      const tile = page.locator(`.effect-tile[data-id="${id}"]`);
+      await expect(page.locator('#effectsGrid')).toHaveCSS('visibility', 'visible');
+      await tile.click({ timeout: 10000 });
+      await page.waitForTimeout(500);
+      await page.locator('#shutter').click({ modifiers: ['Alt'] });
+      await expect(page.locator('#shutter')).toBeEnabled({ timeout: 20000 });
+      await page.waitForTimeout(400);
+      await page.locator('.thumb').last().click();
+      await expect(page.locator('#review')).toBeVisible();
+      await page.locator('#review').click();
+      await expect(page.locator('#review')).toBeHidden();
+    }
+  } finally {
+    await closeApp(desktop);
+  }
+});

@@ -248,27 +248,6 @@ test('restarting the camera clears the selected backdrop', async ({ page }) => {
 
 // ---- Photo Booth interaction accuracy ----
 
-test('four quick pictures: one countdown, four shots, saved as a 2x2 grid', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('photoshoot.settings', JSON.stringify({ countdownSeconds: 1 })));
-  await page.goto('/app/');
-  await expectLive(page);
-  await page.locator('[data-mode="strip"]').click();
-  let countdowns = 0;
-  await page.exposeFunction('countedDown', () => countdowns++);
-  await page.evaluate(() => {
-    new MutationObserver((m) => {
-      for (const r of m) if ((r.target as HTMLElement).classList.contains('is-counting') && !(r.oldValue ?? '').includes('is-counting'))
-        (window as unknown as { countedDown: () => void }).countedDown();
-    }).observe(document.getElementById('toolbar')!, { attributes: true, attributeFilter: ['class'], attributeOldValue: true });
-  });
-  await page.locator('#shutter').click();
-  const img = page.locator('#trayScroll img').first();
-  await expect(img).toBeVisible({ timeout: 60000 });
-  expect(countdowns).toBe(1);
-  const ratio = await img.evaluate((i: HTMLImageElement) => i.naturalWidth / i.naturalHeight);
-  expect(ratio).toBeGreaterThan(1); // 2x2 of landscape frames, not a tall strip
-});
-
 test('option-click skips the countdown and shift-click skips the flash', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('photoshoot.settings', JSON.stringify({ countdownSeconds: 3 })));
   await page.goto('/app/');

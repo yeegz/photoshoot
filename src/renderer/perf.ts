@@ -43,5 +43,5 @@ function update(): void {
     line(`Effect   ${effectLabel(app.effect)}`),
     line(`Backend  ${s.backend}`)
   );
-  if (s.dropped) overlay.append(line('⚠ dropping frames', true));
+  if (s.dropped) overlay.append(line('Dropping frames', true));
 }

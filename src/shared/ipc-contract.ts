@@ -37,6 +37,10 @@ export const IPC = {
 
 export type CaptureFormat = 'png' | 'jpg';
 export type CaptureKind = 'single' | 'strip' | 'video';
+export type StripLayout = 'grid' | 'strip' | 'row' | 'feature';
+export type StripFrame = 'white' | 'black' | 'cream';
+export const STRIP_LAYOUTS: readonly StripLayout[] = ['grid', 'strip', 'row', 'feature'];
+export const STRIP_FRAMES: readonly StripFrame[] = ['white', 'black', 'cream'];
 export type BuiltInThemeId = 'booth' | 'modern' | 'metal' | 'glass' | 'retro' | 'darkroom';
 
 export interface AppInfo {
@@ -64,6 +68,9 @@ export interface Settings {
   reducedMotion: boolean;
   screenFlash: boolean; // light up the whole window when a photo is taken
   checkForUpdates: boolean; // look for a newer GitHub release at launch
+  stripLayout: StripLayout; // last layout picked for four-photo sheets
+  stripFrame: StripFrame; // paper colour around four-photo sheets
+  tipsSeen: boolean; // first-run tips were shown (Settings → Help shows them again)
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -81,6 +88,9 @@ export const DEFAULT_SETTINGS: Settings = {
   reducedMotion: false,
   screenFlash: true,
   checkForUpdates: true,
+  stripLayout: 'strip',
+  stripFrame: 'white',
+  tipsSeen: false,
 };
 
 export interface SaveRequest {
