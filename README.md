@@ -13,8 +13,8 @@ Take photos, make a four-photo strip, record a short video, or give your webcam 
 
 ## What you can do
 
-- **Find your look.** 17 live effects, from black & white and Plastic Camera to Comic Book and Fish Eye. Drag the center of distortion effects to move the warp.
-- **Have some fun.** Eight face-tracked effects, including Bug Out, Chipmunk and Space Alien.
+- **Find your look.** 52 live effects, from black & white and Plastic Camera to Comic Book, Film, VHS and Fish Eye. Drag the center of distortion effects to move the warp.
+- **Have some fun.** 17 of them are face-tracked, including Bug Out, Chipmunk, Space Alien and Puppy, and they follow up to four people.
 - **Keep the focus on you.** Blur the room behind you, pick a neutral studio or quiet interior, or use your own photo. Person segmentation follows your head and body without taking a reference photo.
 - **Capture the moment.** Single photos, four photos with a countdown before each (and, if you like, a different effect for each), and videos up to 60 seconds. After four photos, design the print: 2×2 grid, classic strip, wide row or one big photo over three; five paper colours and rounded corners; a caption and the date in your choice of five fonts, three sizes, alignment and colour, with a small Photoshoot mark in the corner. Then save or share. The saved image includes your effects, mirror setting and background.
 - **Effects people love.** The Photo Booth set (including Kaleidoscope and Edge Work), plus Film, Disposable, Soft Glam, Golden Hour, VHS, Sparkles, Hearts, Neon and more. Face masks like Puppy, Kitty, Rainbow Mouth, Heart Eyes and Flower Crown follow up to four people and react when you open your mouth, raise your eyebrows or smile.
